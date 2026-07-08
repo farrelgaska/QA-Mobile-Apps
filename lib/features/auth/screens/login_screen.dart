@@ -1,0 +1,183 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../shared/widgets/app_button.dart';
+import '../../../shared/widgets/app_input.dart';
+import '../../../shared/widgets/app_card.dart';
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({Key? key}) : super(key: key);
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _nikController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _rememberMe = false;
+  String? _nikError;
+  String? _passwordError;
+  bool _isLoading = false;
+
+  void _handleLogin() {
+    setState(() {
+      _nikError = null;
+      _passwordError = null;
+    });
+
+    if (_nikController.text.trim().isEmpty) {
+      setState(() => _nikError = 'NIK tidak boleh kosong');
+      return;
+    }
+    if (_passwordController.text.isEmpty) {
+      setState(() => _passwordError = 'Password tidak boleh kosong');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        context.go('/home');
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _nikController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Logo
+                Image.asset(
+                  'assets/images/logo_qa.png',
+                  height: 72,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'QA Mobile Apps',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 24,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Masuk dengan akun SSO',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // Form card
+                AppCard(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      AppInput(
+                        label: 'NIK / Username',
+                        hintText: 'Masukkan NIK Anda',
+                        controller: _nikController,
+                        prefixIcon: Icons.person_outline,
+                        errorText: _nikError,
+                      ),
+                      const SizedBox(height: 20),
+                      AppInput(
+                        label: 'Password',
+                        hintText: 'Masukkan Password',
+                        controller: _passwordController,
+                        isObscure: true,
+                        prefixIcon: Icons.lock_outline,
+                        errorText: _passwordError,
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Remember me & forgot password
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: Checkbox(
+                                  value: _rememberMe,
+                                  activeColor: AppColors.primary,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _rememberMe = val ?? false;
+                                    });
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Ingat Saya',
+                                style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Silakan hubungi IT Support untuk reset password')),
+                              );
+                            },
+                            child: const Text(
+                              'Lupa Password?',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      AppButton(
+                        text: 'Masuk',
+                        isLoading: _isLoading,
+                        onPressed: _handleLogin,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 48),
+                const Text(
+                  '© Quality Assurance & Innovation',
+                  style: TextStyle(color: AppColors.textSoft, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Internal Use Only • v1.0.0',
+                  style: TextStyle(color: AppColors.textSoft, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

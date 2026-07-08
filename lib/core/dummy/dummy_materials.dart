@@ -1,0 +1,156 @@
+import '../../shared/models/material_model.dart';
+import '../../shared/models/checklist_item_model.dart';
+import '../../shared/models/enums.dart';
+
+final List<MaterialModel> dummyMaterials = [
+  MaterialModel(
+    id: 'mat-1',
+    name: 'TIANG 7M 2S',
+    type: 'Tiang Beton',
+    status: 'Aktif',
+    checklistItems: [
+      ChecklistItemModel(
+        id: 'mat-1-c1',
+        title: 'Diameter',
+        inputType: InputType.number,
+        unit: 'cm',
+        standard: '± 15.5 - 16.2 cm',
+        requiredPhoto: true,
+      ),
+      ChecklistItemModel(
+        id: 'mat-1-c2',
+        title: 'Panjang',
+        inputType: InputType.number,
+        unit: 'm',
+        standard: '12 m ± 50 mm',
+        requiredPhoto: true,
+      ),
+      ChecklistItemModel(
+        id: 'mat-1-c3',
+        title: 'Kondisi Visual',
+        inputType: InputType.choice,
+        choices: ['Baik', 'Retak', 'Berkarat', 'Cacat'],
+        standard: 'Tidak retak / tidak berkarat',
+        requiredPhoto: true,
+      ),
+      ChecklistItemModel(
+        id: 'mat-1-c4',
+        title: 'Sertifikat QA',
+        inputType: InputType.text,
+        standard: 'Tersedia & valid',
+        requiredPhoto: false,
+      ),
+    ],
+  ),
+  MaterialModel(
+    id: 'mat-2',
+    name: 'ODP SOLID 18',
+    type: 'Optical Distribution Point',
+    status: 'Aktif',
+    checklistItems: [
+      ChecklistItemModel(
+        id: 'mat-2-c1',
+        title: 'Kondisi Box',
+        inputType: InputType.choice,
+        choices: ['Baik', 'Lecet', 'Pecah'],
+        standard: 'Box tidak pecah, karet seal lengkap',
+        requiredPhoto: false,
+      ),
+      ChecklistItemModel(
+        id: 'mat-2-c2',
+        title: 'Kelengkapan Aksesoris',
+        inputType: InputType.text,
+        standard: 'Pigtail, adapter coupler, tray terpasang',
+        requiredPhoto: true,
+      ),
+      ChecklistItemModel(
+        id: 'mat-2-c3',
+        title: 'Uji Fungsi Kunci',
+        inputType: InputType.choice,
+        choices: ['Lancar', 'Macet'],
+        standard: 'Kunci box berfungsi lancar',
+        requiredPhoto: false,
+      ),
+    ],
+  ),
+  MaterialModel(
+    id: 'mat-3',
+    name: 'KABEL NYFGBY 4x16',
+    type: 'Kabel Power',
+    status: 'Aktif',
+    checklistItems: [
+      ChecklistItemModel(
+        id: 'mat-3-c1',
+        title: 'Ketebalan Isolator',
+        inputType: InputType.number,
+        unit: 'mm',
+        standard: 'Min. 1.8 mm',
+        requiredPhoto: false,
+      ),
+      ChecklistItemModel(
+        id: 'mat-3-c2',
+        title: 'Kondisi Kulit Luar',
+        inputType: InputType.choice,
+        choices: ['Mulus', 'Terkoyak'],
+        standard: 'Tidak ada bagian kulit luar terkelupas',
+        requiredPhoto: true,
+      ),
+      ChecklistItemModel(
+        id: 'mat-3-c3',
+        title: 'Hasil Megger Test',
+        inputType: InputType.number,
+        unit: 'MΩ',
+        standard: 'Min. 100 MΩ',
+        requiredPhoto: true,
+      ),
+    ],
+  ),
+  MaterialModel(
+    id: 'mat-4',
+    name: 'TRAFO 100KVA',
+    type: 'Transformator',
+    status: 'Aktif',
+    checklistItems: [
+      ChecklistItemModel(
+        id: 'mat-4-c1',
+        title: 'Kondisi Fisik Trafo',
+        inputType: InputType.choice,
+        choices: ['Baik', 'Penyok', 'Bocor Oli'],
+        standard: 'Fisik mulus, tidak ada kebocoran oli',
+        requiredPhoto: true,
+      ),
+      ChecklistItemModel(
+        id: 'mat-4-c2',
+        title: 'Tahanan Isolasi',
+        inputType: InputType.number,
+        unit: 'MΩ',
+        standard: 'Min. 1000 MΩ',
+        requiredPhoto: true,
+      ),
+    ],
+  ),
+  MaterialModel(
+    id: 'mat-5',
+    name: 'PATCHCORD',
+    type: 'Fiber Optic Jumper',
+    status: 'Aktif',
+    checklistItems: [
+      ChecklistItemModel(
+        id: 'mat-5-c1',
+        title: 'Panjang Kabel',
+        inputType: InputType.number,
+        unit: 'm',
+        standard: 'Sesuai pesanan (± 0.1m)',
+        requiredPhoto: false,
+      ),
+      ChecklistItemModel(
+        id: 'mat-5-c2',
+        title: 'Kondisi Ferrule',
+        inputType: InputType.choice,
+        choices: ['Bersih', 'Kotor', 'Baret'],
+        standard: 'Ferrule bersih & bebas baret',
+        requiredPhoto: true,
+      ),
+    ],
+  ),
+];
