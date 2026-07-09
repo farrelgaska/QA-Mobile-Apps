@@ -172,7 +172,7 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
                   maxLines: 2,
                   style: const TextStyle(
                     fontSize: 12,
-                    color: Color(0xFFF3F4F6),
+                    color: Color(0xFF111827),
                     fontWeight: FontWeight.w500,
                   ),
                   cursorColor: const Color(0xFF006B5A),
@@ -247,7 +247,7 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
                         : null,
                     style: const TextStyle(
                       fontSize: 13,
-                      color: Color(0xFFF3F4F6),
+                      color: Color(0xFF111827),
                       fontWeight: FontWeight.w500,
                     ),
                     cursorColor: const Color(0xFF006B5A),

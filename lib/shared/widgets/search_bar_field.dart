@@ -20,21 +20,21 @@ class SearchBarField extends StatelessWidget {
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF242424),
+              color: const Color(0xFFFFFFFF),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0xFF374151)),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
             ),
             child: TextField(
               onChanged: onChanged,
               style: const TextStyle(
-                color: Color(0xFFF3F4F6),
+                color: Color(0xFF111827),
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
               cursorColor: const Color(0xFF006B5A),
               decoration: InputDecoration(
                 hintText: placeholder,
-                prefixIcon: const Icon(Icons.search, color: Color(0xFF9CA3AF), size: 20),
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF6B7280), size: 20),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 hintStyle: const TextStyle(
                   color: Color(0xFF9CA3AF),

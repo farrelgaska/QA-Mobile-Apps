@@ -48,41 +48,41 @@ class AppTheme {
           borderRadius: AppRadius.cardBorderRadius,
         ),
       ),
-      inputDecorationTheme: const InputDecorationTheme(
+      inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Color(0xFF242424),
-        hintStyle: TextStyle(
+        fillColor: const Color(0xFFFFFFFF),
+        hintStyle: const TextStyle(
           color: Color(0xFF9CA3AF),
           fontSize: 14,
           fontWeight: FontWeight.w400,
         ),
-        labelStyle: TextStyle(
-          color: Color(0xFFE5E7EB),
+        labelStyle: const TextStyle(
+          color: Color(0xFF1F2937),
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
-        prefixIconColor: Color(0xFF9CA3AF),
-        suffixIconColor: Color(0xFF9CA3AF),
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        prefixIconColor: const Color(0xFF6B7280),
+        suffixIconColor: const Color(0xFF6B7280),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: Color(0xFF374151)),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: Color(0xFF374151)),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFF006B5A), width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: Color(0xFFDC2626)),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFDC2626)),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: Color(0xFFDC2626), width: 1.5),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
         ),
       ),
       checkboxTheme: CheckboxThemeData(
@@ -154,41 +154,41 @@ class AppTheme {
           borderRadius: AppRadius.cardBorderRadius,
         ),
       ),
-      inputDecorationTheme: const InputDecorationTheme(
+      inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Color(0xFF242424),
-        hintStyle: TextStyle(
+        fillColor: const Color(0xFFFFFFFF),
+        hintStyle: const TextStyle(
           color: Color(0xFF9CA3AF),
           fontSize: 14,
           fontWeight: FontWeight.w400,
         ),
-        labelStyle: TextStyle(
-          color: Color(0xFFE5E7EB),
+        labelStyle: const TextStyle(
+          color: Color(0xFF1F2937),
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
-        prefixIconColor: Color(0xFF9CA3AF),
-        suffixIconColor: Color(0xFF9CA3AF),
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        prefixIconColor: const Color(0xFF6B7280),
+        suffixIconColor: const Color(0xFF6B7280),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: Color(0xFF374151)),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: Color(0xFF374151)),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFF006B5A), width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: Color(0xFFDC2626)),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFDC2626)),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: Color(0xFFDC2626), width: 1.5),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
         ),
       ),
       checkboxTheme: CheckboxThemeData(
