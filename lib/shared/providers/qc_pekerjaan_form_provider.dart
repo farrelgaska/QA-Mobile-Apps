@@ -90,6 +90,15 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool get hasAnyDraftContent {
+    return areaController.text.trim().isNotEmpty ||
+           locationDetailController.text.trim().isNotEmpty ||
+           mitraController.text.trim().isNotEmpty ||
+           staffNoteController.text.trim().isNotEmpty ||
+           itemResults.any((val) => val.trim().isNotEmpty) ||
+           itemPhotos.any((photosList) => photosList.isNotEmpty);
+  }
+
   String? validateForm() {
     // Basic non‑list validation could be added here if needed
     for (int i = 0; i < _pekerjaan.checklistItems.length; i++) {
@@ -105,21 +114,17 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
           return 'Form ${i+1} - ${item.title}: isi hasil input terlebih dahulu';
         }
       }
-      if (item.inputType == InputType.number && !QCValidators.isValidNumber(valStr)) {
-        return 'Form ${i+1} - ${item.title}: masukkan angka yang valid';
+      if (item.inputType == InputType.number) {
+        if (!QCValidators.isValidNumber(valStr)) {
+          return 'Form ${i+1} - ${item.title}: masukkan angka yang valid';
+        }
+        final valNum = double.tryParse(valStr.replaceAll(',', '.'));
+        if (valNum != null && valNum < 0) {
+          return 'Form ${i+1} - ${item.title}: nilai tidak boleh negatif';
+        }
       }
       if (itemPhotos[i].isEmpty) {
         return 'Form ${i+1} - ${item.title}: tambahkan dokumentasi foto terlebih dahulu';
-      }
-      final bool isNonIdeal = valStr == 'Tidak' ||
-          valStr == 'Tidak Sesuai' ||
-          itemStatuses[i] == ChecklistStatus.tidakSesuai ||
-          itemStatuses[i] == ChecklistStatus.perluTindakLanjut ||
-          (isChoiceOrBool &&
-              !['sesuai', 'rapi', 'kencang', 'ada', 'lengkap', 'ya', 'ok', 'diterima', 'sesuai standar']
-                  .contains(valStr.toLowerCase()));
-      if (isNonIdeal && (itemIssues[i].trim().isEmpty)) {
-        return 'Form ${i+1} - ${item.title}: wajib mengisi keterangan masalah karena nilai berada di luar standar / tidak sesuai';
       }
     }
     return null;
@@ -174,19 +179,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
     if (item.inputType == InputType.number) {
       final parsed = double.tryParse(trimmed.replaceAll(',', '.'));
       if (parsed == null) return ChecklistStatus.belumDiisi;
-      final lower = item.title.toLowerCase();
-      if (lower.contains('redaman')) {
-        return (parsed >= -24 && parsed <= -15) ? ChecklistStatus.lulus : ChecklistStatus.tidakSesuai;
-      }
-      if (lower.contains('kedalaman')) {
-        return (parsed >= 1.2) ? ChecklistStatus.lulus : ChecklistStatus.tidakSesuai;
-      }
-      // generic numeric passes
       return ChecklistStatus.lulus;
-    } else if (item.inputType == InputType.choice) {
-      final lower = trimmed.toLowerCase();
-      const passKeywords = ['sesuai', 'rapi', 'kencang', 'bersih', 'ada & jelas', 'tegak lurus', 'sesuai standar', 'lengkap', 'ya', 'ok'];
-      return passKeywords.contains(lower) ? ChecklistStatus.lulus : ChecklistStatus.tidakSesuai;
     } else {
       return ChecklistStatus.lulus;
     }

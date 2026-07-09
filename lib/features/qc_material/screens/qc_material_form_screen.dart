@@ -13,6 +13,7 @@ import '../../../shared/widgets/screen_header.dart';
 import '../../../shared/widgets/confirmation_modal.dart';
 import '../../../shared/widgets/work_location_selector.dart';
 import '../../../shared/providers/qc_material_form_provider.dart';
+import '../../../shared/widgets/app_snackbar.dart';
 
 class QCMaterialFormScreen extends StatelessWidget {
   final String materialId;
@@ -192,16 +193,12 @@ class QCMaterialFormScreen extends StatelessWidget {
           text: 'Simpan Draft',
           variant: AppButtonVariant.secondary,
           onPressed: () {
+            if (!p.hasAnyDraftContent) {
+              AppSnackbar.warning(context, 'Isi minimal satu data pemeriksaan sebelum menyimpan draft.');
+              return;
+            }
             p.persistReport(QCReportStatus.draft);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Draft berhasil disimpan'),
-                backgroundColor: AppColors.primary,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                margin: const EdgeInsets.all(16),
-              ),
-            );
+            AppSnackbar.success(context, 'Draft berhasil disimpan');
             context.pop();
           },
         ),
@@ -215,15 +212,7 @@ class QCMaterialFormScreen extends StatelessWidget {
           onPressed: () {
             final error = p.validateForm();
             if (error != null) {
-              ScaffoldMessenger.of(context).clearSnackBars();
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(error,
-                    style: const TextStyle(color: AppColors.rejectedText, fontWeight: FontWeight.bold, fontSize: 13)),
-                backgroundColor: AppColors.rejectedBg,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                margin: const EdgeInsets.all(16),
-              ));
+              AppSnackbar.error(context, error);
               return;
             }
             showDialog(

@@ -112,6 +112,18 @@ class QCMaterialFormProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool get hasAnyDraftContent {
+    return poNumberController.text.trim().isNotEmpty ||
+           doNumberController.text.trim().isNotEmpty ||
+           vendorNameController.text.trim().isNotEmpty ||
+           arrivalVolumeController.text.trim().isNotEmpty ||
+           samplingVolumeController.text.trim().isNotEmpty ||
+           brandNameController.text.trim().isNotEmpty ||
+           warehouseLocationController.text.trim().isNotEmpty ||
+           staffNoteController.text.trim().isNotEmpty ||
+           answers.any((answer) => answer.value.trim().isNotEmpty || answer.photoPaths.isNotEmpty);
+  }
+
   String? validateForm() {
     // General info validation (same as original _validateFormFirstError subset)
     if (poNumberController.text.trim().isEmpty) return 'Isi nomor PO terlebih dahulu';
@@ -141,20 +153,17 @@ class QCMaterialFormProvider extends ChangeNotifier {
           return 'Form $formNumber - ${item.label}: isi hasil input terlebih dahulu';
         }
       }
-      if (item.inputType == QCInputType.number && !QCValidators.isValidNumber(valStr)) {
-        return 'Form $formNumber - ${item.label}: masukkan angka yang valid';
+      if (item.inputType == QCInputType.number) {
+        if (!QCValidators.isValidNumber(valStr)) {
+          return 'Form $formNumber - ${item.label}: masukkan angka yang valid';
+        }
+        final valNum = double.tryParse(valStr.replaceAll(',', '.'));
+        if (valNum != null && valNum < 0) {
+          return 'Form $formNumber - ${item.label}: nilai tidak boleh negatif';
+        }
       }
       if (answer.photoPaths.isEmpty) {
         return 'Form $formNumber - ${item.label}: tambahkan dokumentasi foto terlebih dahulu';
-      }
-      final bool isNonIdeal = valStr == 'Tidak' ||
-          valStr == 'Tidak Sesuai' ||
-          answer.status == QCResultStatus.fail ||
-          (item.inputType == QCInputType.choice &&
-              !['sesuai', 'rapi', 'kencang', 'ada', 'lengkap', 'ya', 'ok', 'diterima', 'sesuai standar']
-                  .contains(valStr.toLowerCase()));
-      if (isNonIdeal && (answer.issueNote == null || answer.issueNote!.trim().isEmpty)) {
-        return 'Form $formNumber - ${item.label}: wajib mengisi keterangan masalah karena nilai berada di luar standar / tidak sesuai';
       }
     }
     return null;

@@ -12,6 +12,7 @@ import '../../../shared/widgets/checklist_item_card.dart';
 import '../../../shared/widgets/screen_header.dart';
 import '../../../shared/widgets/confirmation_modal.dart';
 import '../../../shared/providers/qc_pekerjaan_form_provider.dart';
+import '../../../shared/widgets/app_snackbar.dart';
 
 class QCPekerjaanFormScreen extends StatelessWidget {
   final String pekerjaanId;
@@ -184,17 +185,12 @@ class QCPekerjaanFormScreen extends StatelessWidget {
             text: 'Simpan Draft',
             variant: AppButtonVariant.secondary,
             onPressed: () {
+              if (!p.hasAnyDraftContent) {
+                AppSnackbar.warning(context, 'Isi minimal satu data pemeriksaan sebelum menyimpan draft.');
+                return;
+              }
               p.persistReport(QCReportStatus.draft);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Draft berhasil disimpan'),
-                  backgroundColor: AppColors.primary,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  margin: const EdgeInsets.all(16),
-                ),
-              );
+              AppSnackbar.success(context, 'Draft berhasil disimpan');
               context.pop();
             },
           ),
@@ -208,19 +204,7 @@ class QCPekerjaanFormScreen extends StatelessWidget {
             onPressed: () {
               final err = p.validateForm();
               if (err != null) {
-                ScaffoldMessenger.of(context).clearSnackBars();
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(err,
-                      style: const TextStyle(
-                          color: AppColors.rejectedText,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13)),
-                  backgroundColor: AppColors.rejectedBg,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  margin: const EdgeInsets.all(16),
-                ));
+                AppSnackbar.error(context, err);
                 return;
               }
               showDialog(

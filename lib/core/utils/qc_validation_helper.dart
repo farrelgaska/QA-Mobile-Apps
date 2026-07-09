@@ -60,12 +60,10 @@ class QCValidationHelper {
       final isPass = passKeywords.contains(lowerVal);
       return QCValidationResult(
         status: isPass ? QCResultStatus.pass : QCResultStatus.fail,
-        warningMessage: isPass ? null : 'Kondisi tidak sesuai standar',
-        isValid: isPass,
+        warningMessage: null, // No warning message for out of standard
+        isValid: true, // Always valid
       );
     }
-
-    final rule = item.validationRule;
 
     // 3. Parse numeric value if validation expects numbers
     if (item.inputType == QCInputType.number) {
@@ -75,81 +73,24 @@ class QCValidationHelper {
       if (valNum == null) {
         return QCValidationResult(
           status: QCResultStatus.fail,
-          warningMessage: rule?.warningInvalid ?? 'Input harus berupa angka',
+          warningMessage: 'Input harus berupa angka',
           isValid: false,
         );
       }
 
-      if (rule != null) {
-        switch (rule.type) {
-          case QCValidationType.range:
-            if (rule.minValue != null && valNum < rule.minValue!) {
-              return QCValidationResult(
-                status: QCResultStatus.fail,
-                warningMessage: rule.warningBelow ?? 'kurang dari standar',
-                isValid: false,
-              );
-            }
-            if (rule.maxValue != null && valNum > rule.maxValue!) {
-              return QCValidationResult(
-                status: QCResultStatus.fail,
-                warningMessage: rule.warningAbove ?? 'melebihi standar',
-                isValid: false,
-              );
-            }
-            break;
-
-          case QCValidationType.min:
-            if (rule.minValue != null && valNum < rule.minValue!) {
-              return QCValidationResult(
-                status: QCResultStatus.fail,
-                warningMessage: rule.warningBelow ?? 'kurang dari standar',
-                isValid: false,
-              );
-            }
-            break;
-
-          case QCValidationType.max:
-            if (rule.maxValue != null && valNum > rule.maxValue!) {
-              return QCValidationResult(
-                status: QCResultStatus.fail,
-                warningMessage: rule.warningAbove ?? 'melebihi standar',
-                isValid: false,
-              );
-            }
-            break;
-
-          case QCValidationType.exact:
-            if (rule.exactValue != null && valNum != rule.exactValue!) {
-              return QCValidationResult(
-                status: QCResultStatus.fail,
-                warningMessage: rule.warningInvalid ?? 'Nilai harus tepat ${rule.exactValue}',
-                isValid: false,
-              );
-            }
-            break;
-
-          default:
-            break;
-        }
+      if (valNum < 0) {
+        return QCValidationResult(
+          status: QCResultStatus.fail,
+          warningMessage: 'Nilai tidak boleh negatif',
+          isValid: false,
+        );
       }
+
       return QCValidationResult(
         status: QCResultStatus.pass,
         warningMessage: null,
         isValid: true,
       );
-    }
-
-    // 4. Fallback for text check or exact checks
-    if (rule != null && rule.type == QCValidationType.exact) {
-      final exactStr = rule.exactValue?.toString() ?? '';
-      if (valStr.trim() != exactStr.trim()) {
-        return QCValidationResult(
-          status: QCResultStatus.fail,
-          warningMessage: rule.warningInvalid ?? 'Nilai tidak sesuai standar',
-          isValid: false,
-        );
-      }
     }
 
     return QCValidationResult(
@@ -193,9 +134,7 @@ class QCValidationHelper {
       // 3. Checked Fail / Need Follow Up status validation
       if (answer.status == QCResultStatus.fail || answer.status == QCResultStatus.needFollowUp) {
         hasFail = true;
-        if (answer.issueNote == null || answer.issueNote!.trim().isEmpty) {
-          errors.add('Keterangan masalah wajib diisi untuk item "${item.label}" yang tidak sesuai.');
-        }
+        // issueNote is no longer required on mobile
       }
 
       if (answer.status == QCResultStatus.notFilled && item.required) {
