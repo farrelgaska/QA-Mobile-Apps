@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/status_style_mapper.dart';
 import 'app_card.dart';
 
 class WorkStatusCard extends StatelessWidget {
@@ -17,21 +18,14 @@ class WorkStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lowerStatus = status.toLowerCase().trim();
-    Color bgColor;
-    Color textColor;
+    final style = StatusStyleMapper.getStyle(status);
+    
     String displayStatus = status;
-
     if (lowerStatus == 'selesai' || lowerStatus == 'disetujui' || lowerStatus == 'lulus') {
-      bgColor = AppColors.approvedBg;
-      textColor = AppColors.approvedText;
       displayStatus = 'Selesai';
     } else if (lowerStatus == 'perlu perbaikan' || lowerStatus == 'tidak sesuai') {
-      bgColor = AppColors.rejectedBg;
-      textColor = AppColors.rejectedText;
       displayStatus = 'Perlu Perbaikan';
     } else {
-      bgColor = AppColors.waitingBg;
-      textColor = AppColors.waitingText;
       displayStatus = 'On Progress';
     }
     
@@ -74,13 +68,13 @@ class WorkStatusCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: bgColor,
+                    color: style.background,
                     borderRadius: BorderRadius.circular(100),
                   ),
                   child: Text(
                     displayStatus,
                     style: TextStyle(
-                      color: textColor,
+                      color: style.foreground,
                       fontWeight: FontWeight.bold,
                       fontSize: 10,
                     ),

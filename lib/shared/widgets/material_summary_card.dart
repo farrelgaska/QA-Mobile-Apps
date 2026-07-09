@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/status_style_mapper.dart';
 import 'app_card.dart';
 
 class MaterialSummaryCard extends StatelessWidget {
@@ -16,20 +17,7 @@ class MaterialSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lowerStatus = status.toLowerCase().trim();
-    Color bgColor;
-    Color textColor;
-
-    if (lowerStatus == 'lulus' || lowerStatus == 'disetujui' || lowerStatus == 'diterima') {
-      bgColor = AppColors.approvedBg;
-      textColor = AppColors.approvedText;
-    } else if (lowerStatus == 'pending' || lowerStatus == 'menunggu' || lowerStatus == 'waiting') {
-      bgColor = AppColors.waitingBg;
-      textColor = AppColors.waitingText;
-    } else {
-      bgColor = AppColors.rejectedBg;
-      textColor = AppColors.rejectedText;
-    }
+    final style = StatusStyleMapper.getStyle(status);
     
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -54,13 +42,13 @@ class MaterialSummaryCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: bgColor,
+                    color: style.background,
                     borderRadius: BorderRadius.circular(100),
                   ),
                   child: Text(
                     status,
                     style: TextStyle(
-                      color: textColor,
+                      color: style.foreground,
                       fontWeight: FontWeight.bold,
                       fontSize: 10,
                     ),

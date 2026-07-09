@@ -47,6 +47,8 @@ class StatusStyleMapper {
         normalized == 'selesai' ||
         normalized == 'diterima' ||
         normalized == 'pass' ||
+        normalized == 'aktif' ||
+        normalized == 'active' ||
         normalized == 'qcreportstatus.approved' ||
         normalized == 'reportstatus.disetujui' ||
         normalized == 'qcresultstatus.pass' ||
