@@ -16,17 +16,17 @@ class AppColors {
   static const Color border = Color(0xFFE5E7EB);
   static const Color borderSoft = Color(0xFFEEF0F2);
   
-  static const Color approvedBg = Color(0xFFE7F7EF);
-  static const Color approvedText = Color(0xFF16A765);
+  static const Color approvedBg = Color(0xFFE8F7F1);
+  static const Color approvedText = Color(0xFF006B5A);
   
-  static const Color waitingBg = Color(0xFFFFF5D8);
-  static const Color waitingText = Color(0xFFF5A400);
+  static const Color waitingBg = Color(0xFFFFF4E5);
+  static const Color waitingText = Color(0xFFF59E0B);
   
-  static const Color revisionBg = Color(0xFFFFF1D6);
-  static const Color revisionText = Color(0xFFE89100);
+  static const Color revisionBg = Color(0xFFFFF4E5);
+  static const Color revisionText = Color(0xFFF59E0B);
   
-  static const Color rejectedBg = Color(0xFFFDE2E2);
-  static const Color rejectedText = Color(0xFFDC2626);
+  static const Color rejectedBg = Color(0xFFFDECEC);
+  static const Color rejectedText = Color(0xFFEF4444);
   
   static const Color infoBg = Color(0xFFE7EEFF);
   static const Color infoText = Color(0xFF2563EB);

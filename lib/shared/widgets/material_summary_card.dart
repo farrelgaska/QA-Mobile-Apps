@@ -16,7 +16,20 @@ class MaterialSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPassed = status.toLowerCase() == 'lulus' || status.toLowerCase() == 'disetujui';
+    final lowerStatus = status.toLowerCase().trim();
+    Color bgColor;
+    Color textColor;
+
+    if (lowerStatus == 'lulus' || lowerStatus == 'disetujui' || lowerStatus == 'diterima') {
+      bgColor = AppColors.approvedBg;
+      textColor = AppColors.approvedText;
+    } else if (lowerStatus == 'pending' || lowerStatus == 'menunggu' || lowerStatus == 'waiting') {
+      bgColor = AppColors.waitingBg;
+      textColor = AppColors.waitingText;
+    } else {
+      bgColor = AppColors.rejectedBg;
+      textColor = AppColors.rejectedText;
+    }
     
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -41,13 +54,13 @@ class MaterialSummaryCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: isPassed ? AppColors.approvedBg : AppColors.rejectedBg,
+                    color: bgColor,
                     borderRadius: BorderRadius.circular(100),
                   ),
                   child: Text(
                     status,
                     style: TextStyle(
-                      color: isPassed ? AppColors.approvedText : AppColors.rejectedText,
+                      color: textColor,
                       fontWeight: FontWeight.bold,
                       fontSize: 10,
                     ),

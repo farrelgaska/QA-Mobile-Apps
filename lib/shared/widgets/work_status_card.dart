@@ -16,7 +16,24 @@ class WorkStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDone = status.toLowerCase() == 'selesai';
+    final lowerStatus = status.toLowerCase().trim();
+    Color bgColor;
+    Color textColor;
+    String displayStatus = status;
+
+    if (lowerStatus == 'selesai' || lowerStatus == 'disetujui' || lowerStatus == 'lulus') {
+      bgColor = AppColors.approvedBg;
+      textColor = AppColors.approvedText;
+      displayStatus = 'Selesai';
+    } else if (lowerStatus == 'perlu perbaikan' || lowerStatus == 'tidak sesuai') {
+      bgColor = AppColors.rejectedBg;
+      textColor = AppColors.rejectedText;
+      displayStatus = 'Perlu Perbaikan';
+    } else {
+      bgColor = AppColors.waitingBg;
+      textColor = AppColors.waitingText;
+      displayStatus = 'On Progress';
+    }
     
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -57,13 +74,13 @@ class WorkStatusCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isDone ? const Color(0xFFE8F7F1) : const Color(0xFFFFF4E5),
+                    color: bgColor,
                     borderRadius: BorderRadius.circular(100),
                   ),
                   child: Text(
-                    isDone ? 'Selesai' : 'On Progress',
+                    displayStatus,
                     style: TextStyle(
-                      color: isDone ? const Color(0xFF006B5A) : const Color(0xFFF59E0B),
+                      color: textColor,
                       fontWeight: FontWeight.bold,
                       fontSize: 10,
                     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/constants/app_colors.dart';
 import '../../shared/models/enums.dart';
 import 'app_card.dart';
@@ -230,8 +231,11 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
                     controller: _resultController,
                     onChanged: widget.onResultValueChanged,
                     keyboardType: widget.inputType == QCInputType.number 
-                        ? const TextInputType.numberWithOptions(decimal: true) 
+                        ? const TextInputType.numberWithOptions(signed: true, decimal: true) 
                         : TextInputType.text,
+                    inputFormatters: widget.inputType == QCInputType.number
+                        ? [FilteringTextInputFormatter.allow(RegExp(r'^-?\d*[,.]?\d*$'))]
+                        : null,
                     style: const TextStyle(fontSize: 13, color: AppColors.textMain),
                     decoration: InputDecoration(
                       hintText: widget.inputType == QCInputType.number ? 'Masukkan angka' : 'Masukkan teks',

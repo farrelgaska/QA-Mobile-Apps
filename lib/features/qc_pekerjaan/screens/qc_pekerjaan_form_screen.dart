@@ -374,6 +374,14 @@ class _QCPekerjaanFormScreenState extends State<QCPekerjaanFormScreen> {
                     break;
                 }
 
+                String? warningMessage;
+                if (item.inputType == InputType.number && _itemResults[index].trim().isNotEmpty) {
+                  final val = _itemResults[index].trim().replaceAll(',', '.');
+                  if (double.tryParse(val) == null) {
+                    warningMessage = 'Input harus berupa angka';
+                  }
+                }
+
                 return ChecklistItemCard(
                   itemNumber: index + 1,
                   title: item.title,
@@ -385,6 +393,7 @@ class _QCPekerjaanFormScreenState extends State<QCPekerjaanFormScreen> {
                   resultValue: _itemResults[index],
                   issueDescription: _itemIssues[index],
                   photos: _itemPhotos[index],
+                  warningMessage: warningMessage,
                   isLocked: false,
                   onStatusChanged: (status) {
                     setState(() {
