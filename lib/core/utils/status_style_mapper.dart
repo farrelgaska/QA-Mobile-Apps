@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 class StatusStyle {
   final Color background;
   final Color foreground;
+  final Color? border;
 
   const StatusStyle({
     required this.background,
     required this.foreground,
+    this.border,
   });
 }
 
@@ -21,6 +23,16 @@ class StatusStyleMapper {
 
     final normalized = statusStr.toLowerCase().trim();
 
+    if (normalized == 'draft' ||
+        normalized == 'qcreportstatus.draft' ||
+        normalized == 'reportstatus.draft') {
+      return const StatusStyle(
+        background: Color(0xFFF3F4F6),
+        foreground: Color(0xFF6B7280),
+        border: Color(0xFFE5E7EB),
+      );
+    }
+
     if (normalized == 'pending' ||
         normalized == 'menunggu' ||
         normalized == 'menunggu review' ||
@@ -28,12 +40,9 @@ class StatusStyleMapper {
         normalized == 'pending review' ||
         normalized == 'on progress' ||
         normalized == 'waiting' ||
-        normalized == 'draft' ||
         normalized == 'notevaluated' ||
         normalized == 'qcreportstatus.waiting' ||
-        normalized == 'qcreportstatus.draft' ||
         normalized == 'reportstatus.menunggu' ||
-        normalized == 'reportstatus.draft' ||
         normalized == 'qcresultstatus.notfilled' ||
         normalized == 'checkliststatus.belumdiisi') {
       return const StatusStyle(

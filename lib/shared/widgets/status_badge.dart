@@ -44,6 +44,7 @@ class StatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: style.background,
         borderRadius: BorderRadius.circular(100),
+        border: style.border != null ? Border.all(color: style.border!, width: 1) : null,
       ),
       child: Text(
         label,
