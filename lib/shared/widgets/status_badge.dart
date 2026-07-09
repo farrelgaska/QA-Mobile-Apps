@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/app_colors.dart';
 import '../../core/utils/status_helper.dart';
+import '../../core/utils/status_style_mapper.dart';
 import '../../shared/models/enums.dart';
 
 class StatusBadge extends StatelessWidget {
@@ -14,58 +14,39 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String label = '';
-    Color textColor = AppColors.textMuted;
-    Color bgColor = AppColors.backgroundSoft;
 
     if (status is ReportStatus) {
       label = StatusHelper.getReportStatusLabel(status as ReportStatus);
-      textColor = StatusHelper.getReportStatusTextColor(status as ReportStatus);
-      bgColor = StatusHelper.getReportStatusBgColor(status as ReportStatus);
     } else if (status is ChecklistStatus) {
       label = StatusHelper.getChecklistStatusLabel(status as ChecklistStatus);
-      textColor = StatusHelper.getChecklistStatusTextColor(status as ChecklistStatus);
-      bgColor = StatusHelper.getChecklistStatusBgColor(status as ChecklistStatus);
     } else if (status is QCReportStatus) {
       label = StatusHelper.getQCReportStatusLabel(status as QCReportStatus);
-      textColor = StatusHelper.getQCReportStatusTextColor(status as QCReportStatus);
-      bgColor = StatusHelper.getQCReportStatusBgColor(status as QCReportStatus);
     } else if (status is QCResultStatus) {
       label = StatusHelper.getQCResultStatusLabel(status as QCResultStatus);
-      textColor = StatusHelper.getQCResultStatusTextColor(status as QCResultStatus);
-      bgColor = StatusHelper.getQCResultStatusBgColor(status as QCResultStatus);
     } else if (status is String) {
       label = status as String;
       final lowerLabel = label.toLowerCase();
-      if (lowerLabel == 'aktif' || lowerLabel == 'lulus' || lowerLabel == 'disetujui' || lowerLabel == 'diterima' || lowerLabel == 'selesai') {
-        textColor = AppColors.approvedText;
-        bgColor = AppColors.approvedBg;
-      } else if (lowerLabel == 'nonaktif' || lowerLabel == 'ditolak' || lowerLabel == 'pending') {
-        label = 'Pending';
-        textColor = const Color(0xFFF59E0B);
-        bgColor = const Color(0xFFFFF4E5);
-      } else if (lowerLabel == 'menunggu' || lowerLabel == 'on progress') {
-        textColor = AppColors.waitingText;
-        bgColor = AppColors.waitingBg;
-      } else if (lowerLabel == 'revisi' || lowerLabel == 'tindak lanjut' || lowerLabel == 'perlu tindak lanjut' || lowerLabel == 'butuh revisi' || lowerLabel == 'perlu perbaikan') {
+      if (lowerLabel == 'aktif' || lowerLabel == 'lulus' || lowerLabel == 'disetujui' || lowerLabel == 'diterima' || lowerLabel == 'selesai' || lowerLabel == 'pass') {
+        label = 'Lulus';
+      } else if (lowerLabel == 'revisi' || lowerLabel == 'tindak lanjut' || lowerLabel == 'perlu tindak lanjut' || lowerLabel == 'butuh revisi' || lowerLabel == 'perlu perbaikan' || lowerLabel == 'fail' || lowerLabel == 'needfollowup') {
         label = 'Perlu Perbaikan';
-        textColor = AppColors.rejectedText; // Merah pastel
-        bgColor = AppColors.rejectedBg;
-      } else {
-        textColor = AppColors.textMuted;
-        bgColor = AppColors.backgroundSoft;
+      } else if (lowerLabel == 'nonaktif' || lowerLabel == 'ditolak' || lowerLabel == 'pending' || lowerLabel == 'menunggu' || lowerLabel == 'on progress' || lowerLabel == 'menunggu review admin') {
+        label = 'Pending';
       }
     }
+
+    final style = StatusStyleMapper.getStyle(status);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: bgColor,
+        color: style.background,
         borderRadius: BorderRadius.circular(100),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: textColor,
+          color: style.foreground,
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),

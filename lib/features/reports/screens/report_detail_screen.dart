@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/dummy/dummy_state.dart';
+import '../../../core/dummy/dummy_qc_material_templates.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/photo_grid.dart';
 import '../../../shared/widgets/screen_header.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../admin/services/qc_evaluation_service.dart';
 
 class RenderItem {
   final String label;
@@ -31,13 +33,26 @@ class RenderItem {
   });
 }
 
-class ReportDetailScreen extends StatelessWidget {
+class ReportDetailScreen extends StatefulWidget {
   final String reportId;
 
   const ReportDetailScreen({
     Key? key,
     required this.reportId,
   }) : super(key: key);
+
+  @override
+  State<ReportDetailScreen> createState() => _ReportDetailScreenState();
+}
+
+class _ReportDetailScreenState extends State<ReportDetailScreen> {
+  final _adminNoteController = TextEditingController();
+
+  @override
+  void dispose() {
+    _adminNoteController.dispose();
+    super.dispose();
+  }
 
   String _formatDate(DateTime dt) {
     final months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
@@ -50,7 +65,7 @@ class ReportDetailScreen extends StatelessWidget {
     
     // Find the report
     final report = state.reports.firstWhere(
-      (r) => r.id == reportId,
+      (r) => r.id == widget.reportId,
       orElse: () => state.reports[0],
     );
 
@@ -60,13 +75,35 @@ class ReportDetailScreen extends StatelessWidget {
     final List<RenderItem> renderItems = [];
     if (report.checklistAnswers != null && report.checklistAnswers!.isNotEmpty) {
       for (var ans in report.checklistAnswers!) {
+        dynamic evalStatus = ans.status;
+        String? warning = ans.warningMessage;
+        if (state.currentUser.role == 'Admin' && report.status == QCReportStatus.waiting) {
+          final template = dummyQCMaterialTemplates.firstWhere(
+            (t) => t.code == report.formCode,
+            orElse: () => dummyQCMaterialTemplates[0],
+          );
+          final item = template.checklistItems.firstWhere(
+            (it) => it.id == ans.itemId,
+            orElse: () => template.checklistItems[0],
+          );
+          evalStatus = QCEvaluationService.evaluateMaterialItem(
+            item: item,
+            value: ans.value?.toString() ?? '',
+          );
+          if (evalStatus == QCResultStatus.fail) {
+            warning = 'Kondisi tidak sesuai standar';
+          } else {
+            warning = null;
+          }
+        }
+
         renderItems.add(
           RenderItem(
             label: ans.paramName ?? 'Parameter',
             standard: ans.standardText ?? 'Standard',
             value: ans.value?.toString() ?? '',
-            status: ans.status,
-            warningMessage: ans.warningMessage,
+            status: evalStatus,
+            warningMessage: warning,
             issueNote: ans.issueNote ?? '',
             photos: ans.photoPaths,
             unit: ans.unit,
@@ -75,13 +112,22 @@ class ReportDetailScreen extends StatelessWidget {
       }
     } else if (report.checklistResults != null) {
       for (var res in report.checklistResults!) {
+        dynamic evalStatus = res.status;
+        if (state.currentUser.role == 'Admin' && report.status == QCReportStatus.waiting) {
+          evalStatus = QCEvaluationService.evaluatePekerjaanItem(
+            title: res.paramName,
+            inputType: res.inputType == 'Angka' ? InputType.number : (res.inputType == 'Pilihan' ? InputType.choice : InputType.text),
+            value: res.resultValue,
+          );
+        }
+
         renderItems.add(
           RenderItem(
             label: res.paramName,
             standard: res.standard,
             value: res.resultValue,
-            status: res.status,
-            warningMessage: null,
+            status: evalStatus,
+            warningMessage: evalStatus == ChecklistStatus.tidakSesuai ? 'Kondisi tidak sesuai standar' : null,
             issueNote: res.issueNote,
             photos: res.photos,
             unit: res.unit,
@@ -344,8 +390,113 @@ class ReportDetailScreen extends StatelessWidget {
                 const SizedBox(height: 24),
               ],
 
-              // Edit Action Button (visible for draft/needFollowUp)
-              if (isEditable) ...[
+              // Admin Action Panel (only visible for Admin role and when report status is waiting)
+              if (state.currentUser.role == 'Admin' && report.status == QCReportStatus.waiting) ...[
+                const SizedBox(height: 24),
+                AppCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Panel Evaluasi Admin',
+                        style: TextStyle(
+                          color: AppColors.textMain,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _adminNoteController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          labelText: 'Catatan Admin',
+                          hintText: 'Tulis instruksi perbaikan atau catatan persetujuan...',
+                          labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                          hintStyle: const TextStyle(color: AppColors.textSoft, fontSize: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: AppButton(
+                              text: 'Minta Perbaikan',
+                              variant: AppButtonVariant.secondary,
+                              onPressed: () {
+                                final updated = report.copyWith(
+                                  status: QCReportStatus.needFollowUp,
+                                  adminNote: _adminNoteController.text.trim().isEmpty 
+                                      ? 'Harap perbaiki beberapa temuan.' 
+                                      : _adminNoteController.text.trim(),
+                                );
+                                state.updateReport(updated);
+                                setState(() {});
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Laporan ditolak, diminta perbaikan.')),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: AppButton(
+                              text: 'Tinjau Ulang',
+                              variant: AppButtonVariant.secondary,
+                              onPressed: () {
+                                final updated = report.copyWith(
+                                  status: QCReportStatus.rejected, // Mapped to Pending orange
+                                  adminNote: _adminNoteController.text.trim().isEmpty 
+                                      ? 'Tinjau ulang ditangguhkan.' 
+                                      : _adminNoteController.text.trim(),
+                                );
+                                state.updateReport(updated);
+                                setState(() {});
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Status laporan diubah menjadi Pending.')),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: AppButton(
+                              text: 'Setujui',
+                              variant: AppButtonVariant.primary,
+                              onPressed: () {
+                                final updated = report.copyWith(
+                                  status: QCReportStatus.approved,
+                                  adminNote: _adminNoteController.text.trim().isEmpty 
+                                      ? 'Laporan disetujui.' 
+                                      : _adminNoteController.text.trim(),
+                                );
+                                state.updateReport(updated);
+                                setState(() {});
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Laporan berhasil disetujui.')),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+              ],
+
+              // Edit Action Button (visible for draft/needFollowUp, only for QA Staff)
+              if (isEditable && state.currentUser.role == 'QA Staff') ...[
                 AppButton(
                   text: report.status == QCReportStatus.needFollowUp ? 'Perbaiki Laporan' : 'Edit Laporan',
                   variant: AppButtonVariant.primary,

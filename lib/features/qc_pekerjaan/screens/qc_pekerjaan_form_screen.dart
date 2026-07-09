@@ -12,6 +12,7 @@ import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/checklist_item_card.dart';
 import '../../../shared/widgets/screen_header.dart';
 import '../../../shared/widgets/confirmation_modal.dart';
+import '../../../core/utils/validators.dart';
 
 class QCPekerjaanFormScreen extends StatefulWidget {
   final String pekerjaanId;
@@ -55,7 +56,7 @@ class _QCPekerjaanFormScreenState extends State<QCPekerjaanFormScreen> {
 
       // Initialize lists matching checklist items
       for (var _ in _pekerjaan.checklistItems) {
-        _itemStatuses.add(ChecklistStatus.lulus);
+        _itemStatuses.add(ChecklistStatus.belumDiisi);
         _itemResults.add('');
         _itemIssues.add('');
         _itemPhotos.add([]);
@@ -118,8 +119,7 @@ class _QCPekerjaanFormScreenState extends State<QCPekerjaanFormScreen> {
       }
 
       if (item.inputType == InputType.number) {
-        final normalized = valStr.replaceAll(',', '.');
-        if (double.tryParse(normalized) == null) {
+        if (!QCValidators.isValidNumber(valStr)) {
           _showWarningSnackbar('Form $formNumber - ${item.title}: masukkan angka yang valid');
           return false;
         }
@@ -210,7 +210,7 @@ class _QCPekerjaanFormScreenState extends State<QCPekerjaanFormScreen> {
                   : 'Teks',
           unit: item.unit,
           resultValue: _itemResults[i],
-          status: _itemStatuses[i],
+          status: ChecklistStatus.belumDiisi,
           issueNote: _itemIssues[i],
           photos: _itemPhotos[i],
         ),

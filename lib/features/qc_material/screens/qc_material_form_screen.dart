@@ -17,6 +17,7 @@ import '../../../shared/widgets/checklist_item_card.dart';
 import '../../../shared/widgets/screen_header.dart';
 import '../../../shared/widgets/confirmation_modal.dart';
 import '../../../shared/widgets/work_location_selector.dart';
+import '../../../core/utils/validators.dart';
 
 class QCMaterialFormScreen extends StatefulWidget {
   final String materialId;
@@ -188,13 +189,6 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
     });
   }
 
-  String _calculateAutoConclusion() {
-    final result = QCValidationHelper.validateBeforeSubmit(
-      items: _template.checklistItems,
-      answers: _answers,
-    );
-    return result.finalConclusion;
-  }
 
   void _saveAsDraft() {
     showDialog(
@@ -263,8 +257,7 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
       }
 
       if (item.inputType == QCInputType.number) {
-        final normalized = valStr.replaceAll(',', '.');
-        if (double.tryParse(normalized) == null) {
+        if (!QCValidators.isValidNumber(valStr)) {
           return 'Form $formNumber - ${item.label}: masukkan angka yang valid';
         }
       }
@@ -365,14 +358,14 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
       siteName: workLoc.siteName,
       area: workLoc.area ?? '',
       detailLocation: workLoc.segment ?? '',
-      checklistAnswers: List.from(_answers),
+      checklistAnswers: _answers.map((ans) => ans.copyWith(status: QCResultStatus.notFilled)).toList(),
       photos: [],
       staffNote: _staffNoteController.text,
       adminNote: status == QCReportStatus.draft ? null : 'Menunggu review dari Admin.',
       formCode: _template.code,
       workLocation: workLoc,
       generalInfo: genInfo,
-      finalConclusion: conclusion ?? _calculateAutoConclusion(),
+      finalConclusion: status == QCReportStatus.draft ? 'Belum Lengkap' : 'Pending',
     );
 
     _state.addReport(newReport);

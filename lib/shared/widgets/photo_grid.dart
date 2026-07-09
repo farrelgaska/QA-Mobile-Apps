@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 
@@ -18,7 +17,8 @@ class PhotoGrid extends StatelessWidget {
     } else if (path.startsWith('http')) {
       return NetworkImage(path);
     } else {
-      return FileImage(File(path));
+      // Safe prototype fallback to avoid dart:io File on Flutter Web (Chrome)
+      return const AssetImage('assets/images/cable_work_sample.png');
     }
   }
 

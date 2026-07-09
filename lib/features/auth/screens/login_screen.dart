@@ -40,10 +40,19 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     final nikInput = _nikController.text.trim();
-    final matchingUser = dummyUsers.firstWhere(
+    final matchingUserIndex = dummyUsers.indexWhere(
       (u) => u.nik.toLowerCase() == nikInput.toLowerCase() || u.name.toLowerCase() == nikInput.toLowerCase(),
-      orElse: () => dummyUsers[0],
     );
+
+    if (matchingUserIndex == -1) {
+      setState(() {
+        _isLoading = false;
+        _nikError = 'Akun tidak ditemukan';
+      });
+      return;
+    }
+
+    final matchingUser = dummyUsers[matchingUserIndex];
     DummyState().currentUser = matchingUser;
 
     Future.delayed(const Duration(milliseconds: 800), () {
@@ -168,6 +177,38 @@ class _LoginScreenState extends State<LoginScreen> {
                         text: 'Masuk',
                         isLoading: _isLoading,
                         onPressed: _handleLogin,
+                      ),
+                      const SizedBox(height: 20),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.waitingBg,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.waitingText.withOpacity(0.3)),
+                        ),
+                        child: const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Demo Akun Kredensial:',
+                              style: TextStyle(
+                                color: AppColors.waitingText,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                            SizedBox(height: 6),
+                            Text(
+                              '• QA Staff: NIK-908271 (atau ketik "yanuar")',
+                              style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              '• Admin: admin (atau ketik "budi")',
+                              style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
