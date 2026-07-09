@@ -77,7 +77,6 @@ class StatusStyleMapper {
         normalized == 'fail' ||
         normalized == 'needfollowup' ||
         normalized == 'qcreportstatus.needfollowup' ||
-        normalized == 'qcreportstatus.rejected' ||
         normalized == 'reportstatus.revisi' ||
         normalized == 'reportstatus.ditolak' ||
         normalized == 'reportstatus.perlutindaklanjut' ||

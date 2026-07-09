@@ -60,6 +60,5 @@ enum QCReportStatus {
   draft,
   waiting,
   approved,
-  rejected,
-  needFollowUp
+  needFollowUp,
 }

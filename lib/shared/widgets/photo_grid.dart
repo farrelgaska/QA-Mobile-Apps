@@ -18,7 +18,7 @@ class PhotoGrid extends StatelessWidget {
       return NetworkImage(path);
     } else {
       // Safe prototype fallback to avoid dart:io File on Flutter Web (Chrome)
-      return const AssetImage('assets/images/cable_work_sample.png');
+      return const AssetImage('assets/images/placeholder.png');
     }
   }
 

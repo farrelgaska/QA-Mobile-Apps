@@ -95,7 +95,6 @@ class StatusHelper {
         return 'Menunggu Review';
       case QCReportStatus.approved:
         return 'Disetujui';
-      case QCReportStatus.rejected:
       case QCReportStatus.needFollowUp:
         return 'Perlu Perbaikan';
     }
@@ -109,7 +108,6 @@ class StatusHelper {
         return const Color(0xFFF59E0B);
       case QCReportStatus.approved:
         return const Color(0xFF006B5A);
-      case QCReportStatus.rejected:
       case QCReportStatus.needFollowUp:
         return const Color(0xFFEF4444);
     }
@@ -123,7 +121,6 @@ class StatusHelper {
         return const Color(0xFFFFF4E5);
       case QCReportStatus.approved:
         return const Color(0xFFE8F7F1);
-      case QCReportStatus.rejected:
       case QCReportStatus.needFollowUp:
         return const Color(0xFFFDECEC);
     }

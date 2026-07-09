@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/dummy/dummy_state.dart';
+import '../../../core/utils/dummy_auth.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/stat_card.dart';
@@ -228,7 +229,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildQcMaterialSections() {
     final materialReports = _state.reports
-        .where((r) => r.type == QCType.material && r.checkedByNik == _state.currentUser.nik)
+        .where((r) => r.type == QCType.material && r.createdByNik == DummyAuth.current.nik)
         .toList();
     final totalMat = materialReports.length;
     final matApproved = materialReports.where((r) => r.status == QCReportStatus.approved).length;
@@ -392,7 +393,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildQcPekerjaanSections() {
     final pekerjaanReports = _state.reports
-        .where((r) => r.type == QCType.pekerjaan && r.checkedByNik == _state.currentUser.nik)
+        .where((r) => r.type == QCType.pekerjaan && r.createdByNik == DummyAuth.current.nik)
         .toList();
     final totalPek = pekerjaanReports.length;
     final pekApproved = pekerjaanReports.where((r) => r.status == QCReportStatus.approved).length;

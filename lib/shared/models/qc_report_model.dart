@@ -57,6 +57,7 @@ class QCReportModel {
   final QCReportStatus status;
   final String checkedByName;
   final String checkedByNik;
+  final String createdByNik;
   final DateTime date;
   final String siteId;
   final String siteName;
@@ -100,7 +101,8 @@ class QCReportModel {
     this.workLocation,
     this.generalInfo,
     this.finalConclusion,
-  });
+    String? createdByNik,
+  }) : createdByNik = createdByNik ?? checkedByNik;
 
   QCReportModel copyWith({
     String? id,
@@ -109,6 +111,7 @@ class QCReportModel {
     QCReportStatus? status,
     String? checkedByName,
     String? checkedByNik,
+    String? createdByNik,
     DateTime? date,
     String? siteId,
     String? siteName,
@@ -131,6 +134,7 @@ class QCReportModel {
       status: status ?? this.status,
       checkedByName: checkedByName ?? this.checkedByName,
       checkedByNik: checkedByNik ?? this.checkedByNik,
+      createdByNik: createdByNik ?? this.createdByNik,
       date: date ?? this.date,
       siteId: siteId ?? this.siteId,
       siteName: siteName ?? this.siteName,

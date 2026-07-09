@@ -8,6 +8,7 @@ class AppTheme {
     return ThemeData(
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.background,
+      brightness: Brightness.light,
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
         secondary: AppColors.primaryDark,
@@ -47,28 +48,164 @@ class AppTheme {
           borderRadius: AppRadius.cardBorderRadius,
         ),
       ),
-      inputDecorationTheme: InputDecorationTheme(
+      inputDecorationTheme: const InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.backgroundSoft,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        fillColor: Color(0xFF242424),
+        hintStyle: TextStyle(
+          color: Color(0xFF9CA3AF),
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+        ),
+        labelStyle: TextStyle(
+          color: Color(0xFFE5E7EB),
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+        prefixIconColor: Color(0xFF9CA3AF),
+        suffixIconColor: Color(0xFF9CA3AF),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: AppRadius.mdBorderRadius,
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          borderSide: BorderSide(color: Color(0xFF374151)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: AppRadius.mdBorderRadius,
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          borderSide: BorderSide(color: Color(0xFF374151)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: AppRadius.mdBorderRadius,
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          borderSide: BorderSide(color: AppColors.primary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: AppRadius.mdBorderRadius,
-          borderSide: const BorderSide(color: AppColors.rejectedText, width: 1.5),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          borderSide: BorderSide(color: Color(0xFFDC2626)),
         ),
-        hintStyle: const TextStyle(color: AppColors.textSoft, fontSize: 14),
-        labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14, fontWeight: FontWeight.w600),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          borderSide: BorderSide(color: Color(0xFFDC2626), width: 1.5),
+        ),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primary;
+          }
+          return Colors.transparent;
+        }),
+        checkColor: WidgetStateProperty.all(Colors.white),
+        side: const BorderSide(
+          color: Color(0xFF9CA3AF),
+          width: 1.5,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+    );
+  }
+
+  /// Simple dark theme — inverts backgrounds and text while keeping brand colors
+  static ThemeData get darkTheme {
+    const darkBg = Color(0xFF121212);
+    const darkSurface = Color(0xFF1E1E1E);
+    const darkTextMain = Color(0xFFF1F5F4);
+    const darkTextMuted = Color(0xFF9CA3AF);
+
+    return ThemeData(
+      primaryColor: AppColors.primary,
+      scaffoldBackgroundColor: darkBg,
+      brightness: Brightness.dark,
+      colorScheme: const ColorScheme.dark(
+        primary: AppColors.primary,
+        secondary: AppColors.primaryDark,
+        surface: darkSurface,
+      ),
+      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).copyWith(
+        titleLarge: GoogleFonts.inter(
+          color: darkTextMain,
+          fontWeight: FontWeight.bold,
+          fontSize: 22,
+        ),
+        titleMedium: GoogleFonts.inter(
+          color: darkTextMain,
+          fontWeight: FontWeight.w600,
+          fontSize: 16,
+        ),
+        bodyLarge: GoogleFonts.inter(
+          color: darkTextMain,
+          fontSize: 14,
+        ),
+        bodyMedium: GoogleFonts.inter(
+          color: darkTextMuted,
+          fontSize: 14,
+        ),
+        labelLarge: GoogleFonts.inter(
+          color: AppColors.primary,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+          letterSpacing: 1.2,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        color: darkSurface,
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.3),
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.cardBorderRadius,
+        ),
+      ),
+      inputDecorationTheme: const InputDecorationTheme(
+        filled: true,
+        fillColor: Color(0xFF242424),
+        hintStyle: TextStyle(
+          color: Color(0xFF9CA3AF),
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+        ),
+        labelStyle: TextStyle(
+          color: Color(0xFFE5E7EB),
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+        prefixIconColor: Color(0xFF9CA3AF),
+        suffixIconColor: Color(0xFF9CA3AF),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          borderSide: BorderSide(color: Color(0xFF374151)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          borderSide: BorderSide(color: Color(0xFF374151)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          borderSide: BorderSide(color: Color(0xFFDC2626)),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          borderSide: BorderSide(color: Color(0xFFDC2626), width: 1.5),
+        ),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primary;
+          }
+          return Colors.transparent;
+        }),
+        checkColor: WidgetStateProperty.all(Colors.white),
+        side: const BorderSide(
+          color: Color(0xFF9CA3AF),
+          width: 1.5,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+        ),
       ),
     );
   }

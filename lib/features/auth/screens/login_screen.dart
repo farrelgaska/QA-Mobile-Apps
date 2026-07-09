@@ -135,24 +135,36 @@ class _LoginScreenState extends State<LoginScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               SizedBox(
                                 width: 24,
                                 height: 24,
                                 child: Checkbox(
                                   value: _rememberMe,
-                                  activeColor: AppColors.primary,
                                   onChanged: (val) {
                                     setState(() {
                                       _rememberMe = val ?? false;
                                     });
                                   },
+                                  activeColor: const Color(0xFF006B5A),
+                                  checkColor: Colors.white,
+                                  side: const BorderSide(
+                                    color: Color(0xFF9CA3AF),
+                                    width: 1.5,
+                                  ),
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  visualDensity: VisualDensity.compact,
                                 ),
                               ),
                               const SizedBox(width: 8),
                               const Text(
                                 'Ingat Saya',
-                                style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                                style: TextStyle(
+                                  color: Color(0xFF6B7280),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ],
                           ),

@@ -170,10 +170,19 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
                   controller: _issueController,
                   onChanged: widget.onIssueDescriptionChanged,
                   maxLines: 2,
-                  style: const TextStyle(fontSize: 12, color: AppColors.textMain),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFFF3F4F6),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  cursorColor: const Color(0xFF006B5A),
                   decoration: const InputDecoration(
                     hintText: 'Jelaskan detail ketidaksesuaian material...',
                     contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    hintStyle: TextStyle(
+                      color: Color(0xFF9CA3AF),
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ),
@@ -236,10 +245,19 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
                     inputFormatters: widget.inputType == QCInputType.number
                         ? [FilteringTextInputFormatter.allow(RegExp(r'^-?\d*[,.]?\d*$'))]
                         : null,
-                    style: const TextStyle(fontSize: 13, color: AppColors.textMain),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFFF3F4F6),
+                      fontWeight: FontWeight.w500,
+                    ),
+                    cursorColor: const Color(0xFF006B5A),
                     decoration: InputDecoration(
                       hintText: widget.inputType == QCInputType.number ? 'Masukkan angka' : 'Masukkan teks',
                       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      hintStyle: const TextStyle(
+                        color: Color(0xFF9CA3AF),
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ),

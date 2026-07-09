@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/dummy/dummy_state.dart';
+import '../../../core/utils/dummy_auth.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/widgets/filter_tabs.dart';
 import '../../../shared/widgets/report_card.dart';
@@ -83,7 +84,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget build(BuildContext context) {
     final filteredReports = _state.reports.where((report) {
       // Filter: QA Staff hanya boleh melihat laporan yang dibuat oleh dirinya sendiri
-      if (report.checkedByNik != _state.currentUser.nik) return false;
+      if (report.createdByNik != DummyAuth.current.nik) return false;
 
       final matchesSearch = report.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           report.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -94,7 +95,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final tabStatus = _mapTabToReportStatus(_selectedTab);
       if (tabStatus != null) {
         if (tabStatus == QCReportStatus.needFollowUp) {
-          return report.status == QCReportStatus.needFollowUp || report.status == QCReportStatus.rejected;
+          return report.status == QCReportStatus.needFollowUp;
         }
         return report.status == tabStatus;
       }

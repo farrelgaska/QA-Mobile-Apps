@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/dummy/dummy_state.dart';
 import '../../../core/dummy/dummy_sites.dart';
+import '../../../core/utils/dummy_auth.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/stat_card.dart';
@@ -125,7 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     // Recalculate stats dynamically from DummyState based on current user NIK
-    final userReports = _state.reports.where((r) => r.checkedByNik == _state.currentUser.nik).toList();
+    final userReports = _state.reports.where((r) => r.createdByNik == DummyAuth.current.nik).toList();
     final totalQc = userReports.length;
     final waitingQc = userReports.where((r) => r.status == QCReportStatus.waiting).length;
     final revisionQc = userReports.where((r) => r.status == QCReportStatus.needFollowUp).length;
