@@ -17,7 +17,6 @@ import '../../../shared/widgets/checklist_item_card.dart';
 import '../../../shared/widgets/screen_header.dart';
 import '../../../shared/widgets/confirmation_modal.dart';
 import '../../../shared/widgets/work_location_selector.dart';
-import '../../../shared/widgets/qc_conclusion_box.dart';
 
 class QCMaterialFormScreen extends StatefulWidget {
   final String materialId;
@@ -251,26 +250,35 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
       final formNumber = i + 1;
 
       final isChoiceOrBool = item.inputType == QCInputType.choice || item.inputType == QCInputType.booleanCheck;
+      final valStr = answer.value.toString().trim();
 
-      if (answer.value.toString().trim().isEmpty) {
-        if (isChoiceOrBool) {
+      if (valStr.isEmpty) {
+        if (item.inputType == QCInputType.number) {
+          return 'Form $formNumber - ${item.label}: isi nilai aktual terlebih dahulu';
+        } else if (isChoiceOrBool) {
           return 'Form $formNumber - ${item.label}: pilih kesesuaian fisik terlebih dahulu';
         } else {
           return 'Form $formNumber - ${item.label}: isi hasil input terlebih dahulu';
         }
       }
-      if (answer.status == QCResultStatus.notFilled) {
-        if (isChoiceOrBool) {
-          return 'Form $formNumber - ${item.label}: pilih kesesuaian fisik terlebih dahulu';
-        } else {
-          return 'Form $formNumber - ${item.label}: isi hasil input terlebih dahulu';
+
+      if (item.inputType == QCInputType.number) {
+        final normalized = valStr.replaceAll(',', '.');
+        if (double.tryParse(normalized) == null) {
+          return 'Form $formNumber - ${item.label}: masukkan angka yang valid';
         }
       }
+
       if (answer.photoPaths.isEmpty) {
         return 'Form $formNumber - ${item.label}: tambahkan dokumentasi foto terlebih dahulu';
       }
-      if ((answer.status == QCResultStatus.fail || answer.status == QCResultStatus.needFollowUp) &&
-          (answer.issueNote == null || answer.issueNote!.trim().isEmpty)) {
+
+      final bool isNonIdeal = valStr == 'Tidak' || 
+                              valStr == 'Tidak Sesuai' ||
+                              (item.inputType == QCInputType.choice && 
+                               !['sesuai', 'rapi', 'kencang', 'ada', 'lengkap', 'ya', 'ok', 'diterima', 'sesuai standar'].contains(valStr.toLowerCase()));
+
+      if (isChoiceOrBool && isNonIdeal && (answer.issueNote == null || answer.issueNote!.trim().isEmpty)) {
         return 'Form $formNumber - ${item.label}: isi keterangan masalah terlebih dahulu';
       }
     }
@@ -308,14 +316,9 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
         message: 'Apakah seluruh data pengujian sudah benar dan siap dikirim?',
         confirmText: 'Kirim',
         onConfirm: () {
-          final validationResult = QCValidationHelper.validateBeforeSubmit(
-            items: _template.checklistItems,
-            answers: _answers,
-          );
-          final isDiterima = validationResult.finalConclusion == 'Diterima';
           _persistReport(
-            isDiterima ? QCReportStatus.approved : QCReportStatus.rejected,
-            conclusion: validationResult.finalConclusion,
+            QCReportStatus.waiting,
+            conclusion: 'Pending',
           );
         },
       ),
@@ -380,11 +383,14 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Berhasil', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+        title: Text(
+          status == QCReportStatus.draft ? 'Berhasil' : 'Laporan berhasil dikirim',
+          style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+        ),
         content: Text(
           status == QCReportStatus.draft
               ? 'Laporan QC Material berhasil disimpan sebagai draft.'
-              : 'Laporan QC Material berhasil dikirim ke Admin.',
+              : 'Data QC berhasil dikirim dan akan ditinjau oleh Admin untuk penilaian standar.',
         ),
         actions: [
           TextButton(
@@ -409,8 +415,6 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
   @override
   Widget build(BuildContext context) {
     if (!_isInit) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-
-    final conclusion = _calculateAutoConclusion();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -626,20 +630,7 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
                 );
               }),
 
-              // 4. Section: Kesimpulan Otomatis
-              const Text(
-                'Evaluasi Mutu Otomatis',
-                style: TextStyle(
-                  color: AppColors.textMain,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 12),
-              QCConclusionBox(conclusionState: conclusion),
-              const SizedBox(height: 20),
-
-              // 5. Staff Note Card
+              // 4. Staff Note Card
               AppCard(
                 padding: const EdgeInsets.all(20),
                 child: AppInput(

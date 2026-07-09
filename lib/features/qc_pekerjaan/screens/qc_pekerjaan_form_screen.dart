@@ -99,39 +99,43 @@ class _QCPekerjaanFormScreenState extends State<QCPekerjaanFormScreen> {
   bool _validateForm() {
     for (int i = 0; i < _pekerjaan.checklistItems.length; i++) {
       final item = _pekerjaan.checklistItems[i];
-      final status = _itemStatuses[i];
       final formNumber = i + 1;
 
       final isChoiceOrBool = item.inputType == InputType.choice;
+      final valStr = _itemResults[i].trim();
 
-      // Special validation for Redaman auto-check
-      if (item.title.toLowerCase().contains('redaman')) {
-        final val = _itemResults[i];
-        if (val.trim().isEmpty) {
-          _showWarningSnackbar('Form $formNumber - ${item.title}: isi nilai redaman terlebih dahulu');
+      if (valStr.isEmpty) {
+        if (item.inputType == InputType.number) {
+          _showWarningSnackbar('Form $formNumber - ${item.title}: isi nilai aktual terlebih dahulu');
+          return false;
+        } else if (isChoiceOrBool) {
+          _showWarningSnackbar('Form $formNumber - ${item.title}: pilih kesesuaian fisik terlebih dahulu');
+          return false;
+        } else {
+          _showWarningSnackbar('Form $formNumber - ${item.title}: isi hasil input terlebih dahulu');
           return false;
         }
-        final parsed = double.tryParse(val.replaceAll(',', '.'));
-        if (parsed == null) {
+      }
+
+      if (item.inputType == InputType.number) {
+        final normalized = valStr.replaceAll(',', '.');
+        if (double.tryParse(normalized) == null) {
           _showWarningSnackbar('Form $formNumber - ${item.title}: masukkan angka yang valid');
           return false;
         }
       }
 
-      if (status == ChecklistStatus.belumDiisi || _itemResults[i].trim().isEmpty) {
-        if (isChoiceOrBool) {
-          _showWarningSnackbar('Form $formNumber - ${item.title}: pilih kesesuaian fisik terlebih dahulu');
-        } else {
-          _showWarningSnackbar('Form $formNumber - ${item.title}: isi hasil input terlebih dahulu');
-        }
-        return false;
-      }
       if (_itemPhotos[i].isEmpty) {
         _showWarningSnackbar('Form $formNumber - ${item.title}: tambahkan dokumentasi foto terlebih dahulu');
         return false;
       }
-      if ((status == ChecklistStatus.tidakSesuai || status == ChecklistStatus.perluTindakLanjut) &&
-          _itemIssues[i].trim().isEmpty) {
+
+      final bool isNonIdeal = valStr == 'Tidak' || 
+                              valStr == 'Tidak Sesuai' ||
+                              (isChoiceOrBool && 
+                               !['sesuai', 'rapi', 'kencang', 'ada', 'lengkap', 'ya', 'ok', 'diterima', 'sesuai standar'].contains(valStr.toLowerCase()));
+
+      if (isChoiceOrBool && isNonIdeal && _itemIssues[i].trim().isEmpty) {
         _showWarningSnackbar('Form $formNumber - ${item.title}: isi keterangan masalah terlebih dahulu');
         return false;
       }
@@ -241,11 +245,14 @@ class _QCPekerjaanFormScreenState extends State<QCPekerjaanFormScreen> {
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Berhasil', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+        title: Text(
+          status == QCReportStatus.draft ? 'Berhasil' : 'Laporan berhasil dikirim',
+          style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+        ),
         content: Text(
           status == QCReportStatus.draft
               ? 'Laporan QC Pekerjaan berhasil disimpan sebagai draft.'
-              : 'Laporan QC Pekerjaan berhasil dikirim ke Admin.',
+              : 'Data QC berhasil dikirim dan akan ditinjau oleh Admin untuk penilaian standar.',
         ),
         actions: [
           TextButton(

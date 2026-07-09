@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/dummy/dummy_state.dart';
+import '../../../core/dummy/dummy_users.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/app_card.dart';
@@ -36,6 +38,13 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     setState(() => _isLoading = true);
+
+    final nikInput = _nikController.text.trim();
+    final matchingUser = dummyUsers.firstWhere(
+      (u) => u.nik.toLowerCase() == nikInput.toLowerCase() || u.name.toLowerCase() == nikInput.toLowerCase(),
+      orElse: () => dummyUsers[0],
+    );
+    DummyState().currentUser = matchingUser;
 
     Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted) {

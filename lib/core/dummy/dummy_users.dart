@@ -30,4 +30,11 @@ final List<UserModel> dummyUsers = [
     nik: 'NIK-908274',
     site: dummySites[3],
   ),
+  UserModel(
+    id: 'user-admin',
+    name: 'Budi (Admin)',
+    role: 'Admin',
+    nik: 'admin',
+    site: dummySites[0],
+  ),
 ];

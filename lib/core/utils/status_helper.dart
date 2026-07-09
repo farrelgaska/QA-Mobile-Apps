@@ -9,7 +9,7 @@ class StatusHelper {
       case ReportStatus.draft:
         return 'Draft';
       case ReportStatus.menunggu:
-        return 'Menunggu';
+        return 'Menunggu Review Admin';
       case ReportStatus.disetujui:
         return 'Disetujui';
       case ReportStatus.ditolak:
@@ -96,7 +96,7 @@ class StatusHelper {
       case QCReportStatus.draft:
         return 'Draft';
       case QCReportStatus.waiting:
-        return 'Menunggu';
+        return 'Menunggu Review Admin';
       case QCReportStatus.approved:
         return 'Disetujui';
       case QCReportStatus.rejected:

@@ -173,7 +173,7 @@ class ReportDetailScreen extends StatelessWidget {
                     _buildInfoRow('Site Lokasi', report.siteName),
                     _buildInfoRow('Area / Zona', report.area),
                     _buildInfoRow('Detail Titik', report.detailLocation),
-                    if (report.finalConclusion != null)
+                    if (report.finalConclusion != null && state.currentUser.role == 'Admin')
                       _buildInfoRow('Kesimpulan', report.finalConclusion!),
                   ],
                 ),
@@ -217,8 +217,10 @@ class ReportDetailScreen extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            StatusBadge(status: result.status),
+                            if (state.currentUser.role == 'Admin') ...[
+                              const SizedBox(width: 8),
+                              StatusBadge(status: result.status),
+                            ],
                           ],
                         ),
                         const SizedBox(height: 4),

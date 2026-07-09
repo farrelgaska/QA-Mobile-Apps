@@ -84,8 +84,15 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
 
   @override
   Widget build(BuildContext context) {
-    final showIssueField = widget.currentStatus == QCResultStatus.fail || 
-        widget.currentStatus == QCResultStatus.needFollowUp;
+    final bool isBooleanOrChoice = widget.inputType == QCInputType.booleanCheck || 
+                                    widget.inputType == QCInputType.choice;
+    final bool isNonIdeal = widget.resultValue == 'Tidak' || 
+                            widget.resultValue == 'Tidak Sesuai' ||
+                            (widget.inputType == QCInputType.choice && 
+                             widget.resultValue.isNotEmpty && 
+                             !['sesuai', 'rapi', 'kencang', 'ada', 'lengkap', 'ya', 'ok', 'diterima', 'sesuai standar'].contains(widget.resultValue.toLowerCase()));
+    
+    final showIssueField = isBooleanOrChoice && isNonIdeal;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -132,14 +139,17 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
             // 1. Render Input Field by inputType
             _buildInputField(),
             
-            // Render Warning Message if fail
-            if (widget.warningMessage != null && widget.warningMessage!.isNotEmpty) ...[
+            // Render Warning Message if fail (only show formatting/filling errors to staff, not standard failures)
+            if (widget.warningMessage != null &&
+                widget.warningMessage!.isNotEmpty &&
+                widget.warningMessage != 'Kondisi tidak sesuai standar' &&
+                widget.warningMessage != 'Nilai tidak sesuai standar' &&
+                !widget.warningMessage!.contains('kurang dari') &&
+                !widget.warningMessage!.contains('melebihi') &&
+                !widget.warningMessage!.contains('standar')) ...[
               ValidationWarningBox(message: widget.warningMessage!),
               const SizedBox(height: 12),
             ],
-
-            // 2. Selection for QCResultStatus or Auto-status
-            _buildAutoStatusSection(widget.currentStatus),
 
             // 3. Conditional Issue Note Input Field
             if (showIssueField) ...[
@@ -361,76 +371,6 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildAutoStatusSection(QCResultStatus status) {
-    Color bgColor;
-    Color textColor;
-    String label;
-    String helperText;
-
-    if (status == QCResultStatus.pass) {
-      bgColor = const Color(0xFFE8F7F1);
-      textColor = const Color(0xFF006B5A);
-      label = 'Lulus';
-      helperText = 'Kondisi sesuai standar';
-    } else if (status == QCResultStatus.fail || status == QCResultStatus.needFollowUp) {
-      bgColor = const Color(0xFFFDECEC);
-      textColor = const Color(0xFFEF4444);
-      label = 'Perlu Perbaikan';
-      helperText = 'Kondisi tidak sesuai standar';
-    } else {
-      bgColor = const Color(0xFFF3F4F6);
-      textColor = const Color(0xFF6B7280);
-      label = 'Belum Dinilai';
-      helperText = 'Pilih parameter terlebih dahulu';
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Hasil Inspeksi',
-          style: TextStyle(
-            color: AppColors.textMain,
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                helperText,
-                style: TextStyle(
-                  color: status == QCResultStatus.notFilled ? AppColors.textSoft : textColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-      ],
     );
   }
 }
