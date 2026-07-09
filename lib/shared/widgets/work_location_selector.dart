@@ -6,7 +6,7 @@ import 'app_card.dart';
 import 'app_input.dart';
 
 class WorkLocationSelector extends StatefulWidget {
-  final SiteModel selectedSite;
+  final SiteModel? selectedSite;
   final bool isCustom;
   final TextEditingController nameController;
   final TextEditingController areaController;
@@ -63,14 +63,15 @@ class _WorkLocationSelectorState extends State<WorkLocationSelector> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.backgroundSoft,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.borderSoft),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<SiteModel>(
-                  value: dummySites.contains(widget.selectedSite) 
-                      ? widget.selectedSite 
+                  dropdownColor: Colors.white,
+                  value: (widget.selectedSite != null && dummySites.contains(widget.selectedSite))
+                      ? widget.selectedSite
                       : dummySites[0],
                   isExpanded: true,
                   icon: const Icon(Icons.arrow_drop_down, color: AppColors.primary),
@@ -84,7 +85,7 @@ class _WorkLocationSelectorState extends State<WorkLocationSelector> {
                       value: site,
                       child: Text(
                         site.name,
-                        style: const TextStyle(fontSize: 13, color: AppColors.textMain),
+                        style: const TextStyle(fontSize: 13, color: Color(0xFF111827)),
                       ),
                     );
                   }).toList(),

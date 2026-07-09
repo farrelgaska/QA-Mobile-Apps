@@ -135,6 +135,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
+                        dropdownColor: Colors.white,
                         value: _selectedPeriod,
                         icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.primary, size: 16),
                         style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12),
@@ -148,7 +149,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         items: _periods.map<DropdownMenuItem<String>>((String value) {
                           return DropdownMenuItem<String>(
                             value: value,
-                            child: Text(value),
+                            child: Text(
+                              value,
+                              style: const TextStyle(color: Color(0xFF111827), fontSize: 12),
+                            ),
                           );
                         }).toList(),
                       ),

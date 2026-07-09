@@ -131,8 +131,8 @@ class QCMaterialFormScreen extends StatelessWidget {
       areaController: p.customLocAreaController,
       segmentController: p.customLocSegmentController,
       noteController: p.customLocNoteController,
-      onSiteChanged: (site) => p.selectedSite = site,
-      onModeChanged: (custom) => p.isCustomLocation = custom,
+      onSiteChanged: (site) => p.setSelectedSite(site),
+      onModeChanged: (custom) => p.setIsCustomLocation(custom),
     );
   }
 
@@ -193,6 +193,11 @@ class QCMaterialFormScreen extends StatelessWidget {
           text: 'Simpan Draft',
           variant: AppButtonVariant.secondary,
           onPressed: () {
+            final locError = p.validateLocation();
+            if (locError != null) {
+              AppSnackbar.warning(context, locError);
+              return;
+            }
             if (!p.hasAnyDraftContent) {
               AppSnackbar.warning(context, 'Isi minimal satu data pemeriksaan sebelum menyimpan draft.');
               return;
@@ -210,6 +215,11 @@ class QCMaterialFormScreen extends StatelessWidget {
           text: 'Submit Laporan',
           variant: AppButtonVariant.primary,
           onPressed: () {
+            final locError = p.validateLocation();
+            if (locError != null) {
+              AppSnackbar.error(context, locError);
+              return;
+            }
             final error = p.validateForm();
             if (error != null) {
               AppSnackbar.error(context, error);

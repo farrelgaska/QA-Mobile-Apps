@@ -40,12 +40,43 @@ class QCMaterialFormProvider extends ChangeNotifier {
   final TextEditingController staffNoteController = TextEditingController();
 
   // Location
-  late SiteModel selectedSite;
+  SiteModel? selectedSite;
   bool isCustomLocation = false;
   final TextEditingController customLocNameController = TextEditingController();
   final TextEditingController customLocAreaController = TextEditingController();
   final TextEditingController customLocSegmentController = TextEditingController();
   final TextEditingController customLocNoteController = TextEditingController();
+
+  void setSelectedSite(SiteModel site) {
+    selectedSite = site;
+    notifyListeners();
+  }
+
+  void setIsCustomLocation(bool val) {
+    isCustomLocation = val;
+    if (isCustomLocation) {
+      selectedSite = null;
+    } else {
+      customLocNameController.clear();
+      customLocAreaController.clear();
+      customLocSegmentController.clear();
+      customLocNoteController.clear();
+    }
+    notifyListeners();
+  }
+
+  String? validateLocation() {
+    if (isCustomLocation) {
+      if (customLocNameController.text.trim().isEmpty) {
+        return 'Isi lokasi custom terlebih dahulu.';
+      }
+      return null;
+    }
+    if (selectedSite == null) {
+      return 'Pilih lokasi kerja terlebih dahulu.';
+    }
+    return null;
+  }
 
   // Checklist answers
   final List<QCChecklistAnswer> answers = [];
@@ -171,7 +202,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
   void persistReport(QCReportStatus status) {
     final workLoc = WorkLocation(
-      siteName: isCustomLocation ? customLocNameController.text : selectedSite.name,
+      siteName: isCustomLocation ? customLocNameController.text : (selectedSite?.name ?? 'Site Utama'),
       area: isCustomLocation ? customLocAreaController.text : 'Area Site Utama',
       segment: isCustomLocation ? customLocSegmentController.text : 'Segmen Default',
       note: isCustomLocation ? customLocNoteController.text : '',
@@ -201,7 +232,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
       checkedByName: _state.currentUser.name,
       checkedByNik: _state.currentUser.nik,
       date: DateTime.now(),
-      siteId: isCustomLocation ? 'custom-site' : selectedSite.id,
+      siteId: isCustomLocation ? 'custom-site' : (selectedSite?.id ?? 'custom-site'),
       siteName: workLoc.siteName,
       area: workLoc.area ?? '',
       detailLocation: workLoc.segment ?? '',
