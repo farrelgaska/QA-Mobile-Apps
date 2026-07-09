@@ -132,11 +132,13 @@ class _QCPekerjaanFormScreenState extends State<QCPekerjaanFormScreen> {
 
       final bool isNonIdeal = valStr == 'Tidak' || 
                               valStr == 'Tidak Sesuai' ||
+                              _itemStatuses[i] == ChecklistStatus.tidakSesuai ||
+                              _itemStatuses[i] == ChecklistStatus.perluTindakLanjut ||
                               (isChoiceOrBool && 
                                !['sesuai', 'rapi', 'kencang', 'ada', 'lengkap', 'ya', 'ok', 'diterima', 'sesuai standar'].contains(valStr.toLowerCase()));
 
-      if (isChoiceOrBool && isNonIdeal && _itemIssues[i].trim().isEmpty) {
-        _showWarningSnackbar('Form $formNumber - ${item.title}: isi keterangan masalah terlebih dahulu');
+      if (isNonIdeal && _itemIssues[i].trim().isEmpty) {
+        _showWarningSnackbar('Form $formNumber - ${item.title}: wajib mengisi keterangan masalah karena nilai berada di luar standar / tidak sesuai');
         return false;
       }
     }

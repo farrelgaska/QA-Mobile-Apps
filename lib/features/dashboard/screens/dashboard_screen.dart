@@ -227,7 +227,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildQcMaterialSections() {
-    final materialReports = _state.reports.where((r) => r.type == QCType.material).toList();
+    final materialReports = _state.reports
+        .where((r) => r.type == QCType.material && r.checkedByNik == _state.currentUser.nik)
+        .toList();
     final totalMat = materialReports.length;
     final matApproved = materialReports.where((r) => r.status == QCReportStatus.approved).length;
     final matPending = materialReports.where((r) => r.status == QCReportStatus.waiting).length;
@@ -254,21 +256,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
               textColor: AppColors.infoText,
             ),
             StatCard(
-              title: 'Lulus',
+              title: 'Disetujui',
               value: '$matApproved',
               icon: Icons.check_circle_outline,
               color: AppColors.approvedBg,
               textColor: AppColors.approvedText,
             ),
             StatCard(
-              title: 'Pending',
+              title: 'Menunggu Review',
               value: '$matPending',
               icon: Icons.hourglass_empty,
               color: const Color(0xFFFFF4E5),
               textColor: const Color(0xFFF59E0B),
             ),
             StatCard(
-              title: 'Perlu Tindak Lanjut',
+              title: 'Perlu Perbaikan',
               value: '$matNeedsRepair',
               icon: Icons.warning_amber_outlined,
               color: AppColors.rejectedBg,
@@ -338,9 +340,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 spacing: 16,
                 runSpacing: 8,
                 children: [
-                  _buildLegendItem(AppColors.approvedText, 'Lulus'),
-                  _buildLegendItem(const Color(0xFFF59E0B), 'Pending'),
-                  _buildLegendItem(AppColors.rejectedText, 'Perlu Tindak Lanjut'),
+                  _buildLegendItem(AppColors.approvedText, 'Disetujui'),
+                  _buildLegendItem(const Color(0xFFF59E0B), 'Menunggu Review'),
+                  _buildLegendItem(AppColors.rejectedText, 'Perlu Perbaikan'),
                 ],
               ),
             ],
@@ -359,11 +361,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         const SizedBox(height: 10),
         ...materialReports.map((report) {
-          String statusText = 'Lulus';
+          String statusText = 'Disetujui';
           if (report.status == QCReportStatus.needFollowUp) {
-            statusText = 'Perlu Tindak Lanjut';
+            statusText = 'Perlu Perbaikan';
           } else if (report.status == QCReportStatus.waiting) {
-            statusText = 'Pending';
+            statusText = 'Menunggu Review';
+          } else if (report.status == QCReportStatus.draft) {
+            statusText = 'Draft';
           }
           return MaterialSummaryCard(
             materialName: report.title,
@@ -373,7 +377,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }).toList(),
         const SizedBox(height: 16),
 
-        // 2. Laporan Perlu Tindak Lanjut
+        // 2. Laporan Perlu Perbaikan
         MaterialNeedsRepairCard(reports: materialNeedsRepairReports),
 
         // 3. Aktivitas Terbaru QC Material
@@ -387,7 +391,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildQcPekerjaanSections() {
-    final pekerjaanReports = _state.reports.where((r) => r.type == QCType.pekerjaan).toList();
+    final pekerjaanReports = _state.reports
+        .where((r) => r.type == QCType.pekerjaan && r.checkedByNik == _state.currentUser.nik)
+        .toList();
     final totalPek = pekerjaanReports.length;
     final pekApproved = pekerjaanReports.where((r) => r.status == QCReportStatus.approved).length;
     final pekOnProgress = pekerjaanReports.where((r) => r.status == QCReportStatus.waiting).length;
@@ -414,21 +420,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
               textColor: AppColors.infoText,
             ),
             StatCard(
-              title: 'Selesai',
+              title: 'Disetujui',
               value: '$pekApproved',
               icon: Icons.check_circle_outline,
               color: AppColors.approvedBg,
               textColor: AppColors.approvedText,
             ),
             StatCard(
-              title: 'On Progress',
+              title: 'Menunggu Review',
               value: '$pekOnProgress',
               icon: Icons.hourglass_bottom_outlined,
               color: AppColors.waitingBg,
               textColor: AppColors.waitingText,
             ),
             StatCard(
-              title: 'Perlu Tindak Lanjut',
+              title: 'Perlu Perbaikan',
               value: '$pekNeedsRepair',
               icon: Icons.warning_amber_outlined,
               color: AppColors.rejectedBg,
@@ -516,11 +522,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         const SizedBox(height: 10),
         ...pekerjaanReports.map((report) {
-          String statusText = 'On Progress';
+          String statusText = 'Menunggu Review';
           if (report.status == QCReportStatus.approved) {
-            statusText = 'Selesai';
+            statusText = 'Disetujui';
           } else if (report.status == QCReportStatus.needFollowUp) {
-            statusText = 'Perlu Tindak Lanjut';
+            statusText = 'Perlu Perbaikan';
+          } else if (report.status == QCReportStatus.draft) {
+            statusText = 'Draft';
           }
           return WorkStatusCard(
             workName: report.title,
@@ -530,7 +538,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }).toList(),
         const SizedBox(height: 16),
 
-        // 2. Laporan Perlu Tindak Lanjut
+        // 2. Laporan Perlu Perbaikan
         PekerjaanNeedsRepairCard(reports: pekerjaanNeedsRepairReports),
         const SizedBox(height: 16),
 
@@ -640,7 +648,7 @@ class MaterialNeedsRepairCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Laporan Perlu Tindak Lanjut',
+                      'Laporan Perlu Perbaikan',
                       style: TextStyle(
                         color: Color(0xFFEF4444),
                         fontWeight: FontWeight.bold,
@@ -806,7 +814,7 @@ class PekerjaanNeedsRepairCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Laporan Perlu Tindak Lanjut',
+                      'Laporan Perlu Perbaikan',
                       style: TextStyle(
                         color: Color(0xFFEF4444),
                         fontWeight: FontWeight.bold,

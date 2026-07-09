@@ -9,11 +9,10 @@ class StatusHelper {
       case ReportStatus.draft:
         return 'Draft';
       case ReportStatus.menunggu:
-        return 'Menunggu Review Admin';
+        return 'Menunggu Review';
       case ReportStatus.disetujui:
         return 'Disetujui';
       case ReportStatus.ditolak:
-        return 'Pending';
       case ReportStatus.revisi:
       case ReportStatus.perluTindakLanjut:
         return 'Perlu Perbaikan';
@@ -23,32 +22,30 @@ class StatusHelper {
   static Color getReportStatusTextColor(ReportStatus status) {
     switch (status) {
       case ReportStatus.draft:
-        return AppColors.inactiveText;
+        return const Color(0xFF6B7280); // Grey Text
       case ReportStatus.menunggu:
-        return AppColors.waitingText;
+        return const Color(0xFFF59E0B); // Pending Orange Text
       case ReportStatus.disetujui:
-        return AppColors.approvedText;
+        return const Color(0xFF006B5A); // Green Text
       case ReportStatus.ditolak:
-        return const Color(0xFFF59E0B); // Pending Orange
       case ReportStatus.revisi:
       case ReportStatus.perluTindakLanjut:
-        return AppColors.rejectedText; // Merah pastel
+        return const Color(0xFFEF4444); // Red Text
     }
   }
 
   static Color getReportStatusBgColor(ReportStatus status) {
     switch (status) {
       case ReportStatus.draft:
-        return AppColors.inactiveBg;
+        return const Color(0xFFF3F4F6); // Grey Bg
       case ReportStatus.menunggu:
-        return AppColors.waitingBg;
+        return const Color(0xFFFFF4E5); // Pending Orange Soft Bg
       case ReportStatus.disetujui:
-        return AppColors.approvedBg;
+        return const Color(0xFFE8F7F1); // Green Soft Bg
       case ReportStatus.ditolak:
-        return const Color(0xFFFFF4E5); // Pending Orange Soft
       case ReportStatus.revisi:
       case ReportStatus.perluTindakLanjut:
-        return AppColors.rejectedBg; // Merah pastel
+        return const Color(0xFFFDECEC); // Red Soft Bg
     }
   }
 
@@ -60,7 +57,6 @@ class StatusHelper {
       case ChecklistStatus.lulus:
         return 'Lulus';
       case ChecklistStatus.tidakSesuai:
-        return 'Tidak Sesuai';
       case ChecklistStatus.perluTindakLanjut:
         return 'Perlu Perbaikan';
     }
@@ -69,24 +65,24 @@ class StatusHelper {
   static Color getChecklistStatusTextColor(ChecklistStatus status) {
     switch (status) {
       case ChecklistStatus.belumDiisi:
-        return AppColors.inactiveText;
+        return const Color(0xFF6B7280);
       case ChecklistStatus.lulus:
-        return AppColors.approvedText;
+        return const Color(0xFF006B5A);
       case ChecklistStatus.tidakSesuai:
       case ChecklistStatus.perluTindakLanjut:
-        return AppColors.rejectedText;
+        return const Color(0xFFEF4444);
     }
   }
 
   static Color getChecklistStatusBgColor(ChecklistStatus status) {
     switch (status) {
       case ChecklistStatus.belumDiisi:
-        return AppColors.inactiveBg;
+        return const Color(0xFFF3F4F6);
       case ChecklistStatus.lulus:
-        return AppColors.approvedBg;
+        return const Color(0xFFE8F7F1);
       case ChecklistStatus.tidakSesuai:
       case ChecklistStatus.perluTindakLanjut:
-        return AppColors.rejectedBg;
+        return const Color(0xFFFDECEC);
     }
   }
 
@@ -96,43 +92,40 @@ class StatusHelper {
       case QCReportStatus.draft:
         return 'Draft';
       case QCReportStatus.waiting:
-        return 'Menunggu Review Admin';
+        return 'Menunggu Review';
       case QCReportStatus.approved:
         return 'Disetujui';
       case QCReportStatus.rejected:
-        return 'Pending';
       case QCReportStatus.needFollowUp:
-        return 'Perlu Tindak Lanjut';
+        return 'Perlu Perbaikan';
     }
   }
 
   static Color getQCReportStatusTextColor(QCReportStatus status) {
     switch (status) {
       case QCReportStatus.draft:
-        return AppColors.inactiveText;
+        return const Color(0xFF6B7280);
       case QCReportStatus.waiting:
-        return AppColors.waitingText;
+        return const Color(0xFFF59E0B);
       case QCReportStatus.approved:
-        return AppColors.approvedText;
+        return const Color(0xFF006B5A);
       case QCReportStatus.rejected:
-        return const Color(0xFFF59E0B); // Pending Orange
       case QCReportStatus.needFollowUp:
-        return AppColors.rejectedText; // Merah pastel
+        return const Color(0xFFEF4444);
     }
   }
 
   static Color getQCReportStatusBgColor(QCReportStatus status) {
     switch (status) {
       case QCReportStatus.draft:
-        return AppColors.inactiveBg;
+        return const Color(0xFFF3F4F6);
       case QCReportStatus.waiting:
-        return AppColors.waitingBg;
+        return const Color(0xFFFFF4E5);
       case QCReportStatus.approved:
-        return AppColors.approvedBg;
+        return const Color(0xFFE8F7F1);
       case QCReportStatus.rejected:
-        return const Color(0xFFFFF4E5); // Pending Orange Soft
       case QCReportStatus.needFollowUp:
-        return AppColors.rejectedBg; // Merah pastel
+        return const Color(0xFFFDECEC);
     }
   }
 

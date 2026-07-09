@@ -41,7 +41,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final nikInput = _nikController.text.trim();
     final matchingUserIndex = dummyUsers.indexWhere(
-      (u) => u.nik.toLowerCase() == nikInput.toLowerCase() || u.name.toLowerCase() == nikInput.toLowerCase(),
+      (u) => u.nik.toLowerCase() == nikInput.toLowerCase() || 
+             u.name.toLowerCase().contains(nikInput.toLowerCase()),
     );
 
     if (matchingUserIndex == -1) {
@@ -191,7 +192,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Demo Akun Kredensial:',
+                              'Demo Akun Kredensial (QA Staff):',
                               style: TextStyle(
                                 color: AppColors.waitingText,
                                 fontWeight: FontWeight.bold,
@@ -200,11 +201,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             SizedBox(height: 6),
                             Text(
-                              '• QA Staff: NIK-908271 (atau ketik "yanuar")',
+                              '• Staff 1: NIK-908271 (atau ketik "yanuar")',
                               style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
                             ),
                             Text(
-                              '• Admin: admin (atau ketik "budi")',
+                              '• Staff 2: NIK-908272 (atau ketik "budi")',
                               style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
                             ),
                           ],

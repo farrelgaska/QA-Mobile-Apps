@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android Gradle build files
+.gradle/
+**/android/.gradle/
+
+# Chrome Device cache
+chrome-device/

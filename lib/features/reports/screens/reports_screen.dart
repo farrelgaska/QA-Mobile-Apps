@@ -27,20 +27,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
   final List<String> _tabs = [
     'Semua',
     'Draft',
-    'Menunggu',
+    'Menunggu Review',
     'Disetujui',
-    'Pending',
     'Perlu Perbaikan'
   ];
 
   String _mapInputStatus(String input) {
-    if (input == 'Revisi' || input == 'Perlu Tindak Lanjut') {
-      return 'Perlu Perbaikan';
-    }
-    if (input == 'Ditolak') {
-      return 'Pending';
-    }
-    return input;
+    final norm = input.toLowerCase().trim();
+    if (norm == 'draft') return 'Draft';
+    if (norm == 'disetujui' || norm == 'approved' || norm == 'selesai' || norm == 'lulus') return 'Disetujui';
+    if (norm == 'perlu perbaikan' || norm == 'needfollowup' || norm == 'tidak sesuai' || norm == 'revisi' || norm == 'perlu tindak lanjut') return 'Perlu Perbaikan';
+    return 'Menunggu Review';
   }
 
   @override
@@ -71,12 +68,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
     switch (tab) {
       case 'Draft':
         return QCReportStatus.draft;
-      case 'Menunggu':
+      case 'Menunggu Review':
         return QCReportStatus.waiting;
       case 'Disetujui':
         return QCReportStatus.approved;
-      case 'Pending':
-        return QCReportStatus.rejected;
       case 'Perlu Perbaikan':
         return QCReportStatus.needFollowUp;
       default:
@@ -87,6 +82,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     final filteredReports = _state.reports.where((report) {
+      // Filter: QA Staff hanya boleh melihat laporan yang dibuat oleh dirinya sendiri
+      if (report.checkedByNik != _state.currentUser.nik) return false;
+
       final matchesSearch = report.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           report.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           report.detailLocation.toLowerCase().contains(_searchQuery.toLowerCase());
@@ -95,6 +93,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
       final tabStatus = _mapTabToReportStatus(_selectedTab);
       if (tabStatus != null) {
+        if (tabStatus == QCReportStatus.needFollowUp) {
+          return report.status == QCReportStatus.needFollowUp || report.status == QCReportStatus.rejected;
+        }
         return report.status == tabStatus;
       }
       return true;

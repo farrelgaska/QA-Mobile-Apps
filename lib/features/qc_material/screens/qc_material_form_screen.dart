@@ -268,11 +268,12 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
 
       final bool isNonIdeal = valStr == 'Tidak' || 
                               valStr == 'Tidak Sesuai' ||
+                              answer.status == QCResultStatus.fail ||
                               (item.inputType == QCInputType.choice && 
                                !['sesuai', 'rapi', 'kencang', 'ada', 'lengkap', 'ya', 'ok', 'diterima', 'sesuai standar'].contains(valStr.toLowerCase()));
 
-      if (isChoiceOrBool && isNonIdeal && (answer.issueNote == null || answer.issueNote!.trim().isEmpty)) {
-        return 'Form $formNumber - ${item.label}: isi keterangan masalah terlebih dahulu';
+      if (isNonIdeal && (answer.issueNote == null || answer.issueNote!.trim().isEmpty)) {
+        return 'Form $formNumber - ${item.label}: wajib mengisi keterangan masalah karena nilai berada di luar standar / tidak sesuai';
       }
     }
 
