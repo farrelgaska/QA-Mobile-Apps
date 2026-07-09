@@ -28,7 +28,9 @@ class StatusBadge extends StatelessWidget {
       final lowerLabel = label.toLowerCase();
       if (lowerLabel == 'aktif' || lowerLabel == 'lulus' || lowerLabel == 'disetujui' || lowerLabel == 'diterima' || lowerLabel == 'selesai' || lowerLabel == 'pass') {
         label = 'Lulus';
-      } else if (lowerLabel == 'revisi' || lowerLabel == 'tindak lanjut' || lowerLabel == 'perlu tindak lanjut' || lowerLabel == 'butuh revisi' || lowerLabel == 'perlu perbaikan' || lowerLabel == 'fail' || lowerLabel == 'needfollowup') {
+      } else if (lowerLabel == 'tindak lanjut' || lowerLabel == 'perlu tindak lanjut' || lowerLabel == 'needfollowup' || lowerLabel == 'revisi' || lowerLabel == 'butuh revisi') {
+        label = 'Perlu Tindak Lanjut';
+      } else if (lowerLabel == 'perlu perbaikan' || lowerLabel == 'tidak sesuai' || lowerLabel == 'fail') {
         label = 'Perlu Perbaikan';
       } else if (lowerLabel == 'nonaktif' || lowerLabel == 'ditolak' || lowerLabel == 'pending' || lowerLabel == 'menunggu' || lowerLabel == 'on progress' || lowerLabel == 'menunggu review admin') {
         label = 'Pending';

@@ -232,6 +232,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final matApproved = materialReports.where((r) => r.status == QCReportStatus.approved).length;
     final matPending = materialReports.where((r) => r.status == QCReportStatus.waiting).length;
     final matNeedsRepair = materialReports.where((r) => r.status == QCReportStatus.needFollowUp).length;
+    final materialNeedsRepairReports = materialReports.where((r) => r.status == QCReportStatus.needFollowUp).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,7 +268,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               textColor: const Color(0xFFF59E0B),
             ),
             StatCard(
-              title: 'Perlu Perbaikan',
+              title: 'Perlu Tindak Lanjut',
               value: '$matNeedsRepair',
               icon: Icons.warning_amber_outlined,
               color: AppColors.rejectedBg,
@@ -339,7 +340,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   _buildLegendItem(AppColors.approvedText, 'Lulus'),
                   _buildLegendItem(const Color(0xFFF59E0B), 'Pending'),
-                  _buildLegendItem(AppColors.rejectedText, 'Perlu Perbaikan'),
+                  _buildLegendItem(AppColors.rejectedText, 'Perlu Tindak Lanjut'),
                 ],
               ),
             ],
@@ -360,7 +361,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ...materialReports.map((report) {
           String statusText = 'Lulus';
           if (report.status == QCReportStatus.needFollowUp) {
-            statusText = 'Perlu Perbaikan';
+            statusText = 'Perlu Tindak Lanjut';
           } else if (report.status == QCReportStatus.waiting) {
             statusText = 'Pending';
           }
@@ -372,8 +373,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }).toList(),
         const SizedBox(height: 16),
 
-        // 2. Material Perlu Perbaikan
-        MaterialNeedsRepairCard(items: _dummyMatNeedsRepair),
+        // 2. Laporan Perlu Tindak Lanjut
+        MaterialNeedsRepairCard(reports: materialNeedsRepairReports),
 
         // 3. Aktivitas Terbaru QC Material
         ActivityTimelineCard(
@@ -391,6 +392,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final pekApproved = pekerjaanReports.where((r) => r.status == QCReportStatus.approved).length;
     final pekOnProgress = pekerjaanReports.where((r) => r.status == QCReportStatus.waiting).length;
     final pekNeedsRepair = pekerjaanReports.where((r) => r.status == QCReportStatus.needFollowUp).length;
+    final pekerjaanNeedsRepairReports = pekerjaanReports.where((r) => r.status == QCReportStatus.needFollowUp).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,7 +428,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               textColor: AppColors.waitingText,
             ),
             StatCard(
-              title: 'Perlu Perbaikan',
+              title: 'Perlu Tindak Lanjut',
               value: '$pekNeedsRepair',
               icon: Icons.warning_amber_outlined,
               color: AppColors.rejectedBg,
@@ -518,7 +520,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (report.status == QCReportStatus.approved) {
             statusText = 'Selesai';
           } else if (report.status == QCReportStatus.needFollowUp) {
-            statusText = 'Perlu Perbaikan';
+            statusText = 'Perlu Tindak Lanjut';
           }
           return WorkStatusCard(
             workName: report.title,
@@ -528,7 +530,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }).toList(),
         const SizedBox(height: 16),
 
-        // 2. Aktivitas Terbaru QC Pekerjaan
+        // 2. Laporan Perlu Tindak Lanjut
+        PekerjaanNeedsRepairCard(reports: pekerjaanNeedsRepairReports),
+        const SizedBox(height: 16),
+
+        // 3. Aktivitas Terbaru QC Pekerjaan
         ActivityTimelineCard(
           title: 'Aktivitas Terbaru QC Pekerjaan',
           activities: _dummyJobActivities,
@@ -600,19 +606,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 class MaterialNeedsRepairCard extends StatelessWidget {
-  final List<Map<String, dynamic>> items;
+  final List<dynamic> reports; // List of QCReportModel
 
-  const MaterialNeedsRepairCard({Key? key, required this.items}) : super(key: key);
+  const MaterialNeedsRepairCard({Key? key, required this.reports}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: const Color(0xFFFDE2E2), // soft red/pink
+        color: const Color(0xFFFDECEC), // soft red
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFFDC2626).withOpacity(0.2), // soft red border
+          color: const Color(0xFFEF4444).withOpacity(0.2),
           width: 1,
         ),
       ),
@@ -625,18 +631,18 @@ class MaterialNeedsRepairCard extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
+                const Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.warning_amber_outlined,
-                      color: Color(0xFFDC2626), // red
+                      color: Color(0xFFEF4444),
                       size: 18,
                     ),
                     const SizedBox(width: 8),
-                    const Text(
-                      'Perlu Perbaikan',
+                    Text(
+                      'Laporan Perlu Tindak Lanjut',
                       style: TextStyle(
-                        color: Color(0xFFDC2626),
+                        color: Color(0xFFEF4444),
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
@@ -646,11 +652,11 @@ class MaterialNeedsRepairCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFDC2626),
+                    color: const Color(0xFFEF4444),
                     borderRadius: BorderRadius.circular(100),
                   ),
                   child: Text(
-                    '${items.length} Item',
+                    '${reports.length} Laporan',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,
@@ -663,87 +669,94 @@ class MaterialNeedsRepairCard extends StatelessWidget {
           ),
           const Divider(color: Color(0xFFFCA5A5), height: 1),
           // Items List
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: items.length,
-            separatorBuilder: (context, index) => const Divider(
-              color: Color(0xFFFCA5A5),
-              height: 1,
-              indent: 16,
-              endIndent: 16,
-            ),
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (_) => MaterialRepairDetailSheet(item: item),
-                    );
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    item['name'],
-                                    style: const TextStyle(
-                                      color: Color(0xFF991B1B), // dark red
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
+          if (reports.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Tidak ada laporan perlu tindak lanjut',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: reports.length,
+              separatorBuilder: (context, index) => const Divider(
+                color: Color(0xFFFCA5A5),
+                height: 1,
+                indent: 16,
+                endIndent: 16,
+              ),
+              itemBuilder: (context, index) {
+                final report = reports[index];
+                final doNumber = report.generalInfo?['doNumber'] ?? 'Batch #TG-0041';
+                final reason = report.adminNote ?? 'Parameter tidak sesuai standar';
+                final timeStr = "${report.date.hour.toString().padLeft(2, '0')}:${report.date.minute.toString().padLeft(2, '0')}";
+                
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      context.push('/reports/${report.id}');
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  report.id,
+                                  style: const TextStyle(
+                                    color: Color(0xFFEF4444),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    item['batch'],
-                                    style: const TextStyle(
-                                      color: Color(0xFFDC2626),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                '${item['reason']}',
-                                style: const TextStyle(
-                                  color: Color(0xFF7F1D1D),
-                                  fontSize: 11,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        report.title,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Color(0xFF991B1B), // dark red
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '— $doNumber',
+                                      style: const TextStyle(
+                                        color: Color(0xFFDC2626),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  '$reason · $timeStr',
+                                  style: const TextStyle(
+                                    color: Color(0xFF7F1D1D),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Row(
-                          children: [
-                            Text(
-                              item['time'],
-                              style: const TextStyle(
-                                color: Color(0xFFDC2626),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.chevron_right,
-                                color: Color(0xFFDC2626),
-                                size: 14,
-                              ),
-                            ],
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.chevron_right,
+                            color: Color(0xFFEF4444),
+                            size: 16,
                           ),
                         ],
                       ),
@@ -751,7 +764,173 @@ class MaterialNeedsRepairCard extends StatelessWidget {
                   ),
                 );
               },
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class PekerjaanNeedsRepairCard extends StatelessWidget {
+  final List<dynamic> reports; // List of QCReportModel
+
+  const PekerjaanNeedsRepairCard({Key? key, required this.reports}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDECEC), // soft red
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFFEF4444).withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.warning_amber_outlined,
+                      color: Color(0xFFEF4444),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Laporan Perlu Tindak Lanjut',
+                      style: TextStyle(
+                        color: Color(0xFFEF4444),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444),
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: Text(
+                    '${reports.length} Laporan',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
+          const Divider(color: Color(0xFFFCA5A5), height: 1),
+          // Items List
+          if (reports.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Tidak ada laporan perlu tindak lanjut',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: reports.length,
+              separatorBuilder: (context, index) => const Divider(
+                color: Color(0xFFFCA5A5),
+                height: 1,
+                indent: 16,
+                endIndent: 16,
+              ),
+              itemBuilder: (context, index) {
+                final report = reports[index];
+                final segment = report.generalInfo?['workSegment'] ?? 'Provisioning';
+                final reason = report.adminNote ?? 'Pekerjaan tidak sesuai standar';
+                final timeStr = "${report.date.hour.toString().padLeft(2, '0')}:${report.date.minute.toString().padLeft(2, '0')}";
+                
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      context.push('/reports/${report.id}');
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  report.id,
+                                  style: const TextStyle(
+                                    color: Color(0xFFEF4444),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        report.title,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Color(0xFF991B1B), // dark red
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '— $segment',
+                                      style: const TextStyle(
+                                        color: Color(0xFFDC2626),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  '$reason · $timeStr',
+                                  style: const TextStyle(
+                                    color: Color(0xFF7F1D1D),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.chevron_right,
+                            color: Color(0xFFEF4444),
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );

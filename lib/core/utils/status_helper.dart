@@ -102,7 +102,7 @@ class StatusHelper {
       case QCReportStatus.rejected:
         return 'Pending';
       case QCReportStatus.needFollowUp:
-        return 'Perlu Perbaikan';
+        return 'Perlu Tindak Lanjut';
     }
   }
 
