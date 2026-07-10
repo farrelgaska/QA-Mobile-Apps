@@ -27,11 +27,11 @@ export const AdminLayout: React.FC = () => {
   const title = getPageTitle(location.pathname);
 
   return (
-    <div className="min-h-screen bg-[#F7F9F8]">
+    <div className="min-h-screen bg-[#F7F9F8] no-scrollbar">
       <Sidebar />
-      <div className="pl-[260px]">
+      <div className="pl-[260px] no-scrollbar">
         <Topbar title={title} />
-        <main className="pt-[94px] px-8 pb-12 min-h-screen overflow-hidden">
+        <main className="pt-[94px] px-8 pb-12 min-h-screen overflow-hidden no-scrollbar">
           <AnimatePresence mode="wait">
             <div key={location.pathname}>
               <Outlet />

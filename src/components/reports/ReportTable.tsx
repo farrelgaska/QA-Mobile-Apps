@@ -1,10 +1,7 @@
 import React from 'react';
 import type { QCReport } from '../../types/report';
-import { Table, TableHeader, TableRow, TableCell, TableBody } from '../ui/Table';
 import { ReportStatusBadge } from './ReportStatusBadge';
 import { StandardResultBadge } from './StandardResultBadge';
-import { Button } from '../ui/Button';
-import { formatDate } from '../../utils/formatDate';
 
 export interface ReportTableProps {
   reports: QCReport[];
@@ -13,62 +10,160 @@ export interface ReportTableProps {
 
 export const ReportTable: React.FC<ReportTableProps> = ({ reports, onDetail }) => {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableCell isHeader>ID Laporan</TableCell>
-          <TableCell isHeader>Item QC</TableCell>
-          <TableCell isHeader>Lokasi</TableCell>
-          <TableCell isHeader>QA Staff</TableCell>
-          <TableCell isHeader>Tanggal Kirim</TableCell>
-          <TableCell isHeader>Evaluasi</TableCell>
-          <TableCell isHeader>Status</TableCell>
-          {onDetail && <TableCell isHeader className="text-right">Aksi</TableCell>}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {reports.length === 0 ? (
-          <TableRow>
-            <TableCell colSpan={onDetail ? 8 : 7} className="text-center py-8 text-gray-400">
-              Tidak ada data laporan.
-            </TableCell>
-          </TableRow>
-        ) : (
-          reports.map((report) => (
-            <TableRow 
-              key={report.id}
-              className={onDetail ? 'cursor-pointer hover:bg-gray-50/50' : ''}
-              onClick={() => onDetail?.(report.id)}
-            >
-              <TableCell className="font-bold text-gray-800">{report.id}</TableCell>
-              <TableCell className="font-semibold text-gray-700">{report.title}</TableCell>
-              <TableCell className="text-gray-500">{report.locationName}</TableCell>
-              <TableCell className="text-gray-650">
-                <div className="font-semibold text-gray-700">{report.submittedBy}</div>
-                <div className="text-[10px] text-gray-400 font-semibold">{report.submittedByNik}</div>
-              </TableCell>
-              <TableCell className="text-gray-500">{formatDate(report.submittedAt)}</TableCell>
-              <TableCell>
-                <StandardResultBadge result={report.standardResult} />
-              </TableCell>
-              <TableCell>
-                <ReportStatusBadge status={report.status} />
-              </TableCell>
-              {onDetail && (
-                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => onDetail(report.id)}
-                  >
-                    Detail
-                  </Button>
-                </TableCell>
-              )}
-            </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+    <div className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="w-full overflow-x-auto">
+        <table className="w-full min-w-[1180px] table-fixed border-collapse">
+          <colgroup>
+            <col className="w-[8%]" />
+            <col className="w-[9%]" />
+            <col className="w-[23%]" />
+            <col className="w-[12%]" />
+            <col className="w-[12%]" />
+            <col className="w-[10%]" />
+            <col className="w-[10%]" />
+            <col className="w-[10%]" />
+            <col className="w-[10%]" />
+          </colgroup>
+
+          <thead>
+            <tr className="bg-gray-50 border-b border-slate-200">
+              <th className="px-6 py-4 text-left align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
+                ID Laporan
+              </th>
+              <th className="px-6 py-4 text-left align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
+                Jenis QC
+              </th>
+              <th className="px-6 py-4 text-left align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
+                Judul Laporan
+              </th>
+              <th className="px-6 py-4 text-left align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
+                Lokasi
+              </th>
+              <th className="px-6 py-4 text-left align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
+                Dibuat Oleh
+              </th>
+              <th className="px-6 py-4 text-left align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
+                Tanggal Submit
+              </th>
+              <th className="px-6 py-4 text-left align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
+                Status
+              </th>
+              <th className="px-6 py-4 pr-8 text-left align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
+                Hasil Standar
+              </th>
+              <th className="px-6 py-4 pl-8 text-center align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
+                Aksi
+              </th>
+            </tr>
+          </thead>
+
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {reports.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="px-6 py-12 text-center text-sm text-slate-400 italic">
+                  Tidak ada laporan yang cocok dengan filter aktif.
+                </td>
+              </tr>
+            ) : (
+              reports.map((report) => (
+                <tr
+                  key={report.id}
+                  onClick={() => onDetail?.(report.id)}
+                  className="cursor-pointer hover:bg-gray-50/50 transition-colors duration-150 group"
+                >
+                  {/* ID */}
+                  <td className="px-6 py-5 align-middle text-sm text-slate-700 font-mono font-bold text-[#006B5A]">
+                    {report.id}
+                  </td>
+
+                  {/* Jenis QC */}
+                  <td className="px-6 py-5 align-middle text-sm text-slate-700">
+                    <span
+                      className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap ${
+                        report.type === 'material'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200/60'
+                          : 'bg-violet-50 text-violet-700 border-violet-200/60'
+                      }`}
+                    >
+                      {report.type === 'material' ? 'Material' : 'Pekerjaan'}
+                    </span>
+                  </td>
+
+                  {/* Judul Laporan */}
+                  <td className="px-6 py-5 align-middle text-sm text-slate-700 min-w-0">
+                    <div className="min-w-0">
+                      <p className="line-clamp-2 font-semibold leading-snug text-slate-900">
+                        {report.title}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        {report.checklistItems ? report.checklistItems.length : 0} parameter checklist
+                      </p>
+                    </div>
+                  </td>
+
+                  {/* Lokasi */}
+                  <td className="px-6 py-5 align-middle text-sm text-slate-700 min-w-0">
+                    <p className="line-clamp-2 leading-snug text-slate-600 font-medium">
+                      {report.locationName}
+                    </p>
+                  </td>
+
+                  {/* Dibuat Oleh */}
+                  <td className="px-6 py-5 align-middle text-sm text-slate-700 min-w-0">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-700 truncate">{report.submittedBy}</p>
+                      <p className="text-xs text-slate-400 font-mono">{report.submittedByNik}</p>
+                    </div>
+                  </td>
+
+                  {/* Tanggal Submit */}
+                  <td className="px-6 py-5 align-middle text-sm text-slate-700">
+                    <p className="text-xs font-semibold text-slate-600">
+                      {new Date(report.submittedAt).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      {new Date(report.submittedAt).toLocaleTimeString('id-ID', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </td>
+
+                  {/* Status */}
+                  <td className="px-6 py-5 align-middle text-sm text-slate-700">
+                    <div className="flex items-center whitespace-nowrap">
+                      <ReportStatusBadge status={report.status} />
+                    </div>
+                  </td>
+
+                  {/* Hasil Standar */}
+                  <td className="px-6 py-5 pr-8 align-middle text-sm text-slate-700">
+                    <div className="flex items-center whitespace-nowrap">
+                      <StandardResultBadge result={report.standardResult} />
+                    </div>
+                  </td>
+
+                  {/* Aksi */}
+                  <td className="px-6 py-5 pl-8 align-middle text-center" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex justify-center">
+                      <button
+                        onClick={() => onDetail?.(report.id)}
+                        className="inline-flex min-h-[44px] min-w-[96px] items-center justify-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold bg-white text-gray-700 hover:border-[#006B5A] hover:text-[#006B5A] hover:bg-[#006B5A]/5 transition-all active:scale-[0.98]"
+                      >
+                        Detail →
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 };

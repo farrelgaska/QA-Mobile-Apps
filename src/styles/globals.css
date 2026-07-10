@@ -16,6 +16,15 @@
   box-sizing: border-box;
 }
 
+html, body {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+  display: none;
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -25,4 +34,14 @@ body {
 
 button, input, textarea, select {
   font: inherit;
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
