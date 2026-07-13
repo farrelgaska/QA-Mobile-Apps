@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/dummy/dummy_qc_material_templates.dart';
 import '../../core/dummy/dummy_state.dart';
+import '../../core/dummy/dummy_sites.dart';
 import '../../shared/models/enums.dart';
 import '../../shared/models/qc_report_model.dart';
 import '../../shared/models/qc_checklist_answer_model.dart';
@@ -81,32 +82,101 @@ class QCMaterialFormProvider extends ChangeNotifier {
   // Checklist answers
   final List<QCChecklistAnswer> answers = [];
 
-  void init(String materialId) {
+  // Revision state
+  bool isRevisionMode = false;
+  String? editReportId;
+  QCReportModel? _originalReport;
+
+  void init(String materialId, {String? editReportId, bool isRevision = false}) {
     if (_isInit) return;
     _template = dummyQCMaterialTemplates.firstWhere((t) => t.id == materialId,
         orElse: () => dummyQCMaterialTemplates[0]);
-    // Prepopulate template fields
-    materialIdController.text = _template.id;
-    stelVersionController.text = _template.code == 'TA-FR-048-010-01'
-        ? 'STEL-L-017-2024 Ver.2'
-        : 'STEL-QA-MYTA-2026';
-    tkdnNumberController.text = 'TKDN-${_template.code}-2026';
-    poDateController.text = '2026-07-01';
-    qaExpiryDateController.text = '2028-12-31';
-    tkdnCertDateController.text = '2026-01-15';
-    selectedSite = _state.currentSite;
-    // Initialize answers list
-    for (var item in _template.checklistItems) {
-      answers.add(QCChecklistAnswer(
-        itemId: item.id,
-        value: '',
-        status: QCResultStatus.notFilled,
-        photoPaths: [],
-        paramName: item.label,
-        standardText: item.standardText,
-        unit: item.unit,
-      ));
+
+    if (editReportId != null) {
+      final report = _state.reports.firstWhere((r) => r.id == editReportId,
+          orElse: () => _state.reports[0]);
+      _originalReport = report;
+      this.editReportId = editReportId;
+      isRevisionMode = isRevision;
+
+      // Prefill fields
+      poNumberController.text = report.generalInfo['poNumber'] ?? '';
+      poDateController.text = report.generalInfo['poDate'] ?? '';
+      doNumberController.text = report.generalInfo['doNumber'] ?? '';
+      vendorNameController.text = report.generalInfo['vendorName'] ?? '';
+      materialIdController.text = report.generalInfo['materialId'] ?? report.templateId;
+      arrivalVolumeController.text = report.generalInfo['arrivalVolume'] ?? '';
+      samplingVolumeController.text = report.generalInfo['samplingVolume'] ?? '';
+      brandNameController.text = report.generalInfo['brandName'] ?? '';
+      warehouseLocationController.text = report.generalInfo['warehouseLocation'] ?? '';
+      stelVersionController.text = report.generalInfo['stelVersion'] ?? '';
+      qaExpiryDateController.text = report.generalInfo['qaExpiryDate'] ?? '';
+      tkdnNumberController.text = report.generalInfo['tkdnNumber'] ?? '';
+      tkdnCertDateController.text = report.generalInfo['tkdnCertDate'] ?? '';
+      tkdnValueController.text = report.generalInfo['tkdnValue'] ?? '';
+      staffNoteController.text = report.staffNote;
+
+      isCustomLocation = report.location.siteId == 'custom-site';
+      if (isCustomLocation) {
+        customLocNameController.text = report.location.siteName;
+        customLocAreaController.text = report.location.area;
+        customLocSegmentController.text = report.location.detailLocation;
+      } else {
+        selectedSite = dummySites.firstWhere((s) => s.id == report.location.siteId,
+            orElse: () => dummySites[0]);
+      }
+
+      // Populate checklist items
+      answers.clear();
+      for (var item in _template.checklistItems) {
+        final matchingAnswer = report.checklistItems.firstWhere(
+          (ans) => ans.itemId == item.id,
+          orElse: () => QCChecklistAnswer(
+            itemId: item.id,
+            value: '',
+            status: QCResultStatus.notFilled,
+            photoPaths: [],
+            paramName: item.label,
+            standardText: item.standardText,
+            unit: item.unit,
+            inputType: item.inputType == QCInputType.number ? 'number' : item.inputType == QCInputType.choice ? 'choice' : 'text',
+          ),
+        );
+        
+        // Recalculate warning message / status locally
+        final valRes = QCValidationHelper.validateChecklistAnswer(item: item, value: matchingAnswer.value?.toString() ?? '');
+        answers.add(matchingAnswer.copyWith(
+          warningMessage: valRes.warningMessage,
+          status: valRes.status,
+        ));
+      }
+    } else {
+      // Prepopulate default template fields
+      materialIdController.text = _template.id;
+      stelVersionController.text = _template.code == 'TA-FR-048-010-01'
+          ? 'STEL-L-017-2024 Ver.2'
+          : 'STEL-QA-MYTA-2026';
+      tkdnNumberController.text = 'TKDN-${_template.code}-2026';
+      poDateController.text = '2026-07-01';
+      qaExpiryDateController.text = '2028-12-31';
+      tkdnCertDateController.text = '2026-01-15';
+      selectedSite = _state.currentSite;
+
+      // Initialize answers list
+      for (var item in _template.checklistItems) {
+        answers.add(QCChecklistAnswer(
+          itemId: item.id,
+          value: '',
+          status: QCResultStatus.notFilled,
+          photoPaths: [],
+          paramName: item.label,
+          standardText: item.standardText,
+          unit: item.unit,
+          inputType: item.inputType == QCInputType.number ? 'number' : item.inputType == QCInputType.choice ? 'choice' : 'text',
+        ));
+      }
     }
+
     _isInit = true;
     notifyListeners();
   }
@@ -127,19 +197,16 @@ class QCMaterialFormProvider extends ChangeNotifier {
     ];
     final url = mockUrls[answers[index].photoPaths.length % mockUrls.length];
     answers[index].photoPaths.add(url);
-    // Re‑validate to clear any photo‑required warning
-    final item = _template.checklistItems[index];
-    final valRes = QCValidationHelper.validateChecklistAnswer(item: item, value: answers[index].value);
-    answers[index].warningMessage = valRes.warningMessage;
     notifyListeners();
   }
 
   void removePhoto(int index, int photoIdx) {
     answers[index].photoPaths.removeAt(photoIdx);
-    // Re‑validate
-    final item = _template.checklistItems[index];
-    final valRes = QCValidationHelper.validateChecklistAnswer(item: item, value: answers[index].value);
-    answers[index].warningMessage = valRes.warningMessage;
+    notifyListeners();
+  }
+
+  void updateIssueNote(int index, String value) {
+    answers[index].issueNote = value;
     notifyListeners();
   }
 
@@ -147,54 +214,47 @@ class QCMaterialFormProvider extends ChangeNotifier {
     return poNumberController.text.trim().isNotEmpty ||
            doNumberController.text.trim().isNotEmpty ||
            vendorNameController.text.trim().isNotEmpty ||
-           arrivalVolumeController.text.trim().isNotEmpty ||
-           samplingVolumeController.text.trim().isNotEmpty ||
-           brandNameController.text.trim().isNotEmpty ||
-           warehouseLocationController.text.trim().isNotEmpty ||
            staffNoteController.text.trim().isNotEmpty ||
-           answers.any((answer) => answer.value.trim().isNotEmpty || answer.photoPaths.isNotEmpty);
+           answers.any((a) => a.value.toString().trim().isNotEmpty) ||
+           answers.any((a) => a.photoPaths.isNotEmpty);
   }
 
   String? validateForm() {
-    // General info validation (same as original _validateFormFirstError subset)
-    if (poNumberController.text.trim().isEmpty) return 'Isi nomor PO terlebih dahulu';
-    if (doNumberController.text.trim().isEmpty) return 'Isi nomor DO terlebih dahulu';
-    if (vendorNameController.text.trim().isEmpty) return 'Isi nama vendor terlebih dahulu';
-    if (arrivalVolumeController.text.trim().isEmpty) return 'Isi volume datang terlebih dahulu';
-    if (samplingVolumeController.text.trim().isEmpty) return 'Isi volume sampling terlebih dahulu';
-    if (brandNameController.text.trim().isEmpty) return 'Isi merk material terlebih dahulu';
-    if (warehouseLocationController.text.trim().isEmpty) return 'Isi lokasi warehouse terlebih dahulu';
-    if (isCustomLocation) {
-      if (customLocNameController.text.trim().isEmpty) return 'Isi nama lokasi kustom terlebih dahulu';
-      if (customLocAreaController.text.trim().isEmpty) return 'Isi area/zona lokasi kustom terlebih dahulu';
-      if (customLocSegmentController.text.trim().isEmpty) return 'Isi titik/segmen lokasi kustom terlebih dahulu';
-    }
     for (int i = 0; i < _template.checklistItems.length; i++) {
       final item = _template.checklistItems[i];
-      final answer = answers[i];
-      final formNumber = i + 1;
-      final valStr = answer.value.trim();
-      final isChoiceOrBool = item.inputType == QCInputType.choice || item.inputType == QCInputType.booleanCheck;
+      final valStr = answers[i].value.toString().trim();
+      final issue = answers[i].issueNote?.trim() ?? '';
+      final photos = answers[i].photoPaths;
+
       if (valStr.isEmpty) {
         if (item.inputType == QCInputType.number) {
-          return 'Form $formNumber - ${item.label}: isi nilai aktual terlebih dahulu';
-        } else if (isChoiceOrBool) {
-          return 'Form $formNumber - ${item.label}: pilih kesesuaian fisik terlebih dahulu';
+          return 'Form ${i+1} - ${item.label}: isi nilai pengujian terlebih dahulu';
+        } else if (item.inputType == QCInputType.choice) {
+          return 'Form ${i+1} - ${item.label}: pilih kesesuaian fisik terlebih dahulu';
         } else {
-          return 'Form $formNumber - ${item.label}: isi hasil input terlebih dahulu';
+          return 'Form ${i+1} - ${item.label}: isi hasil input terlebih dahulu';
         }
       }
+
       if (item.inputType == QCInputType.number) {
         if (!QCValidators.isValidNumber(valStr)) {
-          return 'Form $formNumber - ${item.label}: masukkan angka yang valid';
+          return 'Form ${i+1} - ${item.label}: masukkan angka yang valid';
         }
         final valNum = double.tryParse(valStr.replaceAll(',', '.'));
         if (valNum != null && valNum < 0) {
-          return 'Form $formNumber - ${item.label}: nilai tidak boleh negatif';
+          return 'Form ${i+1} - ${item.label}: nilai tidak boleh negatif';
         }
       }
-      if (answer.photoPaths.isEmpty) {
-        return 'Form $formNumber - ${item.label}: tambahkan dokumentasi foto terlebih dahulu';
+
+      if (item.requiredPhoto && photos.isEmpty) {
+        return 'Form ${i+1} - ${item.label}: tambahkan dokumentasi foto terlebih dahulu';
+      }
+
+      final isChoice = item.inputType == QCInputType.choice;
+      final isNonIdeal = isChoice &&
+          !['sesuai', 'rapi', 'kencang', 'ada', 'lengkap', 'ya', 'ok', 'diterima', 'sesuai standar', 'bersih', 'ada & jelas', 'tegak lurus'].contains(valStr.toLowerCase());
+      if (isNonIdeal && issue.isEmpty) {
+        return 'Form ${i+1} - ${item.label}: isi keterangan masalah terlebih dahulu';
       }
     }
     return null;
@@ -224,28 +284,60 @@ class QCMaterialFormProvider extends ChangeNotifier {
       'tkdnCertDate': tkdnCertDateController.text.trim(),
       'tkdnValue': tkdnValueController.text.trim(),
     };
-    final newReport = QCReportModel(
-      id: 'QC-MAT-${DateTime.now().year}-${1000 + _state.reports.length}',
-      title: _template.name,
-      type: QCType.material,
-      status: status,
-      checkedByName: _state.currentUser.name,
-      checkedByNik: _state.currentUser.nik,
-      date: DateTime.now(),
-      siteId: isCustomLocation ? 'custom-site' : (selectedSite?.id ?? 'custom-site'),
-      siteName: workLoc.siteName,
-      area: workLoc.area ?? '',
-      detailLocation: workLoc.segment ?? '',
-      checklistAnswers: answers.map((a) => a.copyWith(status: QCResultStatus.notFilled)).toList(),
-      photos: [],
-      staffNote: staffNoteController.text,
-      adminNote: status == QCReportStatus.DRAFT ? null : 'Menunggu review dari Admin.',
-      formCode: _template.code,
-      workLocation: workLoc,
-      generalInfo: genInfo,
-      finalConclusion: status == QCReportStatus.DRAFT ? 'Belum Lengkap' : 'Pending',
-    );
-    _state.addReport(newReport);
+
+    if (isRevisionMode && _originalReport != null) {
+      final updatedHistory = List<QCReportModel>.from(_originalReport!.revisionHistory);
+      updatedHistory.add(_originalReport!);
+
+      final updatedReport = QCReportModel(
+        id: _originalReport!.id,
+        title: _originalReport!.title,
+        type: _originalReport!.type,
+        status: QCReportStatus.SUBMITTED,
+        checkedByName: _state.currentUser.name,
+        checkedByNik: _state.currentUser.nik,
+        date: DateTime.now(),
+        siteId: isCustomLocation ? 'custom-site' : (selectedSite?.id ?? 'custom-site'),
+        siteName: workLoc.siteName,
+        area: workLoc.area ?? '',
+        detailLocation: workLoc.segment ?? '',
+        checklistAnswers: answers.map((a) => a.copyWith(status: QCResultStatus.notFilled)).toList(),
+        photos: [],
+        staffNote: staffNoteController.text,
+        adminNote: 'Menunggu review dari Admin (Revisi #${_originalReport!.revisionNumber + 1}).',
+        formCode: _originalReport!.formCode,
+        templateId: _originalReport!.templateId,
+        generalInfo: genInfo,
+        revisionNumber: _originalReport!.revisionNumber + 1,
+        revisionHistory: updatedHistory,
+      );
+      _state.updateReport(updatedReport);
+    } else {
+      final newReport = QCReportModel(
+        id: 'QC-MAT-${DateTime.now().year}-${1000 + _state.reports.length}',
+        title: _template.name,
+        type: QCType.material,
+        status: status,
+        checkedByName: _state.currentUser.name,
+        checkedByNik: _state.currentUser.nik,
+        date: DateTime.now(),
+        siteId: isCustomLocation ? 'custom-site' : (selectedSite?.id ?? 'custom-site'),
+        siteName: workLoc.siteName,
+        area: workLoc.area ?? '',
+        detailLocation: workLoc.segment ?? '',
+        checklistAnswers: answers.map((a) => a.copyWith(status: QCResultStatus.notFilled)).toList(),
+        photos: [],
+        staffNote: staffNoteController.text,
+        adminNote: status == QCReportStatus.DRAFT ? null : 'Menunggu review dari Admin.',
+        formCode: _template.code,
+        templateId: _template.id,
+        generalInfo: genInfo,
+        finalConclusion: status == QCReportStatus.DRAFT ? 'Belum Lengkap' : 'Pending',
+        revisionNumber: 1,
+        revisionHistory: [],
+      );
+      _state.addReport(newReport);
+    }
   }
 
   @override

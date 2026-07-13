@@ -120,10 +120,16 @@ final GoRouter appRouter = GoRouter(
       path: '/qc-material/form/:id',
       pageBuilder: (context, state) {
         final id = state.pathParameters['id'] ?? '';
+        final editReportId = state.uri.queryParameters['editReportId'];
+        final isRevision = state.uri.queryParameters['isRevision'] == 'true';
         return _buildPageWithTransition(
           context: context,
           state: state,
-          child: QCMaterialFormScreen(materialId: id),
+          child: QCMaterialFormScreen(
+            materialId: id,
+            editReportId: editReportId,
+            isRevision: isRevision,
+          ),
         );
       },
     ),
@@ -152,10 +158,16 @@ final GoRouter appRouter = GoRouter(
       path: '/qc-pekerjaan/form/:id',
       pageBuilder: (context, state) {
         final id = state.pathParameters['id'] ?? '';
+        final editReportId = state.uri.queryParameters['editReportId'];
+        final isRevision = state.uri.queryParameters['isRevision'] == 'true';
         return _buildPageWithTransition(
           context: context,
           state: state,
-          child: QCPekerjaanFormScreen(pekerjaanId: id),
+          child: QCPekerjaanFormScreen(
+            pekerjaanId: id,
+            editReportId: editReportId,
+            isRevision: isRevision,
+          ),
         );
       },
     ),

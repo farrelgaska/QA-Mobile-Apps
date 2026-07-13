@@ -3,6 +3,7 @@ import '../../core/dummy/dummy_pekerjaan.dart';
 import '../../core/dummy/dummy_state.dart';
 import '../../shared/models/enums.dart';
 import '../../shared/models/qc_report_model.dart';
+import '../../shared/models/qc_checklist_answer_model.dart';
 import '../../shared/models/work_location_model.dart';
 import '../../core/utils/validators.dart';
 
@@ -28,19 +29,69 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   final List<String> itemIssues = [];
   final List<List<String>> itemPhotos = [];
   final List<String?> itemWarnings = [];
+  final List<String?> itemAdminNotes = [];
 
-  void init(String pekerjaanId) {
+  // Revision state
+  bool isRevisionMode = false;
+  String? editReportId;
+  QCReportModel? _originalReport;
+
+  void init(String pekerjaanId, {String? editReportId, bool isRevision = false}) {
     if (_isInit) return;
     _pekerjaan = dummyPekerjaan.firstWhere((p) => p.id == pekerjaanId,
         orElse: () => dummyPekerjaan[0]);
-    // Initialize lists based on checklist items
-    for (var _ in _pekerjaan.checklistItems) {
-      itemStatuses.add(ChecklistStatus.belumDiisi);
-      itemResults.add('');
-      itemIssues.add('');
-      itemPhotos.add([]);
-      itemWarnings.add(null);
+
+    if (editReportId != null) {
+      final report = _state.reports.firstWhere((r) => r.id == editReportId,
+          orElse: () => _state.reports[0]);
+      _originalReport = report;
+      this.editReportId = editReportId;
+      isRevisionMode = isRevision;
+
+      // Prefill fields
+      areaController.text = report.area;
+      locationDetailController.text = report.detailLocation;
+      mitraController.text = report.generalInfo['mitraName'] ?? '';
+      staffNoteController.text = report.staffNote;
+
+      // Populate checklist items
+      for (int i = 0; i < _pekerjaan.checklistItems.length; i++) {
+        final item = _pekerjaan.checklistItems[i];
+        // find matching answer in report
+        final matchingAnswer = report.checklistItems.firstWhere(
+          (ans) => ans.itemId == item.id,
+          orElse: () => QCChecklistAnswer(
+            itemId: item.id,
+            value: '',
+            status: QCResultStatus.notFilled,
+            photoPaths: [],
+          ),
+        );
+
+        itemResults.add(matchingAnswer.value?.toString() ?? '');
+        itemIssues.add(matchingAnswer.issueNote ?? '');
+        itemPhotos.add(List<String>.from(matchingAnswer.photoPaths));
+        itemStatuses.add(ChecklistStatus.belumDiisi);
+        itemWarnings.add(null);
+        itemAdminNotes.add(matchingAnswer.adminNote);
+      }
+
+      // Recalculate status for all prefilled items
+      for (int i = 0; i < _pekerjaan.checklistItems.length; i++) {
+        _recalculateStatus(i);
+      }
+    } else {
+      // Initialize empty lists based on checklist items
+      for (var _ in _pekerjaan.checklistItems) {
+        itemStatuses.add(ChecklistStatus.belumDiisi);
+        itemResults.add('');
+        itemIssues.add('');
+        itemPhotos.add([]);
+        itemWarnings.add(null);
+        itemAdminNotes.add(null);
+      }
     }
+
     _isInit = true;
     notifyListeners();
   }
@@ -183,39 +234,72 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
       note: '',
       isCustom: false,
     );
-    final results = List<QCReportChecklistResult>.generate(_pekerjaan.checklistItems.length, (i) {
+    final answers = List<QCChecklistAnswer>.generate(_pekerjaan.checklistItems.length, (i) {
       final item = _pekerjaan.checklistItems[i];
-      return QCReportChecklistResult(
+      return QCChecklistAnswer(
         itemId: item.id,
+        value: itemResults[i],
+        status: QCResultStatus.notFilled,
+        photoPaths: itemPhotos[i],
         paramName: item.title,
-        standard: item.standard,
-        inputType: item.inputType == InputType.number ? 'Angka' : item.inputType == InputType.choice ? 'Pilihan' : 'Teks',
+        standardText: item.standard,
         unit: item.unit,
-        resultValue: itemResults[i],
-        status: itemStatuses[i],
+        inputType: item.inputType == InputType.number ? 'number' : item.inputType == InputType.choice ? 'choice' : 'text',
         issueNote: itemIssues[i],
-        photos: itemPhotos[i],
+        adminNote: isRevisionMode ? itemAdminNotes[i] : null,
       );
     });
-    final newReport = QCReportModel(
-      id: 'QC-WRK-${DateTime.now().year}-${1000 + _state.reports.length}',
-      title: '${_pekerjaan.name} - Inspeksi Lapangan',
-      type: QCType.pekerjaan,
-      status: status,
-      checkedByName: _state.currentUser.name,
-      checkedByNik: _state.currentUser.nik,
-      date: DateTime.now(),
-      siteId: _state.currentSite.id,
-      siteName: _state.currentSite.name,
-      area: workLoc.area ?? '',
-      detailLocation: workLoc.segment ?? '',
-      checklistResults: results,
-      photos: [],
-      staffNote: staffNoteController.text,
-      adminNote: status == QCReportStatus.DRAFT ? null : 'Menunggu review dari Admin.',
-      workLocation: workLoc,
-    );
-    _state.addReport(newReport);
+
+    if (isRevisionMode && _originalReport != null) {
+      final updatedHistory = List<QCReportModel>.from(_originalReport!.revisionHistory);
+      updatedHistory.add(_originalReport!);
+
+      final updatedReport = QCReportModel(
+        id: _originalReport!.id,
+        title: _originalReport!.title,
+        type: _originalReport!.type,
+        status: QCReportStatus.SUBMITTED,
+        checkedByName: _state.currentUser.name,
+        checkedByNik: _state.currentUser.nik,
+        date: DateTime.now(),
+        siteId: _originalReport!.siteId,
+        siteName: _originalReport!.siteName,
+        area: workLoc.area ?? '',
+        detailLocation: workLoc.segment ?? '',
+        checklistAnswers: answers,
+        photos: [],
+        staffNote: staffNoteController.text,
+        adminNote: 'Menunggu review dari Admin (Revisi #${_originalReport!.revisionNumber + 1}).',
+        formCode: _originalReport!.formCode,
+        templateId: _originalReport!.templateId,
+        revisionNumber: _originalReport!.revisionNumber + 1,
+        revisionHistory: updatedHistory,
+      );
+      _state.updateReport(updatedReport);
+    } else {
+      final newReport = QCReportModel(
+        id: 'QC-WRK-${DateTime.now().year}-${1000 + _state.reports.length}',
+        title: '${_pekerjaan.name} - Inspeksi Lapangan',
+        type: QCType.pekerjaan,
+        status: status,
+        checkedByName: _state.currentUser.name,
+        checkedByNik: _state.currentUser.nik,
+        date: DateTime.now(),
+        siteId: _state.currentSite.id,
+        siteName: _state.currentSite.name,
+        area: workLoc.area ?? '',
+        detailLocation: workLoc.segment ?? '',
+        checklistAnswers: answers,
+        photos: [],
+        staffNote: staffNoteController.text,
+        adminNote: status == QCReportStatus.DRAFT ? null : 'Menunggu review dari Admin.',
+        formCode: 'PEK-CONST-01',
+        templateId: _pekerjaan.id,
+        revisionNumber: 1,
+        revisionHistory: [],
+      );
+      _state.addReport(newReport);
+    }
   }
 
   @override

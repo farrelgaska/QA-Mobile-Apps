@@ -12,6 +12,7 @@ import '../../../shared/widgets/status_badge.dart';
 import '../../admin/services/qc_evaluation_service.dart';
 
 class RenderItem {
+  final String? itemId;
   final String label;
   final String standard;
   final String value;
@@ -20,8 +21,10 @@ class RenderItem {
   final String issueNote;
   final List<String> photos;
   final String? unit;
+  final String? adminNote;
 
   RenderItem({
+    this.itemId,
     required this.label,
     required this.standard,
     required this.value,
@@ -30,6 +33,7 @@ class RenderItem {
     required this.issueNote,
     required this.photos,
     this.unit,
+    this.adminNote,
   });
 }
 
@@ -73,8 +77,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
     // Build unified render items list
     final List<RenderItem> renderItems = [];
-    if (report.checklistAnswers != null && report.checklistAnswers!.isNotEmpty) {
-      for (var ans in report.checklistAnswers!) {
+    if (report.checklistItems.isNotEmpty) {
+      for (var ans in report.checklistItems) {
         dynamic evalStatus = ans.status;
         String? warning = ans.warningMessage;
         if (state.currentUser.role == 'Admin') {
@@ -99,19 +103,21 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
         renderItems.add(
           RenderItem(
-            label: ans.paramName ?? 'Parameter',
-            standard: ans.standardText ?? 'Standard',
+            itemId: ans.itemId,
+            label: ans.paramName,
+            standard: ans.standardText,
             value: ans.value?.toString() ?? '',
             status: evalStatus,
             warningMessage: warning,
             issueNote: ans.issueNote ?? '',
             photos: ans.photoPaths,
             unit: ans.unit,
+            adminNote: ans.adminNote,
           ),
         );
       }
-    } else if (report.checklistResults != null) {
-      for (var res in report.checklistResults!) {
+    } else if (report.checklistResults.isNotEmpty) {
+      for (var res in report.checklistResults) {
         dynamic evalStatus = res.status;
         if (state.currentUser.role == 'Admin') {
           evalStatus = QCEvaluationService.evaluatePekerjaanItem(
@@ -123,6 +129,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
         renderItems.add(
           RenderItem(
+            itemId: res.itemId,
             label: res.paramName,
             standard: res.standard,
             value: res.resultValue,
@@ -131,6 +138,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             issueNote: res.issueNote,
             photos: res.photos,
             unit: res.unit,
+            adminNote: res.adminNote,
           ),
         );
       }
@@ -212,8 +220,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                     const SizedBox(height: 16),
                     _buildInfoRow('Jenis QC', report.type == QCType.material ? 'QC Material' : 'QC Pekerjaan'),
                     _buildInfoRow('Nama Item', report.title),
-                    if (report.formCode != null)
-                      _buildInfoRow('Kode Form', report.formCode!),
+                    if (report.formCode.isNotEmpty)
+                      _buildInfoRow('Kode Form', report.formCode),
                     _buildInfoRow('Tanggal', _formatDate(report.date)),
                     _buildInfoRow('Pemeriksa', '${report.checkedByName} (${report.checkedByNik})'),
                     _buildInfoRow('Site Lokasi', report.siteName),
@@ -243,10 +251,14 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                     result.status == QCResultStatus.fail ||
                     result.status == QCResultStatus.needFollowUp;
 
+                final bool itemNeedsFollowUp = report.status == QCReportStatus.NEEDS_FOLLOW_UP &&
+                    (hasIssue || (result.adminNote != null && result.adminNote!.trim().isNotEmpty));
+
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
                   child: AppCard(
                     padding: const EdgeInsets.all(16),
+                    color: itemNeedsFollowUp ? const Color(0xFFFFF5F5) : null,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -354,6 +366,48 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                           const SizedBox(height: 6),
                           PhotoGrid(photos: result.photos),
                         ],
+
+                        // Admin Note specific to this item
+                        if (itemNeedsFollowUp && result.adminNote != null && result.adminNote!.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.rejectedBg,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppColors.rejectedText, width: 0.5),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Row(
+                                  children: [
+                                    Icon(Icons.info_outline, color: AppColors.rejectedText, size: 14),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Catatan Evaluasi Admin:',
+                                      style: TextStyle(
+                                        color: AppColors.rejectedText,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  result.adminNote!,
+                                  style: const TextStyle(
+                                    color: AppColors.rejectedText,
+                                    fontSize: 12,
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -413,9 +467,11 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                       } else if (titleLower.contains('beton 9')) {
                         templateId = 'tiang_beton_9m';
                       }
-                      context.push('/qc-material/form/$templateId?editReportId=${report.id}');
+                      final isRevision = report.status == QCReportStatus.NEEDS_FOLLOW_UP;
+                      context.push('/qc-material/form/$templateId?editReportId=${report.id}${isRevision ? "&isRevision=true" : ""}');
                     } else {
-                      context.push('/qc-pekerjaan/form/pek-1?editReportId=${report.id}');
+                      final isRevision = report.status == QCReportStatus.NEEDS_FOLLOW_UP;
+                      context.push('/qc-pekerjaan/form/pek-1?editReportId=${report.id}${isRevision ? "&isRevision=true" : ""}');
                     }
                   },
                 ),

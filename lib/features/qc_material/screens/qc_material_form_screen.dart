@@ -17,12 +17,24 @@ import '../../../shared/widgets/app_snackbar.dart';
 
 class QCMaterialFormScreen extends StatelessWidget {
   final String materialId;
-  const QCMaterialFormScreen({Key? key, required this.materialId}) : super(key: key);
+  final String? editReportId;
+  final bool isRevision;
+
+  const QCMaterialFormScreen({
+    Key? key,
+    required this.materialId,
+    this.editReportId,
+    this.isRevision = false,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => QCMaterialFormProvider()..init(materialId),
+      create: (_) => QCMaterialFormProvider()..init(
+        materialId,
+        editReportId: editReportId,
+        isRevision: isRevision,
+      ),
       child: Consumer<QCMaterialFormProvider>(
         builder: (context, provider, _) {
           if (!provider.isReady) {
@@ -149,24 +161,71 @@ class QCMaterialFormScreen extends StatelessWidget {
           final hasValidationError = answer.warningMessage != null &&
               answer.warningMessage!.isNotEmpty &&
               answer.warningMessage != 'Wajib diisi';
-          return ChecklistItemCard(
-            itemNumber: index + 1,
-            title: item.label,
-            standardText: item.standardText,
-            inputType: item.inputType,
-            unit: item.unit,
-            choices: item.choices,
-            currentStatus: answer.status,
-            resultValue: answer.value,
-            issueDescription: answer.issueNote ?? '',
-            photos: answer.photoPaths,
-            warningMessage: answer.warningMessage,
-            isLocked: hasValidationError,
-            onStatusChanged: (status) => p.answers[index].status = status,
-            onResultValueChanged: (val) => p.updateAnswer(index, val),
-            onIssueDescriptionChanged: (val) => p.answers[index].issueNote = val,
-            onAddPhoto: () => p.addPhoto(index),
-            onDeletePhoto: (pIdx) => p.removePhoto(index, pIdx),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ChecklistItemCard(
+                itemNumber: index + 1,
+                title: item.label,
+                standardText: item.standardText,
+                inputType: item.inputType,
+                unit: item.unit,
+                choices: item.choices,
+                currentStatus: answer.status,
+                resultValue: answer.value,
+                issueDescription: answer.issueNote ?? '',
+                photos: answer.photoPaths,
+                warningMessage: answer.warningMessage,
+                isLocked: hasValidationError,
+                onStatusChanged: (status) => p.answers[index].status = status,
+                onResultValueChanged: (val) => p.updateAnswer(index, val),
+                onIssueDescriptionChanged: (val) => p.updateIssueNote(index, val),
+                onAddPhoto: () => p.addPhoto(index),
+                onDeletePhoto: (pIdx) => p.removePhoto(index, pIdx),
+              ),
+              if (p.isRevisionMode && answer.adminNote != null && answer.adminNote!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16, left: 8, right: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.rejectedBg,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.rejectedText, width: 0.5),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.info_outline, color: AppColors.rejectedText, size: 14),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Catatan Perbaikan Admin (Item ${index + 1}):',
+                            style: const TextStyle(
+                              color: AppColors.rejectedText,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        answer.adminNote!,
+                        style: const TextStyle(
+                          color: AppColors.rejectedText,
+                          fontSize: 12,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+            ],
           );
         }),
       ],
@@ -187,32 +246,34 @@ class QCMaterialFormScreen extends StatelessWidget {
 
   Widget _buildActionButtons(BuildContext context, QCMaterialFormProvider p) {
     return Row(children: [
-      Expanded(
-        flex: 4,
-        child: AppButton(
-          text: 'Simpan Draft',
-          variant: AppButtonVariant.secondary,
-          onPressed: () {
-            final locError = p.validateLocation();
-            if (locError != null) {
-              AppSnackbar.warning(context, locError);
-              return;
-            }
-            if (!p.hasAnyDraftContent) {
-              AppSnackbar.warning(context, 'Isi minimal satu data pemeriksaan sebelum menyimpan draft.');
-              return;
-            }
-            p.persistReport(QCReportStatus.DRAFT);
-            AppSnackbar.success(context, 'Draft berhasil disimpan');
-            context.pop();
-          },
+      if (!p.isRevisionMode) ...[
+        Expanded(
+          flex: 4,
+          child: AppButton(
+            text: 'Simpan Draft',
+            variant: AppButtonVariant.secondary,
+            onPressed: () {
+              final locError = p.validateLocation();
+              if (locError != null) {
+                AppSnackbar.warning(context, locError);
+                return;
+              }
+              if (!p.hasAnyDraftContent) {
+                AppSnackbar.warning(context, 'Isi minimal satu data pemeriksaan sebelum menyimpan draft.');
+                return;
+              }
+              p.persistReport(QCReportStatus.DRAFT);
+              AppSnackbar.success(context, 'Draft berhasil disimpan');
+              context.pop();
+            },
+          ),
         ),
-      ),
-      const SizedBox(width: 12),
+        const SizedBox(width: 12),
+      ],
       Expanded(
         flex: 6,
         child: AppButton(
-          text: 'Submit Laporan',
+          text: p.isRevisionMode ? 'Kirim Ulang' : 'Submit Laporan',
           variant: AppButtonVariant.primary,
           onPressed: () {
             final locError = p.validateLocation();
@@ -228,9 +289,11 @@ class QCMaterialFormScreen extends StatelessWidget {
             showDialog(
               context: context,
               builder: (c) => ConfirmationModal(
-                title: 'Kirim Laporan QC',
-                message: 'Apakah seluruh data pengujian sudah benar dan siap dikirim?',
-                confirmText: 'Kirim',
+                title: p.isRevisionMode ? 'Kirim Ulang Laporan' : 'Kirim Laporan QC',
+                message: p.isRevisionMode
+                    ? 'Apakah perbaikan data pengujian sudah benar dan siap dikirim ulang?'
+                    : 'Apakah seluruh data pengujian sudah benar dan siap dikirim?',
+                confirmText: p.isRevisionMode ? 'Kirim Ulang' : 'Kirim',
                 onConfirm: () {
                   p.persistReport(QCReportStatus.SUBMITTED);
                   Navigator.pop(c);
