@@ -434,13 +434,6 @@ class _AccountSettingPageState extends State<AccountSettingPage> {
                       title: 'Ubah Password Akun',
                       subtitle: 'Diperbarui 3 bulan lalu',
                     ),
-                    const Divider(color: AppColors.borderSoft, height: 1, indent: 50),
-                    _buildActionRow(
-                      context,
-                      icon: Icons.security_outlined,
-                      title: 'PIN & Biometrik',
-                      subtitle: 'Sidik jari aktif',
-                    ),
                   ],
                 ),
               ),
