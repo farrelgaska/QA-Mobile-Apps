@@ -119,8 +119,8 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // ── Selectors ─────────────────────────────────────────────────────────────
 
   const getReport = useCallback(
-    (id: string) => reportsRef.current.find(r => r.id === id),
-    []
+    (id: string) => reports.find(r => r.id === id),
+    [reports]
   );
 
   // ── Approve report ────────────────────────────────────────────────────────
