@@ -1,10 +1,11 @@
 /**
  * reportApi.ts
- * Thin typed wrapper around the prototype backend at http://localhost:3001.
+ * Thin typed wrapper around the prototype backend at http://localhost:3002.
  * All functions throw on non-2xx responses so callers can handle errors.
  */
 
-const BASE_URL = 'http://localhost:3001';
+// Prototype backend URL (configured to port 3002)
+const BASE_URL = 'http://localhost:3002';
 
 // ─── Raw API shape (shared report contract) ──────────────────────────────────
 
