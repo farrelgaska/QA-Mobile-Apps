@@ -67,6 +67,13 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
 
+  // GET /
+  if (pathname === '/' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'running', api: 'mock-api' }));
+    return;
+  }
+
   // GET /reports
   if (pathname === '/reports' && req.method === 'GET') {
     const reports = getReports();
@@ -255,7 +262,7 @@ const server = http.createServer((req, res) => {
   res.end(JSON.stringify({ error: 'Route not found' }));
 });
 
-const PORT = 3001;
+const PORT = 3002;
 server.listen(PORT, () => {
   console.log(`[Mock API] Listening at http://localhost:${PORT}`);
 });
