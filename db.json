@@ -1,0 +1,225 @@
+[
+  {
+    "id": "REP-001",
+    "type": "MATERIAL",
+    "template_id": "tiang_besi_7m_3_segmen",
+    "form_code": "TA-FR-048-010-01",
+    "title": "Pemeriksaan Tiang Besi 7 Meter 3 Segmen",
+    "status": "SUBMITTED",
+    "staff": {
+      "name": "Ahmad Syarif",
+      "nik": "120001"
+    },
+    "location": {
+      "site_id": "site-1",
+      "site_name": "Bekasi Site",
+      "area": "Sektor Timur",
+      "detail_location": "Bekasi Site"
+    },
+    "general_info": {
+      "poNumber": "PO-990"
+    },
+    "checklist_items": [
+      {
+        "id": "REP-001-C01",
+        "parameter_name": "Ketebalan Seng (Galvanize Thickness)",
+        "input_type": "number",
+        "standard_text": "min 80 micron",
+        "unit": "micron",
+        "actual_value": "82",
+        "staff_note": "",
+        "item_photos": ["https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?w=600&auto=format&fit=crop&q=60"],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "REP-001-C02",
+        "parameter_name": "Tebal Segmen Bawah (Segment 1)",
+        "input_type": "number",
+        "standard_text": "min 4.0 mm",
+        "unit": "mm",
+        "actual_value": "4.1",
+        "staff_note": "",
+        "item_photos": [],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "REP-001-C03",
+        "parameter_name": "Tebal Segmen Tengah (Segment 2)",
+        "input_type": "number",
+        "standard_text": "min 3.5 mm",
+        "unit": "mm",
+        "actual_value": "3.6",
+        "staff_note": "",
+        "item_photos": [],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "REP-001-C04",
+        "parameter_name": "Tebal Segmen Atas (Segment 3)",
+        "input_type": "number",
+        "standard_text": "min 3.0 mm",
+        "unit": "mm",
+        "actual_value": "2.9",
+        "staff_note": "",
+        "item_photos": [],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      }
+    ],
+    "staff_note": "",
+    "submitted_at": "2026-07-09T08:30:00Z",
+    "admin_review": {
+      "admin_note": "",
+      "conclusion": "NEEDS_REVIEW",
+      "reviewed_at": ""
+    },
+    "general_photos": [
+      "https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?w=600&auto=format&fit=crop&q=60"
+    ],
+    "revision_number": 1,
+    "revision_history": []
+  },
+  {
+    "id": "REP-002",
+    "type": "WORK",
+    "template_id": "pemasangan_tiang_erection",
+    "form_code": "TA-FR-048-010-02",
+    "title": "Pemasangan Tiang (Erection)",
+    "status": "SUBMITTED",
+    "staff": {
+      "name": "Budi Hartono",
+      "nik": "120002"
+    },
+    "location": {
+      "site_id": "site-2",
+      "site_name": "Cikarang Plant",
+      "area": "Sektor Barat",
+      "detail_location": "Cikarang Plant"
+    },
+    "general_info": {},
+    "checklist_items": [
+      {
+        "id": "REP-002-C01",
+        "parameter_name": "Kelurusan tiang diukur dengan waterpass",
+        "input_type": "number",
+        "standard_text": "Tegak lurus (90 derajat)",
+        "unit": "derajat",
+        "actual_value": "90",
+        "staff_note": "",
+        "item_photos": ["https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=600&auto=format&fit=crop&q=60"],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "REP-002-C02",
+        "parameter_name": "Kekencangan baut angkur (torque check)",
+        "input_type": "choice",
+        "standard_text": "Kencang merata",
+        "unit": "",
+        "actual_value": "Kencang",
+        "staff_note": "",
+        "item_photos": [],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "REP-002-C03",
+        "parameter_name": "Pengecatan ulang area sambungan segmen",
+        "input_type": "choice",
+        "standard_text": "Rapi & menutup sempurna",
+        "unit": "",
+        "actual_value": "Belum dicat",
+        "staff_note": "",
+        "item_photos": ["https://images.unsplash.com/photo-1590069261209-f8e9b8642343?w=600&auto=format&fit=crop&q=60"],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      }
+    ],
+    "staff_note": "",
+    "submitted_at": "2026-07-09T09:15:00Z",
+    "admin_review": {
+      "admin_note": "",
+      "conclusion": "NEEDS_REVIEW",
+      "reviewed_at": ""
+    },
+    "general_photos": [
+      "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=600&auto=format&fit=crop&q=60",
+      "https://images.unsplash.com/photo-1590069261209-f8e9b8642343?w=600&auto=format&fit=crop&q=60"
+    ],
+    "revision_number": 1,
+    "revision_history": []
+  },
+  {
+    "id": "REP-003",
+    "type": "MATERIAL",
+    "template_id": "tiang_beton_7m_bulat",
+    "form_code": "TA-FR-048-010-04",
+    "title": "Inspeksi Tiang Beton 7 Meter Bulat",
+    "status": "APPROVED",
+    "staff": {
+      "name": "Cecep Solihin",
+      "nik": "120003"
+    },
+    "location": {
+      "site_id": "site-3",
+      "site_name": "Bandung Site",
+      "area": "Sektor Selatan",
+      "detail_location": "Bandung Site"
+    },
+    "general_info": {},
+    "checklist_items": [
+      {
+        "id": "REP-003-C01",
+        "parameter_name": "Kuat Tekan Beton",
+        "input_type": "number",
+        "standard_text": "min 350 kg/cm2",
+        "unit": "kg/cm2",
+        "actual_value": "365",
+        "staff_note": "",
+        "item_photos": ["https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?w=600&auto=format&fit=crop&q=60"],
+        "admin_evaluation": "PASS",
+        "admin_note": ""
+      },
+      {
+        "id": "REP-003-C02",
+        "parameter_name": "Diameter Bawah",
+        "input_type": "number",
+        "standard_text": "140 - 150 mm",
+        "unit": "mm",
+        "actual_value": "145",
+        "staff_note": "",
+        "item_photos": [],
+        "admin_evaluation": "PASS",
+        "admin_note": ""
+      },
+      {
+        "id": "REP-003-C03",
+        "parameter_name": "Diameter Atas",
+        "input_type": "number",
+        "standard_text": "110 - 120 mm",
+        "unit": "mm",
+        "actual_value": "115",
+        "staff_note": "",
+        "item_photos": [],
+        "admin_evaluation": "PASS",
+        "admin_note": ""
+      }
+    ],
+    "staff_note": "",
+    "submitted_at": "2026-07-08T10:00:00Z",
+    "admin_review": {
+      "admin_note": "Semua spesifikasi beton terpenuhi dengan baik.",
+      "conclusion": "PASSED",
+      "reviewed_at": "2026-07-08T11:00:00Z",
+      "reviewed_by": "Admin"
+    },
+    "general_photos": [
+      "https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?w=600&auto=format&fit=crop&q=60"
+    ],
+    "revision_number": 1,
+    "revision_history": []
+  }
+]
