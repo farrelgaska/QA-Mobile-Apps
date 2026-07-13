@@ -74,7 +74,18 @@ export function getStandardResultColor(result: StandardResult): string {
   }
 }
 
+
+/** Map raw API conclusion / legacy strings → StandardResult union. */
+export function normalizeStandardResult(raw?: string): StandardResult {
+  if (!raw) return 'Perlu Review';
+  const val = raw.toUpperCase().trim();
+  if (val === 'PASSED' || val === 'PASS' || val === 'LULUS') return 'Lulus';
+  if (val === 'NOT_PASSED' || val === 'FAIL' || val === 'FAILED' || val === 'TIDAK LULUS') return 'Tidak Lulus';
+  return 'Perlu Review';
+}
+
 export function mapToSharedReport(report: any): QCReport {
+
   if (!report) return report;
   
   const staff = report.staff || {
@@ -148,7 +159,8 @@ export function mapToSharedReport(report: any): QCReport {
     revision_number: report.revision_number || report.revisionNumber || 1,
     revision_history: (report.revision_history || report.revisionHistory || []).map((h: any) => mapToSharedReport(h)),
     
-    template_id: report.template_id || report.formCode || '',
+    template_id: report.template_id || '',
+    // Note: form_code and template_id are distinct — do not conflate them
     form_code: report.form_code || report.formCode || '',
     staff,
     location,
@@ -175,6 +187,6 @@ export function mapToSharedReport(report: any): QCReport {
     })),
     photos: report.general_photos || report.photos || [],
     adminNote: admin_review.admin_note || report.adminNote || '',
-    standardResult: admin_review.conclusion || report.standardResult || 'Perlu Review',
+    standardResult: normalizeStandardResult(admin_review.conclusion || report.standardResult),
   };
 }
