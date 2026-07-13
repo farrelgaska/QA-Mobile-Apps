@@ -13,6 +13,7 @@ import '../features/qc_pekerjaan/screens/qc_pekerjaan_segment_screen.dart';
 import '../features/qc_pekerjaan/screens/qc_pekerjaan_list_screen.dart';
 import '../features/qc_pekerjaan/screens/qc_pekerjaan_form_screen.dart';
 import '../shared/layouts/main_shell.dart';
+import '../shared/models/qc_material_template_model.dart';
 
 CustomTransitionPage<void> _buildPageWithTransition({
   required BuildContext context,
@@ -122,6 +123,9 @@ final GoRouter appRouter = GoRouter(
         final id = state.pathParameters['id'] ?? '';
         final editReportId = state.uri.queryParameters['editReportId'];
         final isRevision = state.uri.queryParameters['isRevision'] == 'true';
+        final template = state.extra is QCMaterialTemplate
+            ? state.extra as QCMaterialTemplate
+            : null;
         return _buildPageWithTransition(
           context: context,
           state: state,
@@ -129,6 +133,7 @@ final GoRouter appRouter = GoRouter(
             materialId: id,
             editReportId: editReportId,
             isRevision: isRevision,
+            template: template,
           ),
         );
       },

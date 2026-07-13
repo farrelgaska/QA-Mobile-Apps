@@ -87,10 +87,18 @@ class QCMaterialFormProvider extends ChangeNotifier {
   String? editReportId;
   QCReportModel? _originalReport;
 
-  void init(String materialId, {String? editReportId, bool isRevision = false}) {
+  void init(String materialId, {String? editReportId, bool isRevision = false, QCMaterialTemplate? template}) {
     if (_isInit) return;
-    _template = dummyQCMaterialTemplates.firstWhere((t) => t.id == materialId,
-        orElse: () => dummyQCMaterialTemplates[0]);
+    // Use provided template if available (e.g., from API-loaded list).
+    // Fall back to dummy templates only if no template was passed.
+    if (template != null) {
+      _template = template;
+    } else {
+      _template = dummyQCMaterialTemplates.firstWhere(
+        (t) => t.id == materialId,
+        orElse: () => dummyQCMaterialTemplates[0],
+      );
+    }
 
     if (editReportId != null) {
       final report = _state.reports.firstWhere((r) => r.id == editReportId,

@@ -303,7 +303,7 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
                                               height: 44,
                                               child: ElevatedButton(
                                                 onPressed: () {
-                                                  context.push('/qc-material/form/${template.id}');
+                                                  context.push('/qc-material/form/${template.id}', extra: template);
                                                 },
                                                 style: ElevatedButton.styleFrom(
                                                   backgroundColor: AppColors.primary,

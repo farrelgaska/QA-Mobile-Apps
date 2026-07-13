@@ -15,16 +15,20 @@ import '../../../shared/widgets/work_location_selector.dart';
 import '../../../shared/providers/qc_material_form_provider.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 
+import '../../../shared/models/qc_material_template_model.dart';
+
 class QCMaterialFormScreen extends StatelessWidget {
   final String materialId;
   final String? editReportId;
   final bool isRevision;
+  final QCMaterialTemplate? template;
 
   const QCMaterialFormScreen({
     Key? key,
     required this.materialId,
     this.editReportId,
     this.isRevision = false,
+    this.template,
   }) : super(key: key);
 
   @override
@@ -34,6 +38,7 @@ class QCMaterialFormScreen extends StatelessWidget {
         materialId,
         editReportId: editReportId,
         isRevision: isRevision,
+        template: template,
       ),
       child: Consumer<QCMaterialFormProvider>(
         builder: (context, provider, _) {
@@ -149,6 +154,32 @@ class QCMaterialFormScreen extends StatelessWidget {
   }
 
   Widget _buildChecklistSection(QCMaterialFormProvider p, dynamic tpl) {
+    if (tpl.checklistItems.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Text('Parameter Checklist Mutu',
+              style: TextStyle(color: AppColors.textMain, fontWeight: FontWeight.bold, fontSize: 16)),
+          SizedBox(height: 12),
+          Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Column(
+                children: [
+                  Icon(Icons.checklist_outlined, size: 48, color: AppColors.textSoft),
+                  SizedBox(height: 12),
+                  Text(
+                    'Template ini belum memiliki item checklist.',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
