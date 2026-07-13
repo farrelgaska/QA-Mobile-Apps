@@ -30,6 +30,14 @@ const TEMPLATES_PATH = path.join(__dirname, 'data', 'templates.json');
 
 const getTemplates = () => {
   try {
+    if (!fs.existsSync(TEMPLATES_PATH)) {
+      const dir = path.dirname(TEMPLATES_PATH);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(TEMPLATES_PATH, '[]', 'utf-8');
+      return [];
+    }
     const raw = fs.readFileSync(TEMPLATES_PATH, 'utf-8');
     return JSON.parse(raw);
   } catch (e) {
