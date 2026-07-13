@@ -4,7 +4,7 @@ export type ReportType = 'material' | 'pekerjaan';
 
 export type StandardResult = 'Lulus' | 'Tidak Lulus' | 'Perlu Review';
 
-export type ChecklistResult = 'pass' | 'fail' | 'review';
+export type ChecklistResult = 'PASS' | 'FAIL' | 'NEEDS_REVIEW';
 
 export interface ChecklistItem {
   id: string;

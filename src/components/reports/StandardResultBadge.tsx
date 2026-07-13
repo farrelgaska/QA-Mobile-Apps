@@ -9,9 +9,9 @@ interface StandardResultBadgeProps {
 
 export const StandardResultBadge: React.FC<StandardResultBadgeProps> = ({ result }) => {
   let mappedResult: StandardResult;
-  if (result === 'pass') mappedResult = 'Lulus';
-  else if (result === 'fail') mappedResult = 'Tidak Lulus';
-  else if (result === 'review') mappedResult = 'Perlu Review';
+  if (result === 'pass' || result === 'PASS') mappedResult = 'Lulus';
+  else if (result === 'fail' || result === 'FAIL') mappedResult = 'Tidak Lulus';
+  else if (result === 'review' || result === 'NEEDS_REVIEW') mappedResult = 'Perlu Review';
   else mappedResult = result;
 
   const color = getStandardResultBadgeVariant(mappedResult);

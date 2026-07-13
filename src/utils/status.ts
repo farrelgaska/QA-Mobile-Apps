@@ -95,11 +95,19 @@ export function mapToSharedReport(report: any): QCReport {
   const rawItems = report.checklist_items || report.checklistItems || report.checklistAnswers || report.checklistResults || [];
   const checklist_items: SharedChecklistItem[] = rawItems.map((item: any) => {
     let evaluation: 'PASS' | 'FAIL' | 'PENDING' = 'PENDING';
-    const rawEval = item.admin_evaluation || item.result || item.status;
-    if (rawEval === 'pass' || rawEval === 'PASS' || rawEval === 'QCResultStatus.pass' || rawEval === 'lulus') {
-      evaluation = 'PASS';
-    } else if (rawEval === 'fail' || rawEval === 'FAIL' || rawEval === 'QCResultStatus.fail' || rawEval === 'tidakSesuai') {
-      evaluation = 'FAIL';
+    if (item.admin_evaluation === 'PASS' || item.admin_evaluation === 'FAIL' || item.admin_evaluation === 'PENDING') {
+      evaluation = item.admin_evaluation;
+    } else {
+      if (status === 'SUBMITTED' || status === 'DRAFT') {
+        evaluation = 'PENDING';
+      } else {
+        const rawEval = item.result || item.status;
+        if (rawEval === 'pass' || rawEval === 'PASS' || rawEval === 'QCResultStatus.pass' || rawEval === 'lulus') {
+          evaluation = 'PASS';
+        } else if (rawEval === 'fail' || rawEval === 'FAIL' || rawEval === 'QCResultStatus.fail' || rawEval === 'tidakSesuai') {
+          evaluation = 'FAIL';
+        }
+      }
     }
     
     return {
@@ -152,7 +160,7 @@ export function mapToSharedReport(report: any): QCReport {
       standardLabel: item.standard_text,
       actualValue: item.actual_value,
       unit: item.unit,
-      result: item.admin_evaluation === 'PASS' ? 'pass' : item.admin_evaluation === 'FAIL' ? 'fail' : 'review',
+      result: item.admin_evaluation === 'PASS' ? 'PASS' : item.admin_evaluation === 'FAIL' ? 'FAIL' : 'NEEDS_REVIEW',
       photoUrls: item.item_photos,
       adminNote: item.admin_note,
     })),

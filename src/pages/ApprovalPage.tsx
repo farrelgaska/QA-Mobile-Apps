@@ -211,7 +211,7 @@ export const ApprovalPage: React.FC = () => {
                   </TableRow>
                 ) : (
                   filtered.map((rep) => {
-                    const hasFailures = rep.checklistItems.some(c => c.result === 'fail');
+                    const hasFailures = rep.checklistItems.some(c => c.result === 'FAIL');
                     return (
                       <TableRow key={rep.id} className="hover:bg-amber-50/30 group">
                         {/* ID */}
@@ -327,6 +327,7 @@ export const ApprovalPage: React.FC = () => {
               variant="primary"
               className="bg-[#006B5A] hover:bg-[#005244]"
               onClick={handleApproveConfirm}
+              disabled={approveTarget !== null && !approveTarget.checklistItems.every(i => i.result === 'PASS')}
             >
               <CheckCircle className="h-4 w-4 mr-1.5" />
               Ya, Setujui Laporan
@@ -348,12 +349,20 @@ export const ApprovalPage: React.FC = () => {
               </p>
             </div>
 
-            {/* Warning if failures */}
-            {approveTarget.checklistItems.some((c: ChecklistItem) => c.result === 'fail') && (
+            {/* Warning if failures or needs review */}
+            {approveTarget.checklistItems.some((c: ChecklistItem) => c.result === 'FAIL') && (
+              <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 leading-relaxed">
+                <AlertCircle className="h-4 w-4 text-rose-500 flex-shrink-0 mt-0.5" />
+                <span>
+                  <strong>Persetujuan Ditolak:</strong> Laporan ini memiliki parameter yang <strong>gagal</strong>. Laporan dengan parameter gagal tidak boleh disetujui.
+                </span>
+              </div>
+            )}
+            {approveTarget.checklistItems.some((c: ChecklistItem) => c.result === 'NEEDS_REVIEW') && (
               <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 leading-relaxed">
                 <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
                 <span>
-                  <strong>Peringatan:</strong> Laporan ini memiliki parameter yang <strong>gagal</strong>. Pastikan Anda telah memeriksa detail sebelum menyetujui.
+                  <strong>Persetujuan Ditolak:</strong> Masih ada parameter yang memerlukan <strong>review / evaluasi</strong>. Harap evaluasi setiap item terlebih dahulu.
                 </span>
               </div>
             )}
@@ -392,7 +401,11 @@ export const ApprovalPage: React.FC = () => {
               id="confirm-revision"
               variant="danger"
               onClick={handleRevisionConfirm}
-              disabled={!revisionNote.trim()}
+              disabled={
+                !revisionNote.trim() ||
+                (revisionTarget !== null && !revisionTarget.checklistItems.some(i => i.result === 'FAIL')) ||
+                (revisionTarget !== null && revisionTarget.checklistItems.some(i => i.result === 'FAIL' && !i.adminNote?.trim()))
+              }
             >
               <RefreshCw className="h-4 w-4 mr-1.5" />
               Kirim Instruksi Tindak Lanjut
@@ -437,6 +450,18 @@ export const ApprovalPage: React.FC = () => {
                 }`}
                 required
               />
+              {revisionTarget !== null && !revisionTarget.checklistItems.some(i => i.result === 'FAIL') && (
+                <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Minta Perbaikan ditolak: minimal harus ada satu parameter yang ditandai Gagal.
+                </p>
+              )}
+              {revisionTarget !== null && revisionTarget.checklistItems.some(i => i.result === 'FAIL' && !i.adminNote?.trim()) && (
+                <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Minta Perbaikan ditolak: semua parameter Gagal harus memiliki Catatan Admin.
+                </p>
+              )}
               {!revisionNote.trim() && (
                 <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />

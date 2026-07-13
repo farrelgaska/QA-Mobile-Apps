@@ -50,9 +50,9 @@ export const ChecklistEvaluationTable: React.FC<ChecklistEvaluationTableProps> =
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => onUpdateItem(item.id, 'pass', item.adminNote || '')}
+                        onClick={() => onUpdateItem(item.id, 'PASS', item.adminNote || '')}
                         className={`p-1.5 rounded-lg border transition-all duration-150 flex items-center gap-1 text-xs font-semibold ${
-                          item.result === 'pass'
+                          item.result === 'PASS'
                             ? 'bg-emerald-50 border-emerald-300 text-emerald-700 shadow-sm'
                             : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-600'
                         }`}
@@ -63,9 +63,9 @@ export const ChecklistEvaluationTable: React.FC<ChecklistEvaluationTableProps> =
                       </button>
                       <button
                         type="button"
-                        onClick={() => onUpdateItem(item.id, 'fail', item.adminNote || '')}
+                        onClick={() => onUpdateItem(item.id, 'FAIL', item.adminNote || '')}
                         className={`p-1.5 rounded-lg border transition-all duration-150 flex items-center gap-1 text-xs font-semibold ${
-                          item.result === 'fail'
+                          item.result === 'FAIL'
                             ? 'bg-rose-50 border-rose-300 text-rose-700 shadow-sm'
                             : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-600'
                         }`}
@@ -76,9 +76,9 @@ export const ChecklistEvaluationTable: React.FC<ChecklistEvaluationTableProps> =
                       </button>
                       <button
                         type="button"
-                        onClick={() => onUpdateItem(item.id, 'review', item.adminNote || '')}
+                        onClick={() => onUpdateItem(item.id, 'NEEDS_REVIEW', item.adminNote || '')}
                         className={`p-1.5 rounded-lg border transition-all duration-150 flex items-center gap-1 text-xs font-semibold ${
-                          item.result === 'review'
+                          item.result === 'NEEDS_REVIEW'
                             ? 'bg-amber-50 border-amber-300 text-amber-750 shadow-sm'
                             : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-600'
                         }`}

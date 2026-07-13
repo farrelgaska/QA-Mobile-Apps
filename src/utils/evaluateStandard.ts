@@ -6,7 +6,7 @@ export function evaluateChecklistItem(
 ): ChecklistResult {
   const cleanActual = actualValue.trim();
   if (!cleanActual) {
-    return 'review';
+    return 'NEEDS_REVIEW';
   }
 
   const actualNum = parseFloat(cleanActual.replace(/[^\d.-]/g, ''));
@@ -16,21 +16,21 @@ export function evaluateChecklistItem(
   if (rangeMatch && !isNaN(actualNum)) {
     const min = parseFloat(rangeMatch[1]);
     const max = parseFloat(rangeMatch[2]);
-    return actualNum >= min && actualNum <= max ? 'pass' : 'fail';
+    return actualNum >= min && actualNum <= max ? 'PASS' : 'FAIL';
   }
 
   // Case 2: "min X"
   const minMatch = standardLabel.match(/min\s*(\d+(?:\.\d+)?)/i);
   if (minMatch && !isNaN(actualNum)) {
     const min = parseFloat(minMatch[1]);
-    return actualNum >= min ? 'pass' : 'fail';
+    return actualNum >= min ? 'PASS' : 'FAIL';
   }
 
   // Case 3: "max X"
   const maxMatch = standardLabel.match(/max\s*(\d+(?:\.\d+)?)/i);
   if (maxMatch && !isNaN(actualNum)) {
     const max = parseFloat(maxMatch[1]);
-    return actualNum <= max ? 'pass' : 'fail';
+    return actualNum <= max ? 'PASS' : 'FAIL';
   }
 
   // Case 4: Text-based/descriptive matches (case insensitive check)
@@ -38,21 +38,21 @@ export function evaluateChecklistItem(
   const cleanActVal = cleanActual.toLowerCase();
 
   if (cleanLabel.includes(cleanActVal) || cleanActVal.includes(cleanLabel)) {
-    return 'pass';
+    return 'PASS';
   }
 
   if (cleanActVal === 'sesuai' || cleanActVal === 'baik' || cleanActVal === 'kencang' || cleanActVal === 'tegak lurus') {
-    return 'pass';
+    return 'PASS';
   }
 
   // If actual number is parsed and matches single numbers in label
   const singleNumMatch = standardLabel.match(/(\d+(?:\.\d+)?)/);
   if (singleNumMatch && !isNaN(actualNum)) {
     const target = parseFloat(singleNumMatch[1]);
-    return actualNum === target ? 'pass' : 'fail';
+    return actualNum === target ? 'PASS' : 'FAIL';
   }
 
-  return 'review';
+  return 'NEEDS_REVIEW';
 }
 
 export function getReportStandardSummary(report: QCReport): StandardResult {
@@ -64,9 +64,9 @@ export function getReportStandardSummary(report: QCReport): StandardResult {
   let hasReview = false;
 
   for (const item of report.checklistItems) {
-    if (item.result === 'fail') {
+    if (item.result === 'FAIL') {
       hasFail = true;
-    } else if (item.result === 'review') {
+    } else if (item.result === 'NEEDS_REVIEW') {
       hasReview = true;
     }
   }

@@ -79,9 +79,26 @@ export const ReportDetailPage: React.FC = () => {
     );
   }
 
-  const hasFailures = report.checklistItems.some(i => i.result === 'fail');
-  const hasPendingReviews = report.checklistItems.some(i => i.result === 'review');
+  const hasFailures = report.checklistItems.some(i => i.result === 'FAIL');
+  const hasPendingReviews = report.checklistItems.some(i => i.result === 'NEEDS_REVIEW');
   const isEditable = report.status === 'SUBMITTED';
+
+  const canApprove = report.checklistItems.every(i => i.result === 'PASS');
+  const canRequestRevision = hasFailures && report.checklistItems.filter(i => i.result === 'FAIL').every(i => i.adminNote?.trim());
+
+  let approvalDisabledReason = '';
+  if (hasFailures) {
+    approvalDisabledReason = 'Persetujuan ditolak: Laporan ini memiliki parameter yang Gagal. Silakan minta perbaikan.';
+  } else if (hasPendingReviews) {
+    approvalDisabledReason = 'Persetujuan ditolak: Masih ada parameter yang belum dievaluasi (Review).';
+  }
+
+  let revisionDisabledReason = '';
+  if (!hasFailures) {
+    revisionDisabledReason = 'Minta Perbaikan ditolak: Harus ada minimal satu parameter yang ditandai Gagal.';
+  } else if (report.checklistItems.some(i => i.result === 'FAIL' && !i.adminNote?.trim())) {
+    revisionDisabledReason = 'Minta Perbaikan ditolak: Semua parameter yang Gagal harus memiliki Catatan Admin.';
+  }
 
   // ─── Main render ──────────────────────────────────────────────────────────
   return (
@@ -193,19 +210,19 @@ export const ReportDetailPage: React.FC = () => {
                 <div className="grid grid-cols-3 gap-2">
                   <div className="text-center p-2 bg-emerald-50 rounded-lg border border-emerald-100">
                     <div className="text-lg font-extrabold text-emerald-700">
-                      {report.checklistItems.filter(c => c.result === 'pass').length}
+                      {report.checklistItems.filter(c => c.result === 'PASS').length}
                     </div>
                     <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">Lulus</div>
                   </div>
                   <div className="text-center p-2 bg-rose-50 rounded-lg border border-rose-100">
                     <div className="text-lg font-extrabold text-rose-700">
-                      {report.checklistItems.filter(c => c.result === 'fail').length}
+                      {report.checklistItems.filter(c => c.result === 'FAIL').length}
                     </div>
                     <div className="text-[10px] text-rose-600 font-semibold mt-0.5">Gagal</div>
                   </div>
                   <div className="text-center p-2 bg-amber-50 rounded-lg border border-amber-100">
                     <div className="text-lg font-extrabold text-amber-700">
-                      {report.checklistItems.filter(c => c.result === 'review').length}
+                      {report.checklistItems.filter(c => c.result === 'NEEDS_REVIEW').length}
                     </div>
                     <div className="text-[10px] text-amber-600 font-semibold mt-0.5">Review</div>
                   </div>
@@ -289,6 +306,19 @@ export const ReportDetailPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-5">
+                  {approvalDisabledReason && (
+                    <div className="p-3.5 bg-rose-50 border border-rose-150 text-rose-800 text-xs rounded-xl flex items-start gap-2 leading-relaxed">
+                      <AlertTriangle className="h-4 w-4 text-rose-500 flex-shrink-0 mt-0.5" />
+                      <span>{approvalDisabledReason}</span>
+                    </div>
+                  )}
+                  {revisionDisabledReason && (
+                    <div className="p-3.5 bg-amber-50 border border-amber-150 text-amber-850 text-xs rounded-xl flex items-start gap-2 leading-relaxed">
+                      <Info className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <span>{revisionDisabledReason}</span>
+                    </div>
+                  )}
+
                   <div>
                     <label htmlFor="admin-feedback" className="block text-xs font-bold text-gray-700 mb-1.5">
                       Catatan Evaluasi / Instruksi Revisi{' '}
@@ -309,6 +339,7 @@ export const ReportDetailPage: React.FC = () => {
                       variant="danger"
                       onClick={() => setIsRevisionModalOpen(true)}
                       className="flex-1 shadow-sm"
+                      disabled={!canRequestRevision}
                     >
                       <RefreshCw className="mr-2 h-4 w-4" />
                       Minta Perbaikan
@@ -318,6 +349,7 @@ export const ReportDetailPage: React.FC = () => {
                       variant="primary"
                       onClick={() => setIsApproveModalOpen(true)}
                       className="flex-1 bg-[#006B5A] hover:bg-[#005244] shadow-sm shadow-[#006B5A]/20"
+                      disabled={!canApprove}
                     >
                       <CheckCircle className="mr-2 h-4 w-4" />
                       Setujui Laporan
