@@ -30,14 +30,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
     'Draft',
     'Menunggu Review',
     'Disetujui',
-    'Perlu Perbaikan'
+    'Perlu Tindak Lanjut'
   ];
 
   String _mapInputStatus(String input) {
     final norm = input.toLowerCase().trim();
     if (norm == 'draft') return 'Draft';
     if (norm == 'disetujui' || norm == 'approved' || norm == 'selesai' || norm == 'lulus') return 'Disetujui';
-    if (norm == 'perlu perbaikan' || norm == 'needfollowup' || norm == 'tidak sesuai' || norm == 'revisi' || norm == 'perlu tindak lanjut') return 'Perlu Perbaikan';
+    if (norm == 'perlu perbaikan' || norm == 'needfollowup' || norm == 'tidak sesuai' || norm == 'revisi' || norm == 'perlu tindak lanjut') return 'Perlu Tindak Lanjut';
     return 'Menunggu Review';
   }
 
@@ -68,13 +68,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
   QCReportStatus? _mapTabToReportStatus(String tab) {
     switch (tab) {
       case 'Draft':
-        return QCReportStatus.draft;
+        return QCReportStatus.DRAFT;
       case 'Menunggu Review':
-        return QCReportStatus.waiting;
+        return QCReportStatus.SUBMITTED;
       case 'Disetujui':
-        return QCReportStatus.approved;
-      case 'Perlu Perbaikan':
-        return QCReportStatus.needFollowUp;
+        return QCReportStatus.APPROVED;
+      case 'Perlu Tindak Lanjut':
+        return QCReportStatus.NEEDS_FOLLOW_UP;
       default:
         return null;
     }
@@ -94,8 +94,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
       final tabStatus = _mapTabToReportStatus(_selectedTab);
       if (tabStatus != null) {
-        if (tabStatus == QCReportStatus.needFollowUp) {
-          return report.status == QCReportStatus.needFollowUp;
+        if (tabStatus == QCReportStatus.NEEDS_FOLLOW_UP) {
+          return report.status == QCReportStatus.NEEDS_FOLLOW_UP;
         }
         return report.status == tabStatus;
       }

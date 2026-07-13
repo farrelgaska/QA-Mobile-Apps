@@ -239,11 +239,11 @@ class QCMaterialFormProvider extends ChangeNotifier {
       checklistAnswers: answers.map((a) => a.copyWith(status: QCResultStatus.notFilled)).toList(),
       photos: [],
       staffNote: staffNoteController.text,
-      adminNote: status == QCReportStatus.draft ? null : 'Menunggu review dari Admin.',
+      adminNote: status == QCReportStatus.DRAFT ? null : 'Menunggu review dari Admin.',
       formCode: _template.code,
       workLocation: workLoc,
       generalInfo: genInfo,
-      finalConclusion: status == QCReportStatus.draft ? 'Belum Lengkap' : 'Pending',
+      finalConclusion: status == QCReportStatus.DRAFT ? 'Belum Lengkap' : 'Pending',
     );
     _state.addReport(newReport);
   }

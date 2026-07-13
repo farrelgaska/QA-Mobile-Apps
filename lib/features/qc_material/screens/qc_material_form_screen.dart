@@ -202,7 +202,7 @@ class QCMaterialFormScreen extends StatelessWidget {
               AppSnackbar.warning(context, 'Isi minimal satu data pemeriksaan sebelum menyimpan draft.');
               return;
             }
-            p.persistReport(QCReportStatus.draft);
+            p.persistReport(QCReportStatus.DRAFT);
             AppSnackbar.success(context, 'Draft berhasil disimpan');
             context.pop();
           },
@@ -232,7 +232,7 @@ class QCMaterialFormScreen extends StatelessWidget {
                 message: 'Apakah seluruh data pengujian sudah benar dan siap dikirim?',
                 confirmText: 'Kirim',
                 onConfirm: () {
-                  p.persistReport(QCReportStatus.waiting);
+                  p.persistReport(QCReportStatus.SUBMITTED);
                   Navigator.pop(c);
                   context.pop();
                 },

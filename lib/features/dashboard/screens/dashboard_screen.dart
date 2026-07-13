@@ -236,10 +236,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .where((r) => r.type == QCType.material && r.createdByNik == DummyAuth.current.nik)
         .toList();
     final totalMat = materialReports.length;
-    final matApproved = materialReports.where((r) => r.status == QCReportStatus.approved).length;
-    final matPending = materialReports.where((r) => r.status == QCReportStatus.waiting).length;
-    final matNeedsRepair = materialReports.where((r) => r.status == QCReportStatus.needFollowUp).length;
-    final materialNeedsRepairReports = materialReports.where((r) => r.status == QCReportStatus.needFollowUp).toList();
+    final matApproved = materialReports.where((r) => r.status == QCReportStatus.APPROVED).length;
+    final matPending = materialReports.where((r) => r.status == QCReportStatus.SUBMITTED).length;
+    final matNeedsRepair = materialReports.where((r) => r.status == QCReportStatus.NEEDS_FOLLOW_UP).length;
+    final materialNeedsRepairReports = materialReports.where((r) => r.status == QCReportStatus.NEEDS_FOLLOW_UP).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,11 +367,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(height: 10),
         ...materialReports.map((report) {
           String statusText = 'Disetujui';
-          if (report.status == QCReportStatus.needFollowUp) {
-            statusText = 'Perlu Perbaikan';
-          } else if (report.status == QCReportStatus.waiting) {
+          if (report.status == QCReportStatus.NEEDS_FOLLOW_UP) {
+            statusText = 'Perlu Tindak Lanjut';
+          } else if (report.status == QCReportStatus.SUBMITTED) {
             statusText = 'Menunggu Review';
-          } else if (report.status == QCReportStatus.draft) {
+          } else if (report.status == QCReportStatus.DRAFT) {
             statusText = 'Draft';
           }
           return MaterialSummaryCard(
@@ -400,10 +400,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .where((r) => r.type == QCType.pekerjaan && r.createdByNik == DummyAuth.current.nik)
         .toList();
     final totalPek = pekerjaanReports.length;
-    final pekApproved = pekerjaanReports.where((r) => r.status == QCReportStatus.approved).length;
-    final pekOnProgress = pekerjaanReports.where((r) => r.status == QCReportStatus.waiting).length;
-    final pekNeedsRepair = pekerjaanReports.where((r) => r.status == QCReportStatus.needFollowUp).length;
-    final pekerjaanNeedsRepairReports = pekerjaanReports.where((r) => r.status == QCReportStatus.needFollowUp).toList();
+    final pekApproved = pekerjaanReports.where((r) => r.status == QCReportStatus.APPROVED).length;
+    final pekOnProgress = pekerjaanReports.where((r) => r.status == QCReportStatus.SUBMITTED).length;
+    final pekNeedsRepair = pekerjaanReports.where((r) => r.status == QCReportStatus.NEEDS_FOLLOW_UP).length;
+    final pekerjaanNeedsRepairReports = pekerjaanReports.where((r) => r.status == QCReportStatus.NEEDS_FOLLOW_UP).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -528,11 +528,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(height: 10),
         ...pekerjaanReports.map((report) {
           String statusText = 'Menunggu Review';
-          if (report.status == QCReportStatus.approved) {
+          if (report.status == QCReportStatus.APPROVED) {
             statusText = 'Disetujui';
-          } else if (report.status == QCReportStatus.needFollowUp) {
-            statusText = 'Perlu Perbaikan';
-          } else if (report.status == QCReportStatus.draft) {
+          } else if (report.status == QCReportStatus.NEEDS_FOLLOW_UP) {
+            statusText = 'Perlu Tindak Lanjut';
+          } else if (report.status == QCReportStatus.DRAFT) {
             statusText = 'Draft';
           }
           return WorkStatusCard(

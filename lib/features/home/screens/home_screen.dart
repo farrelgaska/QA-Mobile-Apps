@@ -128,9 +128,9 @@ class _HomeScreenState extends State<HomeScreen> {
     // Recalculate stats dynamically from DummyState based on current user NIK
     final userReports = _state.reports.where((r) => r.createdByNik == DummyAuth.current.nik).toList();
     final totalQc = userReports.length;
-    final waitingQc = userReports.where((r) => r.status == QCReportStatus.waiting).length;
-    final revisionQc = userReports.where((r) => r.status == QCReportStatus.needFollowUp).length;
-    final approvedQc = userReports.where((r) => r.status == QCReportStatus.approved).length;
+    final waitingQc = userReports.where((r) => r.status == QCReportStatus.SUBMITTED).length;
+    final revisionQc = userReports.where((r) => r.status == QCReportStatus.NEEDS_FOLLOW_UP).length;
+    final approvedQc = userReports.where((r) => r.status == QCReportStatus.APPROVED).length;
 
     // Filter recent reports based on currently selected site and current user
     final recentReports = userReports

@@ -9,6 +9,9 @@ enum ReportStatus {
 
 enum ChecklistStatus {
   belumDiisi,
+  sudahDiisi,
+  inputTidakValid,
+  perluDilengkapi,
   lulus,
   tidakSesuai,
   perluTindakLanjut
@@ -57,8 +60,8 @@ enum QCResultStatus {
 }
 
 enum QCReportStatus {
-  draft,
-  waiting,
-  approved,
-  needFollowUp,
+  DRAFT,
+  SUBMITTED,
+  NEEDS_FOLLOW_UP,
+  APPROVED
 }

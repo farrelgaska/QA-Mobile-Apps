@@ -69,7 +69,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       orElse: () => state.reports[0],
     );
 
-    final isEditable = report.status == QCReportStatus.draft || report.status == QCReportStatus.needFollowUp;
+    final isEditable = report.status == QCReportStatus.DRAFT || report.status == QCReportStatus.NEEDS_FOLLOW_UP;
 
     // Build unified render items list
     final List<RenderItem> renderItems = [];
@@ -77,7 +77,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       for (var ans in report.checklistAnswers!) {
         dynamic evalStatus = ans.status;
         String? warning = ans.warningMessage;
-        if (state.currentUser.role == 'Admin' && report.status == QCReportStatus.waiting) {
+        if (state.currentUser.role == 'Admin') {
           final template = dummyQCMaterialTemplates.firstWhere(
             (t) => t.code == report.formCode,
             orElse: () => dummyQCMaterialTemplates[0],
@@ -113,7 +113,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     } else if (report.checklistResults != null) {
       for (var res in report.checklistResults!) {
         dynamic evalStatus = res.status;
-        if (state.currentUser.role == 'Admin' && report.status == QCReportStatus.waiting) {
+        if (state.currentUser.role == 'Admin') {
           evalStatus = QCEvaluationService.evaluatePekerjaanItem(
             title: res.paramName,
             inputType: res.inputType == 'Angka' ? InputType.number : (res.inputType == 'Pilihan' ? InputType.choice : InputType.text),
@@ -154,7 +154,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               ),
 
               // Banner Catatan Admin (Perlu Perbaikan)
-              if (report.status == QCReportStatus.needFollowUp && report.adminNote != null) ...[
+              if (report.status == QCReportStatus.NEEDS_FOLLOW_UP && report.adminNote != null) ...[
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -393,7 +393,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               // Edit Action Button (visible for draft/needFollowUp)
               if (isEditable) ...[
                 AppButton(
-                  text: report.status == QCReportStatus.needFollowUp ? 'Perbaiki Laporan' : 'Edit Laporan',
+                  text: report.status == QCReportStatus.NEEDS_FOLLOW_UP ? 'Perbaiki Laporan' : 'Edit Laporan',
                   variant: AppButtonVariant.primary,
                   onPressed: () {
                     // Navigate to form depending on type

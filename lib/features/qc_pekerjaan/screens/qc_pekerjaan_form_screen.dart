@@ -151,11 +151,11 @@ class QCPekerjaanFormScreen extends StatelessWidget {
             resultValue: p.itemResults[index],
             issueDescription: p.itemIssues[index],
             photos: p.itemPhotos[index],
-            warningMessage: null,
+            warningMessage: p.itemWarnings[index],
             isLocked: false,
             onStatusChanged: (status) => p.updateStatus(index, status),
             onResultValueChanged: (val) => p.updateResult(index, val),
-            onIssueDescriptionChanged: (val) => p.itemIssues[index] = val,
+            onIssueDescriptionChanged: (val) => p.updateIssueNote(index, val),
             onAddPhoto: () => p.addPhoto(index),
             onDeletePhoto: (pIdx) => p.removePhoto(index, pIdx),
           );
@@ -189,7 +189,7 @@ class QCPekerjaanFormScreen extends StatelessWidget {
                 AppSnackbar.warning(context, 'Isi minimal satu data pemeriksaan sebelum menyimpan draft.');
                 return;
               }
-              p.persistReport(QCReportStatus.draft);
+              p.persistReport(QCReportStatus.DRAFT);
               AppSnackbar.success(context, 'Draft berhasil disimpan');
               context.pop();
             },
@@ -215,7 +215,7 @@ class QCPekerjaanFormScreen extends StatelessWidget {
                       'Apakah seluruh data inspeksi pekerjaan konstruksi sudah lengkap dan siap dikirim?',
                   confirmText: 'Kirim',
                   onConfirm: () {
-                    p.persistReport(QCReportStatus.waiting);
+                    p.persistReport(QCReportStatus.SUBMITTED);
                     Navigator.pop(c);
                     context.pop();
                   },
