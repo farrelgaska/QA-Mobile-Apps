@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { QCReport, StandardResult } from '../types/report';
-import { dummyReports } from '../data/dummyReports';
 import { mapToSharedReport } from '../utils/status';
 import {
   fetchReports,
@@ -81,21 +80,9 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setReports(mapped);
       saveToStorage(mapped);
     } catch (err) {
-      // API offline: fall back to localStorage, then to dummy data
-      console.warn('[Mock API offline] Falling back to local data.', err);
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw) as QCReport[];
-          setReports(parsed.map(r => mapToSharedReport(r)));
-        } else {
-          // Last resort: use dummy data, filter out DRAFT (staff-only)
-          setReports(dummyReports.filter(r => r.status !== 'DRAFT').map(r => mapToSharedReport(r)));
-        }
-      } catch {
-        setReports(dummyReports.filter(r => r.status !== 'DRAFT').map(r => mapToSharedReport(r)));
-      }
-      setError('Tidak dapat terhubung ke server. Menampilkan data lokal.');
+      console.warn('[Mock API offline] Failed to fetch reports from server.', err);
+      setReports([]);
+      setError('Tidak dapat terhubung ke server.');
     } finally {
       setLoading(false);
     }
