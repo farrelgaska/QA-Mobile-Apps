@@ -8,22 +8,62 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts';
-
-const dummyData = [
-  { name: 'Minggu 1', Laporan: 12, Disetujui: 10, Perbaikan: 2 },
-  { name: 'Minggu 2', Laporan: 19, Disetujui: 15, Perbaikan: 4 },
-  { name: 'Minggu 3', Laporan: 15, Disetujui: 12, Perbaikan: 3 },
-  { name: 'Minggu 4', Laporan: 28, Disetujui: 24, Perbaikan: 4 },
-  { name: 'Minggu 5', Laporan: 22, Disetujui: 18, Perbaikan: 4 },
-  { name: 'Minggu 6', Laporan: 35, Disetujui: 30, Perbaikan: 5 },
-];
+import { useReports } from '../../app/ReportsContext';
 
 export const ReportChart: React.FC = () => {
+  const { reports } = useReports();
+
+  const chartData = React.useMemo(() => {
+    if (!reports || reports.length === 0) {
+      return [{ name: 'Belum Ada Laporan', Laporan: 0, Disetujui: 0 }];
+    }
+
+    const groups: { [key: string]: { monday: Date; Laporan: number; Disetujui: number } } = {};
+
+    reports.forEach(report => {
+      if (!report.submittedAt) return;
+      const d = new Date(report.submittedAt);
+      if (isNaN(d.getTime())) return;
+
+      // Find Monday of the week
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(d.setDate(diff));
+      monday.setHours(0, 0, 0, 0);
+
+      const key = monday.getTime().toString();
+      if (!groups[key]) {
+        groups[key] = {
+          monday,
+          Laporan: 0,
+          Disetujui: 0,
+        };
+      }
+      groups[key].Laporan += 1;
+      if (report.status === 'APPROVED') {
+        groups[key].Disetujui += 1;
+      }
+    });
+
+    // Sort chronologically by Monday date
+    const sortedKeys = Object.keys(groups).sort((a, b) => Number(a) - Number(b));
+    return sortedKeys.map(key => {
+      const g = groups[key];
+      const dayStr = String(g.monday.getDate()).padStart(2, '0');
+      const monthStr = String(g.monday.getMonth() + 1).padStart(2, '0');
+      return {
+        name: `Mgu ${dayStr}/${monthStr}`,
+        Laporan: g.Laporan,
+        Disetujui: g.Disetujui,
+      };
+    });
+  }, [reports]);
+
   return (
     <div className="w-full h-[300px]">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
-          data={dummyData}
+          data={chartData}
           margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
         >
           <defs>
