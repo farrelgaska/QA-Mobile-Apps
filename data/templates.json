@@ -212,5 +212,40 @@
     "isActive": false,
     "createdAt": "2026-07-13T04:29:49.531Z",
     "updatedAt": "2026-07-13T04:29:49.539Z"
+  },
+  {
+    "id": "MAT-1783917909180",
+    "type": "MATERIAL",
+    "name": "Tiang Beton 67 Meter",
+    "formCode": "FORM-MAT-1783917909180",
+    "category": "Tiang Beton",
+    "standardCode": "SPLN 321-64-7676",
+    "checklistItems": [
+      {
+        "id": "MAT-1783917909180-C01",
+        "parameter_name": "Panjang",
+        "input_type": "choice",
+        "standard_text": "6767",
+        "unit": "mm",
+        "is_required": true,
+        "name": "Panjang",
+        "standardLabel": "6767",
+        "requiredPhoto": true
+      },
+      {
+        "id": "MAT-1783917909180-C02",
+        "parameter_name": "Diameter",
+        "input_type": "choice",
+        "standard_text": "6767",
+        "unit": "mm",
+        "is_required": true,
+        "name": "Diameter",
+        "standardLabel": "6767",
+        "requiredPhoto": true
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-13T04:45:09.219Z",
+    "updatedAt": "2026-07-13T04:45:28.249Z"
   }
 ]
