@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { QCReport, StandardResult } from '../types/report';
 import { dummyReports } from '../data/dummyReports';
-import { normalizeReportStatus } from '../utils/status';
+import { normalizeReportStatus, mapToSharedReport } from '../utils/status';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -38,10 +38,7 @@ function loadFromStorage(): QCReport[] {
   } catch {
     loadedReports = dummyReports;
   }
-  return loadedReports.map(r => ({
-    ...r,
-    status: normalizeReportStatus(r.status)
-  }));
+  return loadedReports.map(r => mapToSharedReport(r));
 }
 
 function saveToStorage(reports: QCReport[]): void {
@@ -59,7 +56,7 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [reports]);
 
   const updateReport = useCallback((updatedReport: QCReport) => {
-    setReports(prev => prev.map(r => r.id === updatedReport.id ? updatedReport : r));
+    setReports(prev => prev.map(r => r.id === updatedReport.id ? mapToSharedReport(updatedReport) : r));
   }, []);
 
   const getReport = useCallback(
@@ -73,8 +70,12 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     updateReport({
       ...report,
       status: 'APPROVED',
-      standardResult: 'Lulus',
-      adminNote: adminNote || 'Laporan disetujui. Semua kriteria memenuhi standar teknis.',
+      admin_review: {
+        ...report.admin_review,
+        admin_note: adminNote || 'Laporan disetujui. Semua kriteria memenuhi standar teknis.',
+        conclusion: 'Lulus',
+        reviewed_at: new Date().toISOString(),
+      },
     });
   }, [reports, updateReport]);
 
@@ -84,7 +85,12 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     updateReport({
       ...report,
       status: 'NEEDS_FOLLOW_UP',
-      adminNote,
+      admin_review: {
+        ...report.admin_review,
+        admin_note: adminNote,
+        conclusion: 'Tidak Lulus',
+        reviewed_at: new Date().toISOString(),
+      },
     });
   }, [reports, updateReport]);
 

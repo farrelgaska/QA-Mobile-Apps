@@ -1,4 +1,4 @@
-import type { ReportStatus, StandardResult } from '../types/report';
+import type { ReportStatus, StandardResult, QCReport, SharedChecklistItem } from '../types/report';
 
 export const STATUS_LABELS: Record<ReportStatus, string> = {
   DRAFT: 'Draft',
@@ -72,4 +72,92 @@ export function getStandardResultColor(result: StandardResult): string {
     default:
       return '#F5A400';
   }
+}
+
+export function mapToSharedReport(report: any): QCReport {
+  if (!report) return report;
+  
+  const staff = report.staff || {
+    name: report.submittedBy || report.checkedByName || 'Yanuar Luthfi',
+    nik: report.submittedByNik || report.checkedByNik || report.createdByNik || 'NIK-908271',
+  };
+  
+  const location = report.location || {
+    site_id: report.siteId || 'site-1',
+    site_name: report.siteName || report.locationName || 'Bekasi Site',
+    area: report.area || 'Sektor Utama',
+    detail_location: report.detailLocation || report.locationName || 'Bekasi Site',
+  };
+  
+  const type = (report.type === 'material' || report.type === 'MATERIAL') ? 'material' : 'pekerjaan';
+  const status = normalizeReportStatus(report.status);
+  
+  const rawItems = report.checklist_items || report.checklistItems || report.checklistAnswers || report.checklistResults || [];
+  const checklist_items: SharedChecklistItem[] = rawItems.map((item: any) => {
+    let evaluation: 'PASS' | 'FAIL' | 'PENDING' = 'PENDING';
+    const rawEval = item.admin_evaluation || item.result || item.status;
+    if (rawEval === 'pass' || rawEval === 'PASS' || rawEval === 'QCResultStatus.pass' || rawEval === 'lulus') {
+      evaluation = 'PASS';
+    } else if (rawEval === 'fail' || rawEval === 'FAIL' || rawEval === 'QCResultStatus.fail' || rawEval === 'tidakSesuai') {
+      evaluation = 'FAIL';
+    }
+    
+    return {
+      id: item.id || item.itemId || '',
+      parameter_name: item.parameter_name || item.name || item.paramName || '',
+      input_type: item.input_type || item.inputType || 'text',
+      standard_text: item.standard_text || item.standardLabel || item.standardText || item.standard || '',
+      unit: item.unit || '',
+      actual_value: item.actual_value || item.actualValue || item.resultValue || (item.value !== undefined ? item.value.toString() : ''),
+      staff_note: item.staff_note || item.issueNote || item.staffNote || '',
+      item_photos: item.item_photos || item.photoUrls || item.photoPaths || item.photos || [],
+      admin_evaluation: evaluation,
+      admin_note: item.admin_note || item.adminNote || '',
+    };
+  });
+  
+  const admin_review = report.admin_review || {
+    admin_note: report.adminNote || '',
+    conclusion: report.standardResult || 'Perlu Review',
+    reviewed_at: report.reviewedAt || '',
+  };
+  
+  return {
+    id: report.id,
+    type,
+    title: report.title,
+    status,
+    staff_note: report.staff_note || report.staffNote || '',
+    general_photos: report.general_photos || report.photos || [],
+    revision_number: report.revision_number || report.revisionNumber || 1,
+    revision_history: (report.revision_history || report.revisionHistory || []).map((h: any) => mapToSharedReport(h)),
+    
+    template_id: report.template_id || report.formCode || '',
+    form_code: report.form_code || report.formCode || '',
+    staff,
+    location,
+    general_info: report.general_info || report.generalInfo || {},
+    checklist_items,
+    submitted_at: report.submitted_at || report.submittedAt || report.date || new Date().toISOString(),
+    admin_review,
+    
+    // Legacy mapping compatibility
+    submittedBy: staff.name,
+    submittedByNik: staff.nik,
+    submittedAt: report.submitted_at || report.submittedAt || report.date || new Date().toISOString(),
+    locationName: location.detail_location || location.site_name,
+    checklistItems: checklist_items.map(item => ({
+      id: item.id,
+      name: item.parameter_name,
+      standardLabel: item.standard_text,
+      actualValue: item.actual_value,
+      unit: item.unit,
+      result: item.admin_evaluation === 'PASS' ? 'pass' : item.admin_evaluation === 'FAIL' ? 'fail' : 'review',
+      photoUrls: item.item_photos,
+      adminNote: item.admin_note,
+    })),
+    photos: report.general_photos || report.photos || [],
+    adminNote: admin_review.admin_note || report.adminNote || '',
+    standardResult: admin_review.conclusion || report.standardResult || 'Perlu Review',
+  };
 }
