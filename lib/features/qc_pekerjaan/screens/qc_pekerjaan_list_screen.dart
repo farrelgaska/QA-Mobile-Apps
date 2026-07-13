@@ -56,8 +56,19 @@ class _QCPekerjaanListScreenState extends State<QCPekerjaanListScreen> {
 
   /// Maps an API WORK template JSON to a [PekerjaanModel] for display.
   PekerjaanModel _mapApiTemplate(Map<String, dynamic> json) {
-    final segmentStr = (json['segment'] as String? ?? 'construction').toLowerCase();
-    final segment = _parseSegment(segmentStr);
+    final categoryStr = (json['category'] as String? ?? '').toLowerCase();
+    final segmentStr = (json['segment'] as String? ?? '').toLowerCase();
+    
+    WorkSegment segment = WorkSegment.construction;
+    if (segmentStr.isNotEmpty) {
+      segment = _parseSegment(segmentStr);
+    } else {
+      if (categoryStr.contains('provisioning')) {
+        segment = WorkSegment.provisioning;
+      } else if (categoryStr.contains('assurance')) {
+        segment = WorkSegment.assurance;
+      }
+    }
 
     final checklistItems = (json['checklistItems'] as List<dynamic>? ?? [])
         .map<ChecklistItemModel>((item) {
@@ -87,7 +98,7 @@ class _QCPekerjaanListScreenState extends State<QCPekerjaanListScreen> {
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
       segment: segment,
-      description: json['category'] as String? ?? '',
+      description: json['description'] as String? ?? '',
       checklistItems: checklistItems,
       status: 'Aktif',
     );
@@ -101,7 +112,7 @@ class _QCPekerjaanListScreenState extends State<QCPekerjaanListScreen> {
     });
 
     try {
-      final rawTemplates = await ApiService().fetchTemplates();
+      final rawTemplates = await ApiService().fetchTemplates('WORK');
 
       if (rawTemplates != null) {
         final workTemplates = rawTemplates
@@ -111,7 +122,7 @@ class _QCPekerjaanListScreenState extends State<QCPekerjaanListScreen> {
 
         if (mounted) {
           setState(() {
-            _allJobs = workTemplates.isNotEmpty ? workTemplates : dummyPekerjaan;
+            _allJobs = workTemplates;
             _isLoading = false;
           });
         }

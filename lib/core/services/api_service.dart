@@ -39,9 +39,10 @@ class ApiService {
 
   /// Fetch all QC templates from the mock API backend.
   /// Returns a list of raw JSON maps, or null if the API is unavailable.
-  Future<List<Map<String, dynamic>>?> fetchTemplates() async {
+  Future<List<Map<String, dynamic>>?> fetchTemplates([String? type]) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/templates')).timeout(
+      final url = type != null ? '$baseUrl/templates?type=$type' : '$baseUrl/templates';
+      final response = await http.get(Uri.parse(url)).timeout(
         const Duration(seconds: 4),
       );
       if (response.statusCode == 200) {
