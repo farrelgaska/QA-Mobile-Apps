@@ -2,23 +2,27 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, 'db.json');
+const DB_PATH = path.join(__dirname, 'data', 'reports.json');
 
 const getReports = () => {
   try {
     const raw = fs.readFileSync(DB_PATH, 'utf-8');
     return JSON.parse(raw);
   } catch (e) {
-    console.error('Error reading db.json:', e);
+    console.error('Error reading reports.json:', e);
     return [];
   }
 };
 
 const saveReports = (data) => {
   try {
+    const dir = path.dirname(DB_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
   } catch (e) {
-    console.error('Error writing to db.json:', e);
+    console.error('Error writing to reports.json:', e);
   }
 };
 
