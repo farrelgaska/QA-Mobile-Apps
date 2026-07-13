@@ -59,6 +59,36 @@ export const ReportChart: React.FC = () => {
     });
   }, [reports]);
 
+  const maxVal = React.useMemo(() => {
+    let currentMax = 0;
+    chartData.forEach(d => {
+      if (d.Laporan > currentMax) currentMax = d.Laporan;
+      if (d.Disetujui > currentMax) currentMax = d.Disetujui;
+    });
+    return currentMax;
+  }, [chartData]);
+
+  const yAxisDomain = React.useMemo(() => {
+    if (maxVal <= 3) {
+      return [0, 3];
+    }
+    const maxTicks = Math.ceil(maxVal * 1.15); // rounded integer maximum with small top padding
+    const cleanMax = Math.max(3, Math.ceil(maxTicks));
+    return [0, cleanMax];
+  }, [maxVal]);
+
+  const yAxisTicks = React.useMemo(() => {
+    const [, max] = yAxisDomain;
+    if (max <= 5) {
+      const ticks = [];
+      for (let i = 0; i <= max; i++) {
+        ticks.push(i);
+      }
+      return ticks;
+    }
+    return undefined; // Let Recharts scale automatically with integer ticks
+  }, [yAxisDomain]);
+
   return (
     <div className="w-full h-[300px]">
       <ResponsiveContainer width="100%" height="100%">
@@ -84,6 +114,9 @@ export const ReportChart: React.FC = () => {
             tick={{ fill: '#9CA3AF', fontSize: 11 }}
           />
           <YAxis 
+            domain={yAxisDomain}
+            ticks={yAxisTicks}
+            allowDecimals={false}
             axisLine={false} 
             tickLine={false} 
             tick={{ fill: '#9CA3AF', fontSize: 11 }} 
