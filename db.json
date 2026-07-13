@@ -28,7 +28,9 @@
         "unit": "micron",
         "actual_value": "82",
         "staff_note": "",
-        "item_photos": ["https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?w=600&auto=format&fit=crop&q=60"],
+        "item_photos": [
+          "https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?w=600&auto=format&fit=crop&q=60"
+        ],
         "admin_evaluation": "NEEDS_REVIEW",
         "admin_note": ""
       },
@@ -109,7 +111,9 @@
         "unit": "derajat",
         "actual_value": "90",
         "staff_note": "",
-        "item_photos": ["https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=600&auto=format&fit=crop&q=60"],
+        "item_photos": [
+          "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=600&auto=format&fit=crop&q=60"
+        ],
         "admin_evaluation": "NEEDS_REVIEW",
         "admin_note": ""
       },
@@ -133,7 +137,9 @@
         "unit": "",
         "actual_value": "Belum dicat",
         "staff_note": "",
-        "item_photos": ["https://images.unsplash.com/photo-1590069261209-f8e9b8642343?w=600&auto=format&fit=crop&q=60"],
+        "item_photos": [
+          "https://images.unsplash.com/photo-1590069261209-f8e9b8642343?w=600&auto=format&fit=crop&q=60"
+        ],
         "admin_evaluation": "NEEDS_REVIEW",
         "admin_note": ""
       }
@@ -179,7 +185,9 @@
         "unit": "kg/cm2",
         "actual_value": "365",
         "staff_note": "",
-        "item_photos": ["https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?w=600&auto=format&fit=crop&q=60"],
+        "item_photos": [
+          "https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?w=600&auto=format&fit=crop&q=60"
+        ],
         "admin_evaluation": "PASS",
         "admin_note": ""
       },
@@ -219,6 +227,228 @@
     "general_photos": [
       "https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?w=600&auto=format&fit=crop&q=60"
     ],
+    "revision_number": 1,
+    "revision_history": []
+  },
+  {
+    "id": "QC-WRK-2026-1009",
+    "type": "WORK",
+    "template_id": "pek-2",
+    "form_code": "PEK-CONST-01",
+    "title": "Penarikan Kabel Dropcore - Inspeksi Lapangan",
+    "status": "APPROVED",
+    "staff": {
+      "name": "Yanuar Luthfi",
+      "nik": "NIK-908271"
+    },
+    "location": {
+      "site_id": "site-1",
+      "site_name": "Site Warehouse Jakarta Barat",
+      "area": "Manakek",
+      "detail_location": "241 69 67"
+    },
+    "general_info": {},
+    "checklist_items": [
+      {
+        "id": "pek-2-c1",
+        "parameter_name": "Pemasangan S-Clamp",
+        "input_type": "choice",
+        "standard_text": "S-Clamp terpasang kencang di tiang & rumah",
+        "unit": "",
+        "actual_value": "Kencang",
+        "staff_note": "",
+        "item_photos": [
+          "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=150&q=80"
+        ],
+        "admin_evaluation": "PASS",
+        "admin_note": "a"
+      },
+      {
+        "id": "pek-2-c2",
+        "parameter_name": "Rute Kabel",
+        "input_type": "text",
+        "standard_text": "Aman dari gesekan pohon/kabel listrik bertegangan tinggi",
+        "unit": "",
+        "actual_value": "mantep",
+        "staff_note": "",
+        "item_photos": [
+          "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=150&q=80"
+        ],
+        "admin_evaluation": "PASS",
+        "admin_note": "a"
+      },
+      {
+        "id": "pek-2-c3",
+        "parameter_name": "Kerapian Dropwire",
+        "input_type": "choice",
+        "standard_text": "Dropwire masuk rapi, menggunakan flexible pipe jika perlu",
+        "unit": "",
+        "actual_value": "Rapi",
+        "staff_note": "kacau",
+        "item_photos": [
+          "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=150&q=80"
+        ],
+        "admin_evaluation": "PASS",
+        "admin_note": "a"
+      }
+    ],
+    "staff_note": "jos margondos",
+    "submitted_at": "2026-07-13T10:53:10.941",
+    "admin_review": {
+      "admin_note": "mantep jon",
+      "conclusion": "PASSED",
+      "reviewed_at": "2026-07-13T03:56:28.987Z",
+      "reviewed_by": "Admin"
+    },
+    "general_photos": [],
+    "revision_number": 2,
+    "revision_history": [
+      {
+        "id": "QC-WRK-2026-1009",
+        "type": "WORK",
+        "template_id": "pek-2",
+        "form_code": "PEK-CONST-01",
+        "title": "Penarikan Kabel Dropcore - Inspeksi Lapangan",
+        "status": "NEEDS_FOLLOW_UP",
+        "staff": {
+          "name": "Yanuar Luthfi",
+          "nik": "NIK-908271"
+        },
+        "location": {
+          "site_id": "site-1",
+          "site_name": "Site Warehouse Jakarta Barat",
+          "area": "Manakek",
+          "detail_location": "241 69 67"
+        },
+        "general_info": {},
+        "checklist_items": [
+          {
+            "id": "pek-2-c1",
+            "parameter_name": "Pemasangan S-Clamp",
+            "input_type": "choice",
+            "standard_text": "S-Clamp terpasang kencang di tiang & rumah",
+            "unit": "",
+            "actual_value": "Kencang",
+            "staff_note": "",
+            "item_photos": [
+              "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=150&q=80"
+            ],
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": "a"
+          },
+          {
+            "id": "pek-2-c2",
+            "parameter_name": "Rute Kabel",
+            "input_type": "text",
+            "standard_text": "Aman dari gesekan pohon/kabel listrik bertegangan tinggi",
+            "unit": "",
+            "actual_value": "kacau",
+            "staff_note": "",
+            "item_photos": [
+              "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=150&q=80"
+            ],
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": "a"
+          },
+          {
+            "id": "pek-2-c3",
+            "parameter_name": "Kerapian Dropwire",
+            "input_type": "choice",
+            "standard_text": "Dropwire masuk rapi, menggunakan flexible pipe jika perlu",
+            "unit": "",
+            "actual_value": "Kendor/Berantakan",
+            "staff_note": "kacau",
+            "item_photos": [
+              "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=150&q=80"
+            ],
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": "a"
+          }
+        ],
+        "staff_note": "kacau",
+        "submitted_at": "2026-07-13T10:48:42.718",
+        "admin_review": {
+          "admin_note": "Kacau lu ndrong",
+          "reviewed_at": "2026-07-13T03:51:59.313Z",
+          "conclusion": "NOT_PASSED"
+        },
+        "general_photos": [],
+        "revision_number": 1,
+        "revision_history": []
+      }
+    ]
+  },
+  {
+    "id": "QC-WRK-2026-1010",
+    "type": "WORK",
+    "template_id": "pek-2",
+    "form_code": "PEK-CONST-01",
+    "title": "Penarikan Kabel Dropcore - Inspeksi Lapangan",
+    "status": "NEEDS_FOLLOW_UP",
+    "staff": {
+      "name": "Yanuar Luthfi",
+      "nik": "NIK-908271"
+    },
+    "location": {
+      "site_id": "site-1",
+      "site_name": "Site Warehouse Jakarta Barat",
+      "area": "asep",
+      "detail_location": "asep"
+    },
+    "general_info": {},
+    "checklist_items": [
+      {
+        "id": "pek-2-c1",
+        "parameter_name": "Pemasangan S-Clamp",
+        "input_type": "choice",
+        "standard_text": "S-Clamp terpasang kencang di tiang & rumah",
+        "unit": "",
+        "actual_value": "Kendor",
+        "staff_note": "kacau",
+        "item_photos": [
+          "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=150&q=80"
+        ],
+        "admin_evaluation": "FAIL",
+        "admin_note": "a"
+      },
+      {
+        "id": "pek-2-c2",
+        "parameter_name": "Rute Kabel",
+        "input_type": "text",
+        "standard_text": "Aman dari gesekan pohon/kabel listrik bertegangan tinggi",
+        "unit": "",
+        "actual_value": "kacau",
+        "staff_note": "",
+        "item_photos": [
+          "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=150&q=80"
+        ],
+        "admin_evaluation": "FAIL",
+        "admin_note": "a"
+      },
+      {
+        "id": "pek-2-c3",
+        "parameter_name": "Kerapian Dropwire",
+        "input_type": "choice",
+        "standard_text": "Dropwire masuk rapi, menggunakan flexible pipe jika perlu",
+        "unit": "",
+        "actual_value": "Kendor/Berantakan",
+        "staff_note": "kacau",
+        "item_photos": [
+          "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=150&q=80"
+        ],
+        "admin_evaluation": "FAIL",
+        "admin_note": "a"
+      }
+    ],
+    "staff_note": "kacau",
+    "submitted_at": "2026-07-13T11:02:23.053",
+    "admin_review": {
+      "admin_note": "Menunggu review dari Admin.",
+      "conclusion": "NOT_PASSED",
+      "reviewed_at": "2026-07-13T04:02:57.809Z",
+      "reviewed_by": "Admin"
+    },
+    "general_photos": [],
     "revision_number": 1,
     "revision_history": []
   }
