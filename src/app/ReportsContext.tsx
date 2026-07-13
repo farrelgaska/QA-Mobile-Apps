@@ -1,15 +1,24 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { QCReport, StandardResult } from '../types/report';
 import { dummyReports } from '../data/dummyReports';
 import { normalizeReportStatus, mapToSharedReport } from '../utils/status';
+import {
+  fetchReports,
+  approveReportApi,
+  requestFollowUpApi,
+  type ApiChecklistItem,
+} from '../services/reportApi';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface ReportsContextValue {
   reports: QCReport[];
+  loading: boolean;
+  error: string | null;
+  refetch: () => void;
   getReport: (id: string) => QCReport | undefined;
-  approveReport: (id: string, adminNote?: string) => void;
-  requestRevision: (id: string, adminNote: string) => void;
+  approveReport: (id: string, adminNote?: string) => Promise<void>;
+  requestRevision: (id: string, adminNote: string) => Promise<void>;
   updateChecklistItem: (
     reportId: string,
     itemId: string,
@@ -22,131 +31,173 @@ interface ReportsContextValue {
 
 const ReportsContext = createContext<ReportsContextValue | null>(null);
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Local-state helpers (fallback) ──────────────────────────────────────────
 
-const STORAGE_KEY = 'reports';
-
-function loadFromStorage(): QCReport[] {
-  let loadedReports: QCReport[] = [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      loadedReports = JSON.parse(raw) as QCReport[];
-    } else {
-      loadedReports = dummyReports;
-    }
-  } catch {
-    loadedReports = dummyReports;
-  }
-  return loadedReports.map(r => mapToSharedReport(r));
-}
+const STORAGE_KEY = 'reports_v2';
 
 function saveToStorage(reports: QCReport[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
+  } catch {
+    // ignore quota errors
+  }
+}
+
+/** Map QCReport's legacy checklistItems back to ApiChecklistItem format for PATCH. */
+function buildApiChecklistItems(report: QCReport): ApiChecklistItem[] {
+  return (report.checklist_items ?? []).map(item => ({
+    id: item.id,
+    parameter_name: item.parameter_name,
+    input_type: item.input_type,
+    standard_text: item.standard_text,
+    unit: item.unit,
+    actual_value: item.actual_value,
+    staff_note: item.staff_note,
+    item_photos: item.item_photos,
+    admin_evaluation: item.admin_evaluation as 'PASS' | 'FAIL' | 'NEEDS_REVIEW' | 'PENDING',
+    admin_note: item.admin_note,
+  }));
 }
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [reports, setReports] = useState<QCReport[]>(() => loadFromStorage());
-  const [loading, setLoading] = useState(false);
+  const [reports, setReports] = useState<QCReport[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Sync with Mock API on mount
-  useEffect(() => {
+  // Keep a stable ref to current reports for use inside callbacks
+  const reportsRef = useRef<QCReport[]>(reports);
+  useEffect(() => { reportsRef.current = reports; }, [reports]);
+
+  // ── Load reports from API ──────────────────────────────────────────────────
+  const loadReports = useCallback(async () => {
     setLoading(true);
-    fetch('http://localhost:3002/reports')
-      .then(res => {
-        if (!res.ok) throw new Error('API server returned error');
-        return res.json();
-      })
-      .then(data => {
-        const mapped = data.map((r: any) => mapToSharedReport(r));
-        setReports(mapped);
-        saveToStorage(mapped);
-        setError(null);
-      })
-      .catch(err => {
-        console.warn('[Mock API Offline - Prototype Fallback] Using local storage state.', err);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    setError(null);
+    try {
+      const apiData = await fetchReports();
+      const mapped = apiData.map((r: any) => mapToSharedReport(r));
+      setReports(mapped);
+      saveToStorage(mapped);
+    } catch (err) {
+      // API offline: fall back to localStorage, then to dummy data
+      console.warn('[Mock API offline] Falling back to local data.', err);
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as QCReport[];
+          setReports(parsed.map(r => mapToSharedReport(r)));
+        } else {
+          // Last resort: use dummy data, filter out DRAFT (staff-only)
+          setReports(dummyReports.filter(r => r.status !== 'DRAFT').map(r => mapToSharedReport(r)));
+        }
+      } catch {
+        setReports(dummyReports.filter(r => r.status !== 'DRAFT').map(r => mapToSharedReport(r)));
+      }
+      setError('Tidak dapat terhubung ke server. Menampilkan data lokal.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const updateReport = useCallback((updatedReport: QCReport) => {
-    const mapped = mapToSharedReport(updatedReport);
-    setReports(prev => prev.map(r => r.id === mapped.id ? mapped : r));
-    
-    // Save to storage
-    saveToStorage(reports.map(r => r.id === mapped.id ? mapped : r));
+  useEffect(() => {
+    loadReports();
+  }, [loadReports]);
 
-    // Async sync to Mock API
-    fetch(`http://localhost:3002/reports/${mapped.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(mapped),
-    }).catch(err => {
-      console.warn('[Mock API Offline - Prototype Fallback] Failed to sync report patch to server.', err);
+  // ── Local optimistic update helper ────────────────────────────────────────
+
+  const applyLocalUpdate = useCallback((updatedReport: QCReport) => {
+    const mapped = mapToSharedReport(updatedReport);
+    setReports(prev => {
+      const next = prev.map(r => r.id === mapped.id ? mapped : r);
+      saveToStorage(next);
+      return next;
     });
-  }, [reports]);
+  }, []);
+
+  // ── Selectors ─────────────────────────────────────────────────────────────
 
   const getReport = useCallback(
-    (id: string) => reports.find(r => r.id === id),
-    [reports]
+    (id: string) => reportsRef.current.find(r => r.id === id),
+    []
   );
 
-  const approveReport = useCallback((id: string, adminNote?: string) => {
-    const report = reports.find(r => r.id === id);
-    if (!report) return;
+  // ── Approve report ────────────────────────────────────────────────────────
 
-    // Enforce Approval rules: every item must be PASS
+  const approveReport = useCallback(async (id: string, adminNote?: string) => {
+    const report = reportsRef.current.find(r => r.id === id);
+    if (!report) throw new Error('Report not found.');
+
+    // Enforce approval rules: every item must be PASS
     const allPass = report.checklistItems.every(i => i.result === 'PASS');
-    if (!allPass) {
-      throw new Error('Approval is blocked: not all items are PASS.');
-    }
+    if (!allPass) throw new Error('Approval is blocked: not all items are PASS.');
 
-    updateReport({
+    const updatedChecklist = buildApiChecklistItems(report);
+    const note = adminNote || 'Laporan disetujui. Semua kriteria memenuhi standar teknis.';
+
+    // Optimistic update first
+    const optimistic: QCReport = {
       ...report,
       status: 'APPROVED',
       standardResult: 'Lulus',
+      adminNote: note,
       admin_review: {
         ...report.admin_review,
-        admin_note: adminNote || 'Laporan disetujui. Semua kriteria memenuhi standar teknis.',
-        conclusion: 'Lulus',
+        admin_note: note,
+        conclusion: 'PASSED',
         reviewed_at: new Date().toISOString(),
       },
-    });
-  }, [reports, updateReport]);
+    };
+    applyLocalUpdate(optimistic);
 
-  const requestRevision = useCallback((id: string, adminNote: string) => {
-    const report = reports.find(r => r.id === id);
-    if (!report) return;
+    // Persist to API (best-effort, non-blocking for UI)
+    try {
+      const updated = await approveReportApi(id, note, 'Admin', updatedChecklist);
+      applyLocalUpdate(mapToSharedReport(updated));
+    } catch (err) {
+      console.warn('[Mock API offline] Approval saved locally only.', err);
+    }
+  }, [applyLocalUpdate]);
 
-    // Enforce Revision rules: at least one item must be FAIL
+  // ── Request follow-up ─────────────────────────────────────────────────────
+
+  const requestRevision = useCallback(async (id: string, adminNote: string) => {
+    const report = reportsRef.current.find(r => r.id === id);
+    if (!report) throw new Error('Report not found.');
+
     const hasFail = report.checklistItems.some(i => i.result === 'FAIL');
-    if (!hasFail) {
-      throw new Error('Revision requires at least one FAIL item.');
-    }
+    if (!hasFail) throw new Error('Revision requires at least one FAIL item.');
 
-    // Enforce Revision rules: every failed item must have an Admin note
     const failedWithoutNotes = report.checklistItems.filter(i => i.result === 'FAIL' && !i.adminNote?.trim());
-    if (failedWithoutNotes.length > 0) {
-      throw new Error('Every failed item must have an Admin note.');
-    }
+    if (failedWithoutNotes.length > 0) throw new Error('Every failed item must have an Admin note.');
 
-    updateReport({
+    const updatedChecklist = buildApiChecklistItems(report);
+
+    // Optimistic update
+    const optimistic: QCReport = {
       ...report,
       status: 'NEEDS_FOLLOW_UP',
       standardResult: 'Tidak Lulus',
+      adminNote,
       admin_review: {
         ...report.admin_review,
         admin_note: adminNote,
-        conclusion: 'Tidak Lulus',
+        conclusion: 'NEEDS_FOLLOW_UP',
         reviewed_at: new Date().toISOString(),
       },
-    });
-  }, [reports, updateReport]);
+    };
+    applyLocalUpdate(optimistic);
+
+    // Persist to API (best-effort)
+    try {
+      const updated = await requestFollowUpApi(id, adminNote, 'Admin', updatedChecklist);
+      applyLocalUpdate(mapToSharedReport(updated));
+    } catch (err) {
+      console.warn('[Mock API offline] Follow-up request saved locally only.', err);
+    }
+  }, [applyLocalUpdate]);
+
+  // ── Update single checklist item (local only, stays until approve/revision) ─
 
   const updateChecklistItem = useCallback((
     reportId: string,
@@ -154,11 +205,18 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     result: 'PASS' | 'FAIL' | 'NEEDS_REVIEW',
     adminNote: string
   ) => {
-    const report = reports.find(r => r.id === reportId);
+    const report = reportsRef.current.find(r => r.id === reportId);
     if (!report) return;
 
     const updatedItems = report.checklistItems.map(item =>
       item.id === itemId ? { ...item, result, adminNote } : item
+    );
+
+    // Also update shared checklist_items so buildApiChecklistItems picks up changes
+    const updatedSharedItems = (report.checklist_items ?? []).map(item =>
+      item.id === itemId
+        ? { ...item, admin_evaluation: result as 'PASS' | 'FAIL' | 'NEEDS_REVIEW', admin_note: adminNote }
+        : item
     );
 
     // Auto-recalculate standardResult
@@ -169,11 +227,21 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       newStandardResult = 'Perlu Review';
     }
 
-    updateReport({ ...report, checklistItems: updatedItems, standardResult: newStandardResult });
-  }, [reports, updateReport]);
+    applyLocalUpdate({
+      ...report,
+      checklistItems: updatedItems,
+      checklist_items: updatedSharedItems,
+      standardResult: newStandardResult,
+    });
+  }, [applyLocalUpdate]);
+
+  // ─── Context value ────────────────────────────────────────────────────────
 
   const value: ReportsContextValue = {
     reports,
+    loading,
+    error,
+    refetch: loadReports,
     getReport,
     approveReport,
     requestRevision,

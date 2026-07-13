@@ -95,18 +95,21 @@ export function mapToSharedReport(report: any): QCReport {
   const rawItems = report.checklist_items || report.checklistItems || report.checklistAnswers || report.checklistResults || [];
   const checklist_items: SharedChecklistItem[] = rawItems.map((item: any) => {
     let evaluation: 'PASS' | 'FAIL' | 'PENDING' = 'PENDING';
-    if (item.admin_evaluation === 'PASS' || item.admin_evaluation === 'FAIL' || item.admin_evaluation === 'PENDING') {
-      evaluation = item.admin_evaluation;
-    } else {
-      if (status === 'SUBMITTED' || status === 'DRAFT') {
-        evaluation = 'PENDING';
-      } else {
-        const rawEval = item.result || item.status;
-        if (rawEval === 'pass' || rawEval === 'PASS' || rawEval === 'QCResultStatus.pass' || rawEval === 'lulus') {
-          evaluation = 'PASS';
-        } else if (rawEval === 'fail' || rawEval === 'FAIL' || rawEval === 'QCResultStatus.fail' || rawEval === 'tidakSesuai') {
-          evaluation = 'FAIL';
-        }
+    const rawEvalUpper = (item.admin_evaluation || '').toUpperCase();
+    if (rawEvalUpper === 'PASS') {
+      evaluation = 'PASS';
+    } else if (rawEvalUpper === 'FAIL') {
+      evaluation = 'FAIL';
+    } else if (rawEvalUpper === 'NEEDS_REVIEW' || rawEvalUpper === 'PENDING') {
+      // NEEDS_REVIEW from mobile = not yet Admin-evaluated → show as PENDING in web
+      evaluation = 'PENDING';
+    } else if (status === 'APPROVED' || status === 'NEEDS_FOLLOW_UP') {
+      // Legacy: derive from old result/status field for already-reviewed reports
+      const legacyEval = item.result || item.status;
+      if (legacyEval === 'pass' || legacyEval === 'PASS' || legacyEval === 'lulus') {
+        evaluation = 'PASS';
+      } else if (legacyEval === 'fail' || legacyEval === 'FAIL' || legacyEval === 'tidakSesuai') {
+        evaluation = 'FAIL';
       }
     }
     

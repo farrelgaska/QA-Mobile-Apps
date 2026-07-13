@@ -22,12 +22,13 @@ import {
   ImageIcon,
   ArrowLeft,
   Info,
+  Loader2,
 } from 'lucide-react';
 
 export const ReportDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getReport, approveReport, requestRevision, updateChecklistItem } = useReports();
+  const { getReport, approveReport, requestRevision, updateChecklistItem, loading: ctxLoading } = useReports();
 
   // Live report from context — re-evaluates on every render so UI updates instantly
   const report = id ? getReport(id) : undefined;
@@ -35,6 +36,11 @@ export const ReportDetailPage: React.FC = () => {
   // Modals state
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
+
+  // Action loading states
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRequestingRevision, setIsRequestingRevision] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Admin input fields
   const [adminFeedback, setAdminFeedback] = useState('');
@@ -46,17 +52,45 @@ export const ReportDetailPage: React.FC = () => {
     }
   }, [report?.adminNote]);
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!report) return;
-    approveReport(report.id, adminFeedback || undefined);
-    setIsApproveModalOpen(false);
+    setIsApproving(true);
+    setActionError(null);
+    try {
+      await approveReport(report.id, adminFeedback || undefined);
+      setIsApproveModalOpen(false);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Gagal menyetujui laporan.');
+      setIsApproveModalOpen(false);
+    } finally {
+      setIsApproving(false);
+    }
   };
 
-  const handleRequestRevision = () => {
+  const handleRequestRevision = async () => {
     if (!report) return;
-    requestRevision(report.id, adminFeedback || 'Harap lakukan perbaikan sesuai catatan yang dilampirkan.');
-    setIsRevisionModalOpen(false);
+    setIsRequestingRevision(true);
+    setActionError(null);
+    try {
+      await requestRevision(report.id, adminFeedback || 'Harap lakukan perbaikan sesuai catatan yang dilampirkan.');
+      setIsRevisionModalOpen(false);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Gagal meminta tindak lanjut.');
+      setIsRevisionModalOpen(false);
+    } finally {
+      setIsRequestingRevision(false);
+    }
   };
+
+  // ─── Loading (context still fetching initial data) ─────────────────────────
+  if (ctxLoading && !report) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-[#006B5A]" />
+        <p className="text-sm font-medium">Memuat laporan…</p>
+      </div>
+    );
+  }
 
   // ─── Not Found ────────────────────────────────────────────────────────────
   if (!report) {
@@ -103,6 +137,15 @@ export const ReportDetailPage: React.FC = () => {
   // ─── Main render ──────────────────────────────────────────────────────────
   return (
     <PageTransition className="space-y-6 max-w-7xl mx-auto">
+
+      {/* Action error banner */}
+      {actionError && (
+        <div className="flex items-start gap-3 p-3.5 rounded-xl border bg-rose-50 border-rose-200 text-rose-800 text-sm">
+          <AlertTriangle className="h-4 w-4 text-rose-500 flex-shrink-0 mt-0.5" />
+          <span>{actionError}</span>
+          <button onClick={() => setActionError(null)} className="ml-auto text-rose-400 hover:text-rose-600 text-xs font-bold">×</button>
+        </div>
+      )}
 
       {/* ── Top Nav Bar ─────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -339,9 +382,11 @@ export const ReportDetailPage: React.FC = () => {
                       variant="danger"
                       onClick={() => setIsRevisionModalOpen(true)}
                       className="flex-1 shadow-sm"
-                      disabled={!canRequestRevision}
+                      disabled={!canRequestRevision || isApproving || isRequestingRevision}
                     >
-                      <RefreshCw className="mr-2 h-4 w-4" />
+                      {isRequestingRevision
+                        ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        : <RefreshCw className="mr-2 h-4 w-4" />}
                       Minta Perbaikan
                     </Button>
                     <Button
@@ -349,9 +394,11 @@ export const ReportDetailPage: React.FC = () => {
                       variant="primary"
                       onClick={() => setIsApproveModalOpen(true)}
                       className="flex-1 bg-[#006B5A] hover:bg-[#005244] shadow-sm shadow-[#006B5A]/20"
-                      disabled={!canApprove}
+                      disabled={!canApprove || isApproving || isRequestingRevision}
                     >
-                      <CheckCircle className="mr-2 h-4 w-4" />
+                      {isApproving
+                        ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        : <CheckCircle className="mr-2 h-4 w-4" />}
                       Setujui Laporan
                     </Button>
                   </div>
@@ -374,9 +421,12 @@ export const ReportDetailPage: React.FC = () => {
               id="confirm-approve-btn"
               variant="primary"
               onClick={handleApprove}
+              disabled={isApproving}
               className="bg-[#006B5A] hover:bg-[#005244]"
             >
-              Ya, Setujui Sekarang
+              {isApproving
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Menyimpan…</>
+                : 'Ya, Setujui Sekarang'}
             </Button>
           </div>
         }
