@@ -115,23 +115,39 @@ export const ReportDetailPage: React.FC = () => {
 
   const hasFailures = report.checklistItems.some(i => i.result === 'FAIL');
   const hasPendingReviews = report.checklistItems.some(i => i.result === 'NEEDS_REVIEW');
+  // Admin can evaluate on SUBMITTED reports; NEEDS_FOLLOW_UP handled by re-submit from mobile
   const isEditable = report.status === 'SUBMITTED';
 
-  const canApprove = report.checklistItems.every(i => i.result === 'PASS');
-  const canRequestRevision = hasFailures && report.checklistItems.filter(i => i.result === 'FAIL').every(i => i.adminNote?.trim());
+  // ── Approval gate ──────────────────────────────────────────────────────────
+  // Rule: every item must be PASS (none FAIL, none NEEDS_REVIEW)
+  const notPassItems = report.checklistItems.filter(i => i.result !== 'PASS');
+  const canApprove = notPassItems.length === 0;
 
-  let approvalDisabledReason = '';
+  // ── Follow-up gate ─────────────────────────────────────────────────────────
+  // Rule: at least one FAIL item; every FAIL item must have an Admin note
+  const failItems = report.checklistItems.filter(i => i.result === 'FAIL');
+  const failItemsMissingNote = failItems.filter(i => !i.adminNote?.trim());
+  const canRequestRevision = failItems.length > 0 && failItemsMissingNote.length === 0 && !!adminFeedback.trim();
+
+  // ── Validation messages shown inline ──────────────────────────────────────
+  const approvalBlockReasons: string[] = [];
   if (hasFailures) {
-    approvalDisabledReason = 'Persetujuan ditolak: Laporan ini memiliki parameter yang Gagal. Silakan minta perbaikan.';
-  } else if (hasPendingReviews) {
-    approvalDisabledReason = 'Persetujuan ditolak: Masih ada parameter yang belum dievaluasi (Review).';
+    approvalBlockReasons.push(`${failItems.length} parameter ditandai Gagal — ubah ke Lulus atau minta perbaikan.`);
+  }
+  if (hasPendingReviews) {
+    const reviewCount = report.checklistItems.filter(i => i.result === 'NEEDS_REVIEW').length;
+    approvalBlockReasons.push(`${reviewCount} parameter belum dievaluasi (masih Perlu Review).`);
   }
 
-  let revisionDisabledReason = '';
+  const revisionBlockReasons: string[] = [];
   if (!hasFailures) {
-    revisionDisabledReason = 'Minta Perbaikan ditolak: Harus ada minimal satu parameter yang ditandai Gagal.';
-  } else if (report.checklistItems.some(i => i.result === 'FAIL' && !i.adminNote?.trim())) {
-    revisionDisabledReason = 'Minta Perbaikan ditolak: Semua parameter yang Gagal harus memiliki Catatan Admin.';
+    revisionBlockReasons.push('Harus ada minimal satu parameter yang ditandai Gagal.');
+  }
+  if (failItemsMissingNote.length > 0) {
+    revisionBlockReasons.push(`${failItemsMissingNote.length} parameter Gagal belum memiliki Catatan Admin.`);
+  }
+  if (!adminFeedback.trim()) {
+    revisionBlockReasons.push('Catatan instruksi tindak lanjut wajib diisi.');
   }
 
   // ─── Main render ──────────────────────────────────────────────────────────
@@ -349,16 +365,28 @@ export const ReportDetailPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-5">
-                  {approvalDisabledReason && (
-                    <div className="p-3.5 bg-rose-50 border border-rose-150 text-rose-800 text-xs rounded-xl flex items-start gap-2 leading-relaxed">
-                      <AlertTriangle className="h-4 w-4 text-rose-500 flex-shrink-0 mt-0.5" />
-                      <span>{approvalDisabledReason}</span>
+                  {/* Approval validation block */}
+                  {approvalBlockReasons.length > 0 && (
+                    <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl leading-relaxed">
+                      <div className="flex items-center gap-2 font-bold mb-1.5">
+                        <AlertTriangle className="h-4 w-4 text-rose-500 flex-shrink-0" />
+                        Persetujuan diblokir — syarat belum terpenuhi:
+                      </div>
+                      <ul className="list-disc list-inside space-y-0.5 pl-1">
+                        {approvalBlockReasons.map((r, i) => <li key={i}>{r}</li>)}
+                      </ul>
                     </div>
                   )}
-                  {revisionDisabledReason && (
-                    <div className="p-3.5 bg-amber-50 border border-amber-150 text-amber-850 text-xs rounded-xl flex items-start gap-2 leading-relaxed">
-                      <Info className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                      <span>{revisionDisabledReason}</span>
+                  {/* Follow-up validation block — only show when relevant */}
+                  {revisionBlockReasons.length > 0 && hasFailures && (
+                    <div className="p-3.5 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl leading-relaxed">
+                      <div className="flex items-center gap-2 font-bold mb-1.5">
+                        <Info className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                        Tindak lanjut diblokir — lengkapi terlebih dahulu:
+                      </div>
+                      <ul className="list-disc list-inside space-y-0.5 pl-1">
+                        {revisionBlockReasons.filter(r => !r.includes('Harus ada minimal')).map((r, i) => <li key={i}>{r}</li>)}
+                      </ul>
                     </div>
                   )}
 
@@ -408,6 +436,7 @@ export const ReportDetailPage: React.FC = () => {
           </Card>
         </div>
       </div>
+
 
       {/* ── Approve Modal ─────────────────────── */}
       <Modal

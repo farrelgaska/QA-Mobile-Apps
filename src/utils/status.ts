@@ -94,15 +94,20 @@ export function mapToSharedReport(report: any): QCReport {
   
   const rawItems = report.checklist_items || report.checklistItems || report.checklistAnswers || report.checklistResults || [];
   const checklist_items: SharedChecklistItem[] = rawItems.map((item: any) => {
-    let evaluation: 'PASS' | 'FAIL' | 'PENDING' = 'PENDING';
+    let evaluation: 'PASS' | 'FAIL' | 'NEEDS_REVIEW' = 'NEEDS_REVIEW';
     const rawEvalUpper = (item.admin_evaluation || '').toUpperCase();
     if (rawEvalUpper === 'PASS') {
       evaluation = 'PASS';
     } else if (rawEvalUpper === 'FAIL') {
       evaluation = 'FAIL';
-    } else if (rawEvalUpper === 'NEEDS_REVIEW' || rawEvalUpper === 'PENDING') {
-      // NEEDS_REVIEW from mobile = not yet Admin-evaluated → show as PENDING in web
-      evaluation = 'PENDING';
+    } else if (
+      rawEvalUpper === 'NEEDS_REVIEW' ||
+      rawEvalUpper === 'PENDING' ||
+      rawEvalUpper === '' ||
+      !rawEvalUpper
+    ) {
+      // Mobile always sends NEEDS_REVIEW — Admin has not evaluated yet.
+      evaluation = 'NEEDS_REVIEW';
     } else if (status === 'APPROVED' || status === 'NEEDS_FOLLOW_UP') {
       // Legacy: derive from old result/status field for already-reviewed reports
       const legacyEval = item.result || item.status;
@@ -163,6 +168,7 @@ export function mapToSharedReport(report: any): QCReport {
       standardLabel: item.standard_text,
       actualValue: item.actual_value,
       unit: item.unit,
+      // Map admin_evaluation to legacy ChecklistResult; NEEDS_REVIEW for any unevaluated item
       result: item.admin_evaluation === 'PASS' ? 'PASS' : item.admin_evaluation === 'FAIL' ? 'FAIL' : 'NEEDS_REVIEW',
       photoUrls: item.item_photos,
       adminNote: item.admin_note,

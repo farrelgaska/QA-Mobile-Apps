@@ -26,7 +26,8 @@ export interface SharedChecklistItem {
   actual_value: string;
   staff_note?: string;
   item_photos: string[];
-  admin_evaluation: 'PASS' | 'FAIL' | 'PENDING';
+  /** Admin-only evaluation. Mobile always sends NEEDS_REVIEW; Admin sets PASS or FAIL. */
+  admin_evaluation: 'PASS' | 'FAIL' | 'NEEDS_REVIEW';
   admin_note?: string;
 }
 
@@ -59,7 +60,9 @@ export interface QCReport {
   admin_review?: {
     admin_note?: string;
     reviewed_at?: string;
-    conclusion?: string;
+    reviewed_by?: string;
+    /** PASSED | NOT_PASSED — set by Admin on final decision. */
+    conclusion?: 'PASSED' | 'NOT_PASSED' | string;
   };
 
   // Legacy Fields for Backward Compatibility

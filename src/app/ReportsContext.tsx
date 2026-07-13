@@ -43,7 +43,7 @@ function saveToStorage(reports: QCReport[]): void {
   }
 }
 
-/** Map QCReport's legacy checklistItems back to ApiChecklistItem format for PATCH. */
+/** Map QCReport's shared checklist_items back to ApiChecklistItem format for PATCH. */
 function buildApiChecklistItems(report: QCReport): ApiChecklistItem[] {
   return (report.checklist_items ?? []).map(item => ({
     id: item.id,
@@ -54,7 +54,8 @@ function buildApiChecklistItems(report: QCReport): ApiChecklistItem[] {
     actual_value: item.actual_value,
     staff_note: item.staff_note,
     item_photos: item.item_photos,
-    admin_evaluation: item.admin_evaluation as 'PASS' | 'FAIL' | 'NEEDS_REVIEW' | 'PENDING',
+    // Preserve Admin evaluation — never trust mobile pass/fail
+    admin_evaluation: item.admin_evaluation as 'PASS' | 'FAIL' | 'NEEDS_REVIEW',
     admin_note: item.admin_note,
   }));
 }
@@ -128,11 +129,20 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const report = reportsRef.current.find(r => r.id === id);
     if (!report) throw new Error('Report not found.');
 
-    // Enforce approval rules: every item must be PASS
-    const allPass = report.checklistItems.every(i => i.result === 'PASS');
-    if (!allPass) throw new Error('Approval is blocked: not all items are PASS.');
+    // Guard: only SUBMITTED reports can be approved
+    if (report.status !== 'SUBMITTED') {
+      throw new Error(`Laporan berstatus "${report.status}" tidak dapat disetujui. Hanya laporan SUBMITTED yang bisa diproses.`);
+    }
+
+    // Enforce: every checklist item must be PASS (ignore mobile values)
+    const failItems = report.checklistItems.filter(i => i.result !== 'PASS');
+    if (failItems.length > 0) {
+      const failNames = failItems.map(i => i.name).join(', ');
+      throw new Error(`Persetujuan diblokir: ${failItems.length} parameter belum PASS (${failNames}).`);
+    }
 
     const updatedChecklist = buildApiChecklistItems(report);
+    const reviewedAt = new Date().toISOString();
     const note = adminNote || 'Laporan disetujui. Semua kriteria memenuhi standar teknis.';
 
     // Optimistic update first
@@ -142,10 +152,10 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       standardResult: 'Lulus',
       adminNote: note,
       admin_review: {
-        ...report.admin_review,
         admin_note: note,
         conclusion: 'PASSED',
-        reviewed_at: new Date().toISOString(),
+        reviewed_at: reviewedAt,
+        reviewed_by: 'Admin',
       },
     };
     applyLocalUpdate(optimistic);
@@ -165,25 +175,42 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const report = reportsRef.current.find(r => r.id === id);
     if (!report) throw new Error('Report not found.');
 
-    const hasFail = report.checklistItems.some(i => i.result === 'FAIL');
-    if (!hasFail) throw new Error('Revision requires at least one FAIL item.');
+    // Guard: only SUBMITTED reports can be sent for follow-up
+    if (report.status !== 'SUBMITTED') {
+      throw new Error(`Laporan berstatus "${report.status}" tidak dapat dimintakan tindak lanjut.`);
+    }
 
-    const failedWithoutNotes = report.checklistItems.filter(i => i.result === 'FAIL' && !i.adminNote?.trim());
-    if (failedWithoutNotes.length > 0) throw new Error('Every failed item must have an Admin note.');
+    if (!adminNote?.trim()) {
+      throw new Error('Catatan instruksi tindak lanjut wajib diisi.');
+    }
+
+    // Enforce: at least one FAIL item must exist
+    const failItems = report.checklistItems.filter(i => i.result === 'FAIL');
+    if (failItems.length === 0) {
+      throw new Error('Tindak lanjut diblokir: harus ada minimal satu parameter yang ditandai Gagal.');
+    }
+
+    // Enforce: every FAIL item must have an Admin note
+    const failedWithoutNotes = failItems.filter(i => !i.adminNote?.trim());
+    if (failedWithoutNotes.length > 0) {
+      const names = failedWithoutNotes.map(i => i.name).join(', ');
+      throw new Error(`Setiap parameter Gagal harus memiliki Catatan Admin (${names}).`);
+    }
 
     const updatedChecklist = buildApiChecklistItems(report);
+    const reviewedAt = new Date().toISOString();
 
-    // Optimistic update
+    // Optimistic update — conclusion is NOT_PASSED (never PASSED for follow-up)
     const optimistic: QCReport = {
       ...report,
       status: 'NEEDS_FOLLOW_UP',
       standardResult: 'Tidak Lulus',
       adminNote,
       admin_review: {
-        ...report.admin_review,
         admin_note: adminNote,
-        conclusion: 'NEEDS_FOLLOW_UP',
-        reviewed_at: new Date().toISOString(),
+        conclusion: 'NOT_PASSED',
+        reviewed_at: reviewedAt,
+        reviewed_by: 'Admin',
       },
     };
     applyLocalUpdate(optimistic);

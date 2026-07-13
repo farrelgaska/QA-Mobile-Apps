@@ -43,8 +43,9 @@ export interface ApiReport {
   admin_review?: {
     admin_note?: string;
     reviewed_at?: string;
-    conclusion?: string;
     reviewed_by?: string;
+    /** PASSED for approved; NOT_PASSED for follow-up */
+    conclusion?: string;
   };
   general_photos?: string[];
 }
@@ -124,7 +125,7 @@ export async function requestFollowUpApi(
     status: 'NEEDS_FOLLOW_UP',
     admin_review: {
       admin_note: adminNote,
-      conclusion: 'NEEDS_FOLLOW_UP',
+      conclusion: 'NOT_PASSED',
       reviewed_at: new Date().toISOString(),
       reviewed_by: reviewedBy,
     },
