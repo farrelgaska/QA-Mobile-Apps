@@ -20,11 +20,26 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _state = DummyState();
   late String _selectedLocation;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _selectedLocation = _state.currentSite.name;
+    _fetchData();
+  }
+
+  Future<void> _fetchData() async {
+    if (_isLoading) return;
+    setState(() {
+      _isLoading = true;
+    });
+    await _state.fetchReportsFromApi();
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _showSitePicker() {
@@ -142,9 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () async {
-            setState(() {});
-          },
+          onRefresh: _fetchData,
           color: AppColors.primary,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),

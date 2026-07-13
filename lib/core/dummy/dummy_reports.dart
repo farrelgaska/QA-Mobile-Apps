@@ -19,12 +19,6 @@ final List<QCReportModel> dummyReports = [
     detailLocation: 'Gudang Utama A-1',
     formCode: 'TA-FR-048-010-01',
     finalConclusion: 'Disetujui',
-    workLocation: WorkLocation(
-      siteName: 'Gudang Material Utama',
-      area: 'Sektor 4 - Area Utara',
-      segment: 'Gudang Utama A-1',
-      isCustom: false,
-    ),
     generalInfo: {
       'poNumber': 'PO-2026-090',
       'poDate': '2026-06-10',
@@ -80,12 +74,6 @@ final List<QCReportModel> dummyReports = [
     detailLocation: 'Gudang Utama A-2',
     formCode: 'TA-FR-048-010-02',
     finalConclusion: 'Disetujui',
-    workLocation: WorkLocation(
-      siteName: 'Gudang Material Utama',
-      area: 'Sektor 4 - Area Utara',
-      segment: 'Gudang Utama A-2',
-      isCustom: false,
-    ),
     generalInfo: {
       'poNumber': 'PO-2026-091',
       'poDate': '2026-06-11',
@@ -132,12 +120,6 @@ final List<QCReportModel> dummyReports = [
     detailLocation: 'Gudang Utama B-1',
     formCode: 'TA-FR-048-010-03',
     finalConclusion: 'Perlu Perbaikan',
-    workLocation: WorkLocation(
-      siteName: 'Gudang Material Utama',
-      area: 'Sektor 4 - Area Utara',
-      segment: 'Gudang Utama B-1',
-      isCustom: false,
-    ),
     generalInfo: {
       'poNumber': 'PO-2026-092',
       'poDate': '2026-06-12',
@@ -186,12 +168,6 @@ final List<QCReportModel> dummyReports = [
     detailLocation: 'Pelanggan R-01',
     formCode: 'PEK-ONT-01',
     finalConclusion: 'Selesai',
-    workLocation: WorkLocation(
-      siteName: 'Gudang Material Utama',
-      area: 'Q1 - Cikarang Site',
-      segment: 'Pelanggan R-01',
-      isCustom: false,
-    ),
     generalInfo: {
       'mitraName': 'CV Prima Mandiri',
       'workSegment': 'FTTH',
@@ -226,12 +202,6 @@ final List<QCReportModel> dummyReports = [
     detailLocation: 'Pole BD-12',
     formCode: 'PEK-DROP-02',
     finalConclusion: 'On Progress',
-    workLocation: WorkLocation(
-      siteName: 'Gudang Material Utama',
-      area: 'Sekitar Cibadung',
-      segment: 'Pole BD-12',
-      isCustom: false,
-    ),
     generalInfo: {
       'mitraName': 'PT Tunas Global',
       'workSegment': 'Outside Plant',
@@ -266,12 +236,6 @@ final List<QCReportModel> dummyReports = [
     detailLocation: 'Tiang Nomor 14 dekat gerbang',
     formCode: 'PEK-CONST-01',
     finalConclusion: 'Perlu Perbaikan',
-    workLocation: WorkLocation(
-      siteName: 'Gudang Material Utama',
-      area: 'Area Utara',
-      segment: 'Tiang Nomor 14 dekat gerbang',
-      isCustom: false,
-    ),
     generalInfo: {
       'mitraName': 'CV Jaya Konstruksi',
       'workSegment': 'Construction',

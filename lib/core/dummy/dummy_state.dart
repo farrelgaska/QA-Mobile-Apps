@@ -4,6 +4,7 @@ import '../../shared/models/user_model.dart';
 import 'dummy_users.dart';
 import '../../shared/models/site_model.dart';
 import 'dummy_sites.dart';
+import '../services/api_service.dart';
 
 class DummyState {
   static final DummyState _instance = DummyState._internal();
@@ -16,8 +17,37 @@ class DummyState {
   
   List<QCReportModel> reports = List.from(dummyReports);
 
+  /// Fetch latest reports from Mock API backend and update memory state.
+  Future<void> fetchReportsFromApi() async {
+    final serverReports = await ApiService().fetchReports();
+    if (serverReports != null) {
+      // Create a map of server reports for O(1) lookup
+      final serverMap = { for (var r in serverReports) r.id : r };
+      
+      // Update existing or add new from server
+      for (final id in serverMap.keys) {
+        final serverReport = serverMap[id]!;
+        final idx = reports.indexWhere((r) => r.id == id);
+        if (idx != -1) {
+          reports[idx] = serverReport;
+        } else {
+          reports.add(serverReport);
+        }
+      }
+      // Sort reports by submittedAt descending to match list order
+      reports.sort((a, b) => b.submittedAt.compareTo(a.submittedAt));
+    }
+  }
+
   void addReport(QCReportModel report) {
-    reports.insert(0, report);
+    final idx = reports.indexWhere((r) => r.id == report.id);
+    if (idx != -1) {
+      reports[idx] = report;
+    } else {
+      reports.insert(0, report);
+    }
+    // Async push to backend server
+    ApiService().postReport(report);
   }
 
   void updateReport(QCReportModel report) {
@@ -27,5 +57,7 @@ class DummyState {
     } else {
       reports.insert(0, report);
     }
+    // Async push to backend server
+    ApiService().patchReport(report);
   }
 }

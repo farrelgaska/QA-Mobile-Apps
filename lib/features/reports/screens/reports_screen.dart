@@ -41,6 +41,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return 'Menunggu Review';
   }
 
+  bool _isLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -49,6 +51,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
       if (_tabs.contains(mappedInit)) {
         _selectedTab = mappedInit;
       }
+    }
+    _fetchData();
+  }
+
+  Future<void> _fetchData() async {
+    if (_isLoading) return;
+    setState(() {
+      _isLoading = true;
+    });
+    await _state.fetchReportsFromApi();
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -139,38 +155,51 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
               const SizedBox(height: 16),
               Expanded(
-                child: filteredReports.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                child: RefreshIndicator(
+                  onRefresh: _fetchData,
+                  color: AppColors.primary,
+                  child: filteredReports.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           children: [
-                            const Icon(Icons.assignment_outlined, color: AppColors.textSoft, size: 48),
-                            const SizedBox(height: 12),
-                            Text(
-                              _selectedTab == 'Semua'
-                                  ? 'Belum ada laporan'
-                                  : 'Laporan dengan status "$_selectedTab" kosong',
-                              style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                            SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                            Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.assignment_outlined, color: AppColors.textSoft, size: 48),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _selectedTab == 'Semua'
+                                        ? 'Belum ada laporan'
+                                        : 'Laporan dengan status "$_selectedTab" kosong',
+                                    style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
+                        )
+                      : ListView.builder(
+                          itemCount: filteredReports.length,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          itemBuilder: (context, index) {
+                            final report = filteredReports[index];
+                            return ReportCard(
+                              reportId: report.id,
+                              title: report.title,
+                              date: report.date,
+                              location: report.detailLocation.isNotEmpty ? report.detailLocation : report.siteName,
+                              status: report.status,
+                              type: report.type,
+                              onTap: () async {
+                                await context.push('/reports/${report.id}');
+                                _fetchData();
+                              },
+                            );
+                          },
                         ),
-                      )
-                    : ListView.builder(
-                        itemCount: filteredReports.length,
-                        physics: const BouncingScrollPhysics(),
-                        itemBuilder: (context, index) {
-                          final report = filteredReports[index];
-                          return ReportCard(
-                            reportId: report.id,
-                            title: report.title,
-                            date: report.date,
-                            location: report.detailLocation.isNotEmpty ? report.detailLocation : report.siteName,
-                            status: report.status,
-                            type: report.type,
-                            onTap: () => context.push('/reports/${report.id}'),
-                          );
-                        },
-                      ),
+                ),
               ),
             ],
           ),
