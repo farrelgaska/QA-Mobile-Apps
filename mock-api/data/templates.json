@@ -1,0 +1,1835 @@
+[
+  {
+    "id": "tiang_besi_7m_3_segmen",
+    "type": "MATERIAL",
+    "name": "Tiang Besi 7 Meter 3 Segmen",
+    "description": "Pemeriksaan Fisik Tiang Besi 7 Meter 3 Segmen",
+    "formCode": "TA-FR-048-010-01",
+    "category": "QC Material",
+    "standardCode": "TA-FR-048-010-01",
+    "checklistItems": [
+      {
+        "id": "tb73-1",
+        "parameterName": "Kondisi fisik luar baik/tidak cacat",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "OK",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "choices": [],
+        "validationRule": {
+          "type": "BOOLEANREQUIRED",
+          "warningInvalid": "Fisik tiang tidak boleh cacat/bengkok"
+        }
+      },
+      {
+        "id": "tb73-2",
+        "parameterName": "Panjang total",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "7000 ± 40 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": true,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 6960,
+          "maxValue": 7040,
+          "warningBelow": "kurang dari standar",
+          "warningAbove": "melebihi standar"
+        }
+      },
+      {
+        "id": "tb73-3",
+        "parameterName": "Panjang ruas tiang bagian atas",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "1370 ± 20 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 1350,
+          "maxValue": 1390,
+          "warningBelow": "kurang dari standar",
+          "warningAbove": "melebihi standar"
+        }
+      },
+      {
+        "id": "tb73-4",
+        "parameterName": "Panjang ruas tiang bagian tengah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "1570 ± 20 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 1550,
+          "maxValue": 1590,
+          "warningBelow": "kurang dari standar",
+          "warningAbove": "melebihi standar"
+        }
+      },
+      {
+        "id": "tb73-5",
+        "parameterName": "Panjang ruas tiang bagian bawah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "4260 ± 20 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 4240,
+          "maxValue": 4280,
+          "warningBelow": "kurang dari standar",
+          "warningAbove": "melebihi standar"
+        }
+      },
+      {
+        "id": "tb73-6",
+        "parameterName": "Panjang Lakop",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "≥ 40 cm",
+        "unit": "cm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "MIN",
+          "minValue": 40,
+          "warningBelow": "kurang dari standar"
+        }
+      },
+      {
+        "id": "tb73-7",
+        "parameterName": "Tebal Lakop",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "≥ 3 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "MIN",
+          "minValue": 3,
+          "warningBelow": "kurang dari standar"
+        }
+      },
+      {
+        "id": "tb73-8",
+        "parameterName": "Diameter luar ruas atas",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "76,3 ± 2 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 74.3,
+          "maxValue": 78.3,
+          "warningBelow": "kurang dari standar",
+          "warningAbove": "melebihi standar"
+        }
+      },
+      {
+        "id": "tb73-9",
+        "parameterName": "Diameter luar ruas tengah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "114 ± 2,9 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 111.1,
+          "maxValue": 116.9,
+          "warningBelow": "kurang dari standar",
+          "warningAbove": "melebihi standar"
+        }
+      },
+      {
+        "id": "tb73-10",
+        "parameterName": "Diameter luar ruas bawah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "139,8 ± 3,5 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 136.3,
+          "maxValue": 143.3,
+          "warningBelow": "kurang dari standar",
+          "warningAbove": "melebihi standar"
+        }
+      },
+      {
+        "id": "tb73-11",
+        "parameterName": "Tebal tiang ruas atas",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "4 mm +15% -12,5%",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 3.5,
+          "maxValue": 4.6,
+          "warningBelow": "kurang dari standar",
+          "warningAbove": "melebihi standar"
+        }
+      },
+      {
+        "id": "tb73-12",
+        "parameterName": "Tebal tiang ruas tengah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "4 mm +15% -12,5%",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 3.5,
+          "maxValue": 4.6,
+          "warningBelow": "kurang dari standar",
+          "warningAbove": "melebihi standar"
+        }
+      },
+      {
+        "id": "tb73-13",
+        "parameterName": "Tebal tiang ruas bawah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "4 mm +15% -12,5%",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 3.5,
+          "maxValue": 4.6,
+          "warningBelow": "kurang dari standar",
+          "warningAbove": "melebihi standar"
+        }
+      },
+      {
+        "id": "tb73-14",
+        "parameterName": "Berat tiang minimal termasuk tutup",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "≥ 71,4 kg",
+        "unit": "kg",
+        "required": true,
+        "requiredPhoto": true,
+        "choices": [],
+        "validationRule": {
+          "type": "MIN",
+          "minValue": 71.4,
+          "warningBelow": "kurang dari standar"
+        }
+      },
+      {
+        "id": "tb73-15",
+        "parameterName": "Kerapian pengelasan pada sambungan",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "wajib sesuai",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "choices": [],
+        "validationRule": {
+          "type": "BOOLEANREQUIRED",
+          "warningInvalid": "Pengelasan harus rapi"
+        }
+      },
+      {
+        "id": "tb73-16",
+        "parameterName": "Terdapat tanda tanam",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "BOOLEANREQUIRED"
+        }
+      },
+      {
+        "id": "tb73-17",
+        "parameterName": "Pengecatan sesuai standar",
+        "category": "Fisik",
+        "inputType": "CHOICE",
+        "standardText": "meni/hitam/cat identitas operator",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [
+          "Sesuai",
+          "Tidak Sesuai"
+        ],
+        "validationRule": null
+      },
+      {
+        "id": "tb73-18",
+        "parameterName": "Terdapat nama atau simbol merk",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "tb73-19",
+        "parameterName": "Timbul jelas pada tutup atas",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": null
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-13T00:00:00.000Z",
+    "updatedAt": "2026-07-13T00:00:00.000Z"
+  },
+  {
+    "id": "tiang_besi_9m_3_segmen",
+    "type": "MATERIAL",
+    "name": "Tiang Besi 9 Meter 3 Segmen",
+    "description": "Pemeriksaan Fisik Tiang Besi 9 Meter 3 Segmen",
+    "formCode": "TA-FR-048-010-05",
+    "category": "QC Material",
+    "standardCode": "TA-FR-048-010-05",
+    "checklistItems": [
+      {
+        "id": "tb93-1",
+        "parameterName": "Kondisi fisik luar baik/tidak cacat",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "OK",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "choices": [],
+        "validationRule": {
+          "type": "BOOLEANREQUIRED"
+        }
+      },
+      {
+        "id": "tb93-2",
+        "parameterName": "Panjang total",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "9000 ± 40 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 8960,
+          "maxValue": 9040,
+          "warningBelow": "kurang dari standar",
+          "warningAbove": "melebihi standar"
+        }
+      },
+      {
+        "id": "tb93-3",
+        "parameterName": "Panjang ruas tiang bagian atas",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "2000 ± 20 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 1980,
+          "maxValue": 2020,
+          "warningBelow": "kurang dari standar",
+          "warningAbove": "melebihi standar"
+        }
+      },
+      {
+        "id": "tb93-4",
+        "parameterName": "Panjang ruas tiang bagian tengah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "2000 ± 20 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 1980,
+          "maxValue": 2020,
+          "warningBelow": "kurang dari standar",
+          "warningAbove": "melebihi standar"
+        }
+      },
+      {
+        "id": "tb93-5",
+        "parameterName": "Panjang ruas tiang bagian bawah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "5000 ± 20 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 4980,
+          "maxValue": 5020,
+          "warningBelow": "kurang dari standar",
+          "warningAbove": "melebihi standar"
+        }
+      },
+      {
+        "id": "tb93-6",
+        "parameterName": "Panjang Lakop",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "40 cm",
+        "unit": "cm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "MIN",
+          "minValue": 40
+        }
+      },
+      {
+        "id": "tb93-7",
+        "parameterName": "Tebal Lakop",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "3 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "MIN",
+          "minValue": 3
+        }
+      },
+      {
+        "id": "tb93-8",
+        "parameterName": "Diameter luar ruas atas",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "76,3 ± 2 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 74.3,
+          "maxValue": 78.3,
+          "warningBelow": "kurang dari standar",
+          "warningAbove": "melebihi standar"
+        }
+      },
+      {
+        "id": "tb93-9",
+        "parameterName": "Diameter luar ruas tengah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "114,3 ± 2,9 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 111.4,
+          "maxValue": 117.2,
+          "warningBelow": "kurang dari standar",
+          "warningAbove": "melebihi standar"
+        }
+      },
+      {
+        "id": "tb93-10",
+        "parameterName": "Diameter luar ruas bawah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "139,8 ± 3,5 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 136.3,
+          "maxValue": 143.3,
+          "warningBelow": "kurang dari standar",
+          "warningAbove": "melebihi standar"
+        }
+      },
+      {
+        "id": "tb93-11",
+        "parameterName": "Tebal tiang ruas atas",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "4 mm +15% -12,5%",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 3.5,
+          "maxValue": 4.6
+        }
+      },
+      {
+        "id": "tb93-12",
+        "parameterName": "Tebal tiang ruas tengah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "4 mm +15% -12,5%",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 3.5,
+          "maxValue": 4.6
+        }
+      },
+      {
+        "id": "tb93-13",
+        "parameterName": "Tebal tiang ruas bawah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "5 mm +15% -12,5%",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 4.375,
+          "maxValue": 5.75
+        }
+      },
+      {
+        "id": "tb93-14",
+        "parameterName": "Berat tiang minimal",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "120 kg",
+        "unit": "kg",
+        "required": true,
+        "requiredPhoto": true,
+        "choices": [],
+        "validationRule": {
+          "type": "MIN",
+          "minValue": 120
+        }
+      },
+      {
+        "id": "tb93-15",
+        "parameterName": "Kerapian pengelasan pada sambungan",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "OK",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "tb93-16",
+        "parameterName": "Terdapat tanda tanam",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "tb93-17",
+        "parameterName": "Pengecatan sesuai standar",
+        "category": "Fisik",
+        "inputType": "CHOICE",
+        "standardText": "Sesuai",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [
+          "Sesuai",
+          "Tidak Sesuai"
+        ],
+        "validationRule": null
+      },
+      {
+        "id": "tb93-18",
+        "parameterName": "Terdapat nama atau simbol merk",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "tb93-19",
+        "parameterName": "Timbul jelas pada tutup bagian atas",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": null
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-13T00:00:00.000Z",
+    "updatedAt": "2026-07-13T00:00:00.000Z"
+  },
+  {
+    "id": "tiang_7m_2_segmen",
+    "type": "MATERIAL",
+    "name": "Tiang 7 Meter 2 Segmen",
+    "description": "Pemeriksaan Fisik Tiang 7 Meter 2 Segmen",
+    "formCode": "TA-FR-048-010-02",
+    "category": "QC Material",
+    "standardCode": "TA-FR-048-010-02",
+    "checklistItems": [
+      {
+        "id": "t72-1",
+        "parameterName": "Kondisi fisik luar baik/tidak cacat",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "OK",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "choices": [],
+        "validationRule": {
+          "type": "BOOLEANREQUIRED"
+        }
+      },
+      {
+        "id": "t72-2",
+        "parameterName": "Panjang total",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "7000 ± 40 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 6960,
+          "maxValue": 7040
+        }
+      },
+      {
+        "id": "t72-3",
+        "parameterName": "Panjang ruas tiang segmen atas",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "2740 ± 20 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 2720,
+          "maxValue": 2760
+        }
+      },
+      {
+        "id": "t72-4",
+        "parameterName": "Panjang ruas tiang segmen bawah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "4260 ± 20 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 4240,
+          "maxValue": 4280
+        }
+      },
+      {
+        "id": "t72-5",
+        "parameterName": "Diameter luar tiang segmen atas",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "76,3 ± 25 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 51.3,
+          "maxValue": 101.3
+        }
+      },
+      {
+        "id": "t72-6",
+        "parameterName": "Diameter luar tiang segmen bawah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "114,3 ± 2,9 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 111.4,
+          "maxValue": 117.2
+        }
+      },
+      {
+        "id": "t72-7",
+        "parameterName": "Tebal tiang segmen atas",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "2,9 mm +15% -12,5%",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 2.5375,
+          "maxValue": 3.335
+        }
+      },
+      {
+        "id": "t72-8",
+        "parameterName": "Tebal tiang segmen bawah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "2,9 mm +15% -12,5%",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 2.5375,
+          "maxValue": 3.335
+        }
+      },
+      {
+        "id": "t72-9",
+        "parameterName": "Berat tiang minimal",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "≥ 52,5 kg",
+        "unit": "kg",
+        "required": true,
+        "requiredPhoto": true,
+        "choices": [],
+        "validationRule": {
+          "type": "MIN",
+          "minValue": 52.5
+        }
+      },
+      {
+        "id": "t72-10",
+        "parameterName": "Tebal Lakop",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "≥ 3 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "MIN",
+          "minValue": 3
+        }
+      },
+      {
+        "id": "t72-11",
+        "parameterName": "Panjang Lakop",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "≥ 40 cm",
+        "unit": "cm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "MIN",
+          "minValue": 40
+        }
+      },
+      {
+        "id": "t72-12",
+        "parameterName": "Kerapian pengelasan pada sambungan",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "OK",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "t72-13",
+        "parameterName": "Terdapat tanda tanam",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "t72-14",
+        "parameterName": "Standar pengecatan",
+        "category": "Fisik",
+        "inputType": "CHOICE",
+        "standardText": "Sesuai",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [
+          "Sesuai",
+          "Tidak Sesuai"
+        ],
+        "validationRule": null
+      },
+      {
+        "id": "t72-15",
+        "parameterName": "Nama/simbol merk pabrik tercetak jelas pada tutup atas",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": null
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-13T00:00:00.000Z",
+    "updatedAt": "2026-07-13T00:00:00.000Z"
+  },
+  {
+    "id": "tiang_galvanis_6m_tanpa_sambungan",
+    "type": "MATERIAL",
+    "name": "Tiang Galvanis 6M Tanpa Sambungan",
+    "description": "Pemeriksaan Fisik Tiang Galvanis 6M Tanpa Sambungan",
+    "formCode": "TA-FR-048-010-03",
+    "category": "QC Material",
+    "standardCode": "TA-FR-048-010-03",
+    "checklistItems": [
+      {
+        "id": "tg6-1",
+        "parameterName": "Kondisi fisik luar baik/tidak cacat",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "tidak cacat",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "choices": [],
+        "validationRule": {
+          "type": "BOOLEANREQUIRED"
+        }
+      },
+      {
+        "id": "tg6-2",
+        "parameterName": "Panjang total",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "6000 ± 50 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 5950,
+          "maxValue": 6050
+        }
+      },
+      {
+        "id": "tg6-3",
+        "parameterName": "Diameter luar",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "76,3 mm ± 1%",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 75.537,
+          "maxValue": 77.063
+        }
+      },
+      {
+        "id": "tg6-4",
+        "parameterName": "Tebal tiang",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "4 mm +15% -12,2%",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 3.512,
+          "maxValue": 4.6
+        }
+      },
+      {
+        "id": "tg6-5",
+        "parameterName": "Berat",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "Minimal 43,78 kg",
+        "unit": "kg",
+        "required": true,
+        "requiredPhoto": true,
+        "choices": [],
+        "validationRule": {
+          "type": "MIN",
+          "minValue": 43.78
+        }
+      },
+      {
+        "id": "tg6-6",
+        "parameterName": "Terdapat tanda tanam",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "tg6-7",
+        "parameterName": "Warna cat sesuai standar pengecatan",
+        "category": "Fisik",
+        "inputType": "CHOICE",
+        "standardText": "silver / cat identitas operator",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [
+          "Sesuai",
+          "Tidak Sesuai"
+        ],
+        "validationRule": null
+      },
+      {
+        "id": "tg6-8",
+        "parameterName": "Terdapat nama atau simbol merk pabrik tercetak jelas pada tutup atas",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": null
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-13T00:00:00.000Z",
+    "updatedAt": "2026-07-13T00:00:00.000Z"
+  },
+  {
+    "id": "tiang_beton_7m",
+    "type": "MATERIAL",
+    "name": "Tiang Beton 7 Meter",
+    "description": "Pemeriksaan Fisik Tiang Beton 7 Meter",
+    "formCode": "TA-FR-048-010-04",
+    "category": "QC Material",
+    "standardCode": "TA-FR-048-010-04",
+    "checklistItems": [
+      {
+        "id": "tb7-1",
+        "parameterName": "Kondisi fisik baik/tidak cacat",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "tidak terdapat retakan dan permukaan licin",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "choices": [],
+        "validationRule": {
+          "type": "BOOLEANREQUIRED"
+        }
+      },
+      {
+        "id": "tb7-2",
+        "parameterName": "Terdapat 3 lubang tembus",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "tb7-3",
+        "parameterName": "Jarak tutup atas ke lubang tembus atas",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "≥ 0,25 m",
+        "unit": "m",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "MIN",
+          "minValue": 0.25
+        }
+      },
+      {
+        "id": "tb7-4",
+        "parameterName": "Jarak lubang tembus atas ke lubang tembus tengah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "≥ 0,35 m",
+        "unit": "m",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "MIN",
+          "minValue": 0.35
+        }
+      },
+      {
+        "id": "tb7-5",
+        "parameterName": "Jarak lubang tembus tengah ke lubang tembus bawah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "≥ 0,35 m",
+        "unit": "m",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "MIN",
+          "minValue": 0.35
+        }
+      },
+      {
+        "id": "tb7-6",
+        "parameterName": "Panjang total",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "≥ 7 m",
+        "unit": "m",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "MIN",
+          "minValue": 7
+        }
+      },
+      {
+        "id": "tb7-7",
+        "parameterName": "Diameter ruas atas",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "122 - 128 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 122,
+          "maxValue": 128
+        }
+      },
+      {
+        "id": "tb7-8",
+        "parameterName": "Diameter ruas bawah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "200 - 206 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 200,
+          "maxValue": 206
+        }
+      },
+      {
+        "id": "tb7-9",
+        "parameterName": "Keterangan",
+        "category": "Teks",
+        "inputType": "TEXT",
+        "standardText": "Opsional",
+        "unit": null,
+        "required": false,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "tb7-10",
+        "parameterName": "Terdapat kode produksi / nomor seri",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "tb7-11",
+        "parameterName": "Terdapat nama atau simbol merk pabrik pembuat",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "tb7-12",
+        "parameterName": "Terdapat garis tanah ground line pada titik tumpu",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "choices": [],
+        "validationRule": null
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-13T00:00:00.000Z",
+    "updatedAt": "2026-07-13T00:00:00.000Z"
+  },
+  {
+    "id": "tiang_beton_9m",
+    "type": "MATERIAL",
+    "name": "Tiang Beton 9 Meter",
+    "description": "Pemeriksaan Fisik Tiang Beton 9 Meter",
+    "formCode": "TA-FR-048-010-06",
+    "category": "QC Material",
+    "standardCode": "TA-FR-048-010-06",
+    "checklistItems": [
+      {
+        "id": "tb9-1",
+        "parameterName": "Kondisi fisik baik/tidak cacat",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "tidak terdapat retakan dan permukaan licin",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "choices": [],
+        "validationRule": {
+          "type": "BOOLEANREQUIRED"
+        }
+      },
+      {
+        "id": "tb9-2",
+        "parameterName": "Terdapat 6 lubang tembus",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "tb9-3",
+        "parameterName": "Jarak tutup atas ke lubang tembus 1",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "0,25 m",
+        "unit": "m",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "EXACT",
+          "exactValue": 0.25
+        }
+      },
+      {
+        "id": "tb9-4",
+        "parameterName": "Jarak lubang tembus 1 ke lubang tembus 2",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "0,35 m",
+        "unit": "m",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "EXACT",
+          "exactValue": 0.35
+        }
+      },
+      {
+        "id": "tb9-5",
+        "parameterName": "Jarak lubang tembus 2 ke lubang tembus 3",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "0,55 m",
+        "unit": "m",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "EXACT",
+          "exactValue": 0.55
+        }
+      },
+      {
+        "id": "tb9-6",
+        "parameterName": "Jarak lubang tembus 3 ke lubang tembus 4",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "0,50 m",
+        "unit": "m",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "EXACT",
+          "exactValue": 0.5
+        }
+      },
+      {
+        "id": "tb9-7",
+        "parameterName": "Jarak lubang tembus 4 ke lubang tembus 5",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "0,50 m",
+        "unit": "m",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "EXACT",
+          "exactValue": 0.5
+        }
+      },
+      {
+        "id": "tb9-8",
+        "parameterName": "Jarak lubang tembus 5 ke lubang tembus 6",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "0,50 m",
+        "unit": "m",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "EXACT",
+          "exactValue": 0.5
+        }
+      },
+      {
+        "id": "tb9-9",
+        "parameterName": "Panjang Total",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "≥ 9 m",
+        "unit": "m",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "MIN",
+          "minValue": 9
+        }
+      },
+      {
+        "id": "tb9-10",
+        "parameterName": "Diameter ruas atas",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "122 - 128 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 122,
+          "maxValue": 128
+        }
+      },
+      {
+        "id": "tb9-11",
+        "parameterName": "Diameter ruas bawah",
+        "category": "Dimensi",
+        "inputType": "NUMBER",
+        "standardText": "222 - 228 mm",
+        "unit": "mm",
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": {
+          "type": "RANGE",
+          "minValue": 222,
+          "maxValue": 228
+        }
+      },
+      {
+        "id": "tb9-12",
+        "parameterName": "Keterangan",
+        "category": "Teks",
+        "inputType": "TEXT",
+        "standardText": "Opsional",
+        "unit": null,
+        "required": false,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "tb9-13",
+        "parameterName": "Terdapat kode produksi / nomor seri",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "tb9-14",
+        "parameterName": "Terdapat nama atau simbol merk pabrik pembuat",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "tb9-15",
+        "parameterName": "Terdapat garis tanah ground line pada titik tumpu",
+        "category": "Fisik",
+        "inputType": "BOOLEANCHECK",
+        "standardText": "Ada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "choices": [],
+        "validationRule": null
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-13T00:00:00.000Z",
+    "updatedAt": "2026-07-13T00:00:00.000Z"
+  },
+  {
+    "id": "pek-1",
+    "type": "WORK",
+    "name": "Instalasi ONT",
+    "description": "Pemasangan unit ONT dan aktivasi layanan di lokasi pelanggan.",
+    "formCode": "QC-WORK-001",
+    "category": "PROVISIONING",
+    "standardCode": "",
+    "status": "On Progress",
+    "checklistItems": [
+      {
+        "id": "pek-1-c1",
+        "parameterName": "Posisi ONT",
+        "category": "Provisioning",
+        "inputType": "CHOICE",
+        "standardText": "Ditempatkan di tempat aman & tinggi rata-rata dada",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "isCritical": false,
+        "choices": [
+          "Sesuai",
+          "Tidak Sesuai"
+        ],
+        "validationRule": null
+      },
+      {
+        "id": "pek-1-c2",
+        "parameterName": "Instalasi Kabel Dropcore",
+        "category": "Provisioning",
+        "inputType": "CHOICE",
+        "standardText": "Kabel dropcore tidak menekuk tajam & dipaku rapi",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "isCritical": false,
+        "choices": [
+          "Rapi",
+          "Bermasalah"
+        ],
+        "validationRule": null
+      },
+      {
+        "id": "pek-1-c3",
+        "parameterName": "Pengukuran Nilai Redaman",
+        "category": "Provisioning",
+        "inputType": "NUMBER",
+        "standardText": "Nilai redaman ≤ -24 dBm",
+        "unit": "dBm",
+        "required": true,
+        "requiredPhoto": true,
+        "isCritical": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "pek-1-c4",
+        "parameterName": "Dokumentasi Before/After",
+        "category": "Provisioning",
+        "inputType": "TEXT",
+        "standardText": "Mengambil foto kondisi sebelum dan sesudah instalasi",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "isCritical": false,
+        "choices": [],
+        "validationRule": null
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-13T00:00:00.000Z",
+    "updatedAt": "2026-07-13T00:00:00.000Z"
+  },
+  {
+    "id": "pek-2",
+    "type": "WORK",
+    "name": "Penarikan Kabel Dropcore",
+    "description": "Pemasangan kabel dropcore dari ODP terdekat menuju rumah pelanggan.",
+    "formCode": "QC-WORK-002",
+    "category": "PROVISIONING",
+    "standardCode": "",
+    "status": "Selesai",
+    "checklistItems": [
+      {
+        "id": "pek-2-c1",
+        "parameterName": "Pemasangan S-Clamp",
+        "category": "Provisioning",
+        "inputType": "CHOICE",
+        "standardText": "S-Clamp terpasang kencang di tiang & rumah",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "isCritical": false,
+        "choices": [
+          "Kencang",
+          "Kendor"
+        ],
+        "validationRule": null
+      },
+      {
+        "id": "pek-2-c2",
+        "parameterName": "Rute Kabel",
+        "category": "Provisioning",
+        "inputType": "TEXT",
+        "standardText": "Aman dari gesekan pohon/kabel listrik bertegangan tinggi",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "isCritical": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "pek-2-c3",
+        "parameterName": "Kerapian Dropwire",
+        "category": "Provisioning",
+        "inputType": "CHOICE",
+        "standardText": "Dropwire masuk rapi, menggunakan flexible pipe jika perlu",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "isCritical": false,
+        "choices": [
+          "Rapi",
+          "Kendor/Berantakan"
+        ],
+        "validationRule": null
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-13T00:00:00.000Z",
+    "updatedAt": "2026-07-13T00:00:00.000Z"
+  },
+  {
+    "id": "pek-3",
+    "type": "WORK",
+    "name": "Validasi Redaman FO",
+    "description": "Pengukuran daya optik pada titik distribusi ODP.",
+    "formCode": "QC-WORK-003",
+    "category": "ASSURANCE",
+    "standardCode": "",
+    "status": "On Progress",
+    "checklistItems": [
+      {
+        "id": "pek-3-c1",
+        "parameterName": "Nilai Redaman Optik di ODP",
+        "category": "Assurance",
+        "inputType": "NUMBER",
+        "standardText": "Maksimal -24 dBm",
+        "unit": "dBm",
+        "required": true,
+        "requiredPhoto": true,
+        "isCritical": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "pek-3-c2",
+        "parameterName": "Kebersihan Konektor Ferrule",
+        "category": "Assurance",
+        "inputType": "CHOICE",
+        "standardText": "Konektor ditiup pen/pembersih, tidak berdebu",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "isCritical": false,
+        "choices": [
+          "Bersih",
+          "Kotor"
+        ],
+        "validationRule": null
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-13T00:00:00.000Z",
+    "updatedAt": "2026-07-13T00:00:00.000Z"
+  },
+  {
+    "id": "pek-4",
+    "type": "WORK",
+    "name": "Pemeriksaan Kualitas Instalasi",
+    "description": "Verifikasi kelayakan instalasi jaringan optik pasca-pasang.",
+    "formCode": "QC-WORK-004",
+    "category": "ASSURANCE",
+    "standardCode": "",
+    "status": "Selesai",
+    "checklistItems": [
+      {
+        "id": "pek-4-c1",
+        "parameterName": "Pelabelan Kabel di ODP",
+        "category": "Assurance",
+        "inputType": "CHOICE",
+        "standardText": "Label nomor core & nama pelanggan tertulis jelas",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "isCritical": false,
+        "choices": [
+          "Ada & Jelas",
+          "Tidak Ada / Buram"
+        ],
+        "validationRule": null
+      },
+      {
+        "id": "pek-4-c2",
+        "parameterName": "Sisa Kabel (Slack)",
+        "category": "Assurance",
+        "inputType": "TEXT",
+        "standardText": "Sisa kabel dropcore digulung rapi dengan diameter min. 30 cm",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "isCritical": false,
+        "choices": [],
+        "validationRule": null
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-13T00:00:00.000Z",
+    "updatedAt": "2026-07-13T00:00:00.000Z"
+  },
+  {
+    "id": "pek-5",
+    "type": "WORK",
+    "name": "Pemasangan Tiang",
+    "description": "Pekerjaan penanaman tiang beton/besi baru di lapangan.",
+    "formCode": "QC-WORK-005",
+    "category": "CONSTRUCTION",
+    "standardCode": "",
+    "status": "On Progress",
+    "checklistItems": [
+      {
+        "id": "pek-5-c1",
+        "parameterName": "Kedalaman Lubang Pondasi",
+        "category": "Construction",
+        "inputType": "NUMBER",
+        "standardText": "Kedalaman lubang pondasi minimal 1.2 meter",
+        "unit": "m",
+        "required": true,
+        "requiredPhoto": true,
+        "isCritical": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "pek-5-c2",
+        "parameterName": "Ketegakan Tiang",
+        "category": "Construction",
+        "inputType": "CHOICE",
+        "standardText": "Kemiringan tiang maksimal 2 derajat",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "isCritical": false,
+        "choices": [
+          "Tegak Lurus",
+          "Miring"
+        ],
+        "validationRule": null
+      },
+      {
+        "id": "pek-5-c3",
+        "parameterName": "Pengecoran Base Pondasi",
+        "category": "Construction",
+        "inputType": "TEXT",
+        "standardText": "Cor semen kokoh, permukaan rapi rata tanah",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "isCritical": false,
+        "choices": [],
+        "validationRule": null
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-13T00:00:00.000Z",
+    "updatedAt": "2026-07-13T00:00:00.000Z"
+  },
+  {
+    "id": "pek-6",
+    "type": "WORK",
+    "name": "Pengecoran Pondasi",
+    "description": "Pengecoran pondasi untuk tiang atau kabinet outdoor.",
+    "formCode": "QC-WORK-006",
+    "category": "CONSTRUCTION",
+    "standardCode": "",
+    "status": "Selesai",
+    "checklistItems": [
+      {
+        "id": "pek-6-c1",
+        "parameterName": "Komposisi Campuran",
+        "category": "Construction",
+        "inputType": "CHOICE",
+        "standardText": "Campuran semen, pasir, kerikil sesuai spek K-175",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "isCritical": false,
+        "choices": [
+          "Sesuai Standar",
+          "Kurang Semen"
+        ],
+        "validationRule": null
+      },
+      {
+        "id": "pek-6-c2",
+        "parameterName": "Dimensi Cor Pondasi",
+        "category": "Construction",
+        "inputType": "TEXT",
+        "standardText": "Ukuran min. 40cm x 40cm x 50cm",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "isCritical": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "pek-6-c3",
+        "parameterName": "Waktu Pengeringan",
+        "category": "Construction",
+        "inputType": "NUMBER",
+        "standardText": "Minimal 24 jam sebelum diberi beban tiang",
+        "unit": "jam",
+        "required": true,
+        "requiredPhoto": false,
+        "isCritical": false,
+        "choices": [],
+        "validationRule": null
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-13T00:00:00.000Z",
+    "updatedAt": "2026-07-13T00:00:00.000Z"
+  },
+  {
+    "id": "pek-7",
+    "type": "WORK",
+    "name": "Penarikan Kabel Jalur Utama",
+    "description": "Penarikan kabel optik utama (aerial feeder/distribution).",
+    "formCode": "QC-WORK-007",
+    "category": "CONSTRUCTION",
+    "standardCode": "",
+    "status": "On Progress",
+    "checklistItems": [
+      {
+        "id": "pek-7-c1",
+        "parameterName": "Ketinggian Kabel",
+        "category": "Construction",
+        "inputType": "NUMBER",
+        "standardText": "Ketinggian kabel dari jalan raya min. 5 meter",
+        "unit": "m",
+        "required": true,
+        "requiredPhoto": true,
+        "isCritical": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "pek-7-c2",
+        "parameterName": "Kerapian Ikatan Kabel",
+        "category": "Construction",
+        "inputType": "TEXT",
+        "standardText": "Diikat rapi ke messenger wire dengan spacing teratur",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": false,
+        "isCritical": false,
+        "choices": [],
+        "validationRule": null
+      },
+      {
+        "id": "pek-7-c3",
+        "parameterName": "Pemasangan Accessoris Span Box",
+        "category": "Construction",
+        "inputType": "CHOICE",
+        "standardText": "Aksesoris clamp, link, tensioner terpasang lengkap",
+        "unit": null,
+        "required": true,
+        "requiredPhoto": true,
+        "isCritical": false,
+        "choices": [
+          "Lengkap",
+          "Tidak Lengkap"
+        ],
+        "validationRule": null
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-13T00:00:00.000Z",
+    "updatedAt": "2026-07-13T00:00:00.000Z"
+  },
+  {
+    "id": "MAT-1783933599412",
+    "type": "MATERIAL",
+    "name": "TIang Beton 67 Meter",
+    "formCode": "FORM-MAT-1783933599412",
+    "category": "Tiang Besi",
+    "standardCode": "SPLN 321-64-7676",
+    "checklistItems": [
+      {
+        "id": "MAT-1783933599412-C01",
+        "parameter_name": "Panjang",
+        "input_type": "choice",
+        "standard_text": "4.2",
+        "unit": "mm",
+        "is_required": false,
+        "name": "Panjang",
+        "standardLabel": "4.2",
+        "requiredPhoto": false
+      },
+      {
+        "id": "MAT-1783933599412-C02",
+        "parameter_name": "Diameter",
+        "input_type": "choice",
+        "standard_text": "2",
+        "unit": "mm",
+        "is_required": false,
+        "name": "Diameter",
+        "standardLabel": "2",
+        "requiredPhoto": false
+      }
+    ],
+    "isActive": true,
+    "updatedAt": "2026-07-13T09:07:07.891Z",
+    "createdAt": "2026-07-13T09:06:39.603Z"
+  }
+]
