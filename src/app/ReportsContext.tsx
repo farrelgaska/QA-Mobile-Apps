@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { QCReport, StandardResult } from '../types/report';
 import { dummyReports } from '../data/dummyReports';
-import { normalizeReportStatus, mapToSharedReport } from '../utils/status';
+import { mapToSharedReport } from '../utils/status';
 import {
   fetchReports,
   approveReportApi,

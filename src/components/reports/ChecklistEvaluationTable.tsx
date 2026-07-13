@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { ChecklistItem, ChecklistResult } from '../../types/report';
 import { Table, TableHeader, TableRow, TableCell, TableBody } from '../ui/Table';
 import { StandardResultBadge } from './StandardResultBadge';
 import { Image as ImageIcon, MessageSquare, Check, X, AlertCircle } from 'lucide-react';
+import { Modal } from '../ui/Modal';
 
 export interface ChecklistEvaluationTableProps {
   items: ChecklistItem[];
@@ -15,8 +16,21 @@ export const ChecklistEvaluationTable: React.FC<ChecklistEvaluationTableProps> =
   isEditable = false,
   onUpdateItem
 }) => {
+  const [editingItem, setEditingItem] = useState<{
+    id: string;
+    name: string;
+    result: ChecklistResult;
+    note: string;
+  } | null>(null);
+
+  const getShortPreview = (note?: string) => {
+    if (!note?.trim()) return 'Tambah catatan...';
+    return note.length > 50 ? note.substring(0, 47) + '...' : note;
+  };
+
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-150 bg-white">
+    <>
+      <div className="overflow-x-auto rounded-xl border border-gray-150 bg-white">
       <Table>
         <TableHeader>
           <TableRow>
@@ -122,13 +136,25 @@ export const ChecklistEvaluationTable: React.FC<ChecklistEvaluationTableProps> =
                 </TableCell>
                 <TableCell className="max-w-[240px]">
                   {isEditable && onUpdateItem ? (
-                    <input
-                      type="text"
-                      value={item.adminNote || ''}
-                      onChange={(e) => onUpdateItem(item.id, item.result, e.target.value)}
-                      placeholder="Tambah catatan item..."
-                      className="w-full text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#006B5A] focus:border-[#006B5A] placeholder-gray-300"
-                    />
+                    <button
+                      type="button"
+                      onClick={() => setEditingItem({
+                        id: item.id,
+                        name: item.name,
+                        result: item.result,
+                        note: item.adminNote || '',
+                      })}
+                      className={`w-full text-left flex items-start gap-1.5 text-xs p-2 rounded-lg transition-all duration-150 border focus:outline-none ${
+                        item.adminNote
+                          ? 'text-amber-700 bg-amber-50/50 border-amber-200/50 hover:bg-amber-100/50 hover:border-amber-300/50'
+                          : 'text-gray-400 bg-gray-50/50 border-gray-150 hover:bg-gray-100/50 hover:border-gray-250 border-dashed'
+                      }`}
+                    >
+                      <MessageSquare className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                      <span className="truncate max-w-[190px]">
+                        {item.adminNote ? getShortPreview(item.adminNote) : 'Tambah catatan...'}
+                      </span>
+                    </button>
                   ) : item.adminNote ? (
                     <div className="flex items-start gap-1.5 text-xs text-amber-700 bg-amber-50/50 border border-amber-200/50 p-2 rounded-lg leading-relaxed">
                       <MessageSquare className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
@@ -144,5 +170,49 @@ export const ChecklistEvaluationTable: React.FC<ChecklistEvaluationTableProps> =
         </TableBody>
       </Table>
     </div>
-  );
+
+    <Modal
+      open={!!editingItem}
+      onClose={() => setEditingItem(null)}
+      title={`Edit Catatan: ${editingItem?.name}`}
+      footer={
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setEditingItem(null)}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-305 rounded-lg hover:bg-gray-50 transition-colors duration-150"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (editingItem && onUpdateItem) {
+                onUpdateItem(editingItem.id, editingItem.result, editingItem.note);
+              }
+              setEditingItem(null);
+            }}
+            className="px-4 py-2 text-sm font-medium text-white bg-[#006B5A] rounded-lg hover:bg-[#005749] transition-colors duration-150"
+          >
+            Simpan
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-3">
+        <label htmlFor="admin-note-textarea" className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          Catatan Evaluasi Admin
+        </label>
+        <textarea
+          id="admin-note-textarea"
+          value={editingItem?.note || ''}
+          onChange={(e) => setEditingItem(prev => prev ? { ...prev, note: e.target.value } : null)}
+          placeholder="Masukkan catatan detail untuk parameter ini..."
+          className="w-full h-32 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#006B5A] focus:border-[#006B5A] text-sm text-gray-700 placeholder-gray-300 resize-none"
+          autoFocus
+        />
+      </div>
+    </Modal>
+  </>
+);
 };

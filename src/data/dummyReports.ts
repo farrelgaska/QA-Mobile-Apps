@@ -1,6 +1,4 @@
-import type { QCReport } from '../types/report';
-
-export const dummyReports: QCReport[] = [
+export const dummyReports: any[] = [
   {
     id: 'REP-001',
     type: 'material',
