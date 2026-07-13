@@ -281,14 +281,9 @@ class QCMaterialFormScreen extends StatelessWidget {
         Expanded(
           flex: 4,
           child: AppButton(
-            text: 'Simpan Draft',
+            text: 'Simpan Form',
             variant: AppButtonVariant.secondary,
             onPressed: () {
-              final locError = p.validateLocation();
-              if (locError != null) {
-                AppSnackbar.warning(context, locError);
-                return;
-              }
               if (!p.hasAnyDraftContent) {
                 AppSnackbar.warning(context, 'Isi minimal satu data pemeriksaan sebelum menyimpan draft.');
                 return;
@@ -304,7 +299,7 @@ class QCMaterialFormScreen extends StatelessWidget {
       Expanded(
         flex: 6,
         child: AppButton(
-          text: p.isRevisionMode ? 'Kirim Ulang' : 'Submit Laporan',
+          text: p.isRevisionMode ? 'Kirim Ulang' : 'Kirim Laporan',
           variant: AppButtonVariant.primary,
           onPressed: () {
             final locError = p.validateLocation();

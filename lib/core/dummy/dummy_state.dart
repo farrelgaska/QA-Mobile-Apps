@@ -1,4 +1,5 @@
 import '../../shared/models/qc_report_model.dart';
+import '../../shared/models/qc_material_template_model.dart';
 import 'dummy_reports.dart';
 import '../../shared/models/user_model.dart';
 import 'dummy_users.dart';
@@ -16,6 +17,11 @@ class DummyState {
   String? profilePictureUrl;
   
   List<QCReportModel> reports = List.from(dummyReports);
+
+  /// In-memory cache of QCMaterialTemplate objects keyed by template id.
+  /// Populated when a template is first loaded (either from API or dummy list)
+  /// so that re-opening a draft can reuse the exact same template.
+  final Map<String, QCMaterialTemplate> templateCache = {};
 
   /// Fetch latest reports from Mock API backend and update memory state.
   Future<void> fetchReportsFromApi() async {

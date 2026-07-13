@@ -4,12 +4,12 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/dummy/dummy_state.dart';
 import '../../../core/dummy/dummy_qc_material_templates.dart';
 import '../../../shared/models/enums.dart';
+import '../../../shared/models/qc_material_template_model.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/photo_grid.dart';
 import '../../../shared/widgets/screen_header.dart';
 import '../../../shared/widgets/status_badge.dart';
-import '../../admin/services/qc_evaluation_service.dart';
 
 class RenderItem {
   final String? itemId;
@@ -167,33 +167,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     final List<RenderItem> renderItems = [];
     if (report.checklistItems.isNotEmpty) {
       for (var ans in report.checklistItems) {
-        // Admin evaluates pass/fail via QCEvaluationService against the template standard.
-        // Staff-side: always show neutral status (no pass/fail displayed).
-        dynamic evalStatus;
-        String? warning;
-        if (state.currentUser.role == 'Admin') {
-          final template = dummyQCMaterialTemplates.firstWhere(
-            (t) => t.code == report.formCode,
-            orElse: () => dummyQCMaterialTemplates[0],
-          );
-          final item = template.checklistItems.firstWhere(
-            (it) => it.id == ans.itemId,
-            orElse: () => template.checklistItems[0],
-          );
-          evalStatus = QCEvaluationService.evaluateMaterialItem(
-            item: item,
-            value: ans.value?.toString() ?? '',
-          );
-          if (evalStatus == QCResultStatus.fail) {
-            warning = 'Kondisi tidak sesuai standar';
-          } else {
-            warning = null;
-          }
-        } else {
-          // Staff: no pass/fail evaluation — show as neutral/pending Admin review
-          evalStatus = QCResultStatus.notFilled;
-          warning = null;
-        }
+        // Mobile-side: always show neutral status (no pass/fail displayed).
+        dynamic evalStatus = QCResultStatus.notFilled;
+        String? warning = null;
 
         renderItems.add(
           RenderItem(
@@ -212,24 +188,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       }
     } else if (report.checklistResults.isNotEmpty) {
       for (var res in report.checklistResults) {
-        // Admin evaluates pass/fail via QCEvaluationService.
-        // Staff-side: always show neutral status (no pass/fail displayed).
-        dynamic evalStatus;
-        String? warning;
-        if (state.currentUser.role == 'Admin') {
-          evalStatus = QCEvaluationService.evaluatePekerjaanItem(
-            title: res.paramName,
-            inputType: res.inputType == 'Angka' ? InputType.number : (res.inputType == 'Pilihan' ? InputType.choice : InputType.text),
-            value: res.resultValue,
-          );
-          if (evalStatus == ChecklistStatus.tidakSesuai) {
-            warning = 'Kondisi tidak sesuai standar';
-          }
-        } else {
-          // Staff: no pass/fail evaluation, show as notFilled (neutral/pending Admin review)
-          evalStatus = QCResultStatus.notFilled;
-          warning = null;
-        }
+        // Mobile-side: always show neutral status (no pass/fail displayed).
+        dynamic evalStatus = QCResultStatus.notFilled;
+        String? warning = null;
 
         renderItems.add(
           RenderItem(
@@ -383,10 +344,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                                 ),
                               ),
                             ),
-                            if (state.currentUser.role == 'Admin') ...[
-                              const SizedBox(width: 8),
-                              StatusBadge(status: result.status),
-                            ],
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -564,7 +521,11 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                       final tid = report.templateId.isNotEmpty
                           ? report.templateId
                           : 'tiang_besi_7m_3_segmen'; // fallback for legacy data
-                      context.push('/qc-material/form/$tid?editReportId=${report.id}${isRevision ? "&isRevision=true" : ""}');
+                      // Look up the cached template so the form can use its exact checklist structure.
+                      final QCMaterialTemplate? cachedTemplate = DummyState().templateCache[tid]
+                          ?? dummyQCMaterialTemplates.cast<QCMaterialTemplate?>().firstWhere(
+                               (t) => t?.id == tid, orElse: () => null);
+                      context.push('/qc-material/form/$tid?editReportId=${report.id}${isRevision ? "&isRevision=true" : ""}', extra: cachedTemplate);
                     } else {
                       // QC Pekerjaan: use templateId if available, fallback to 'pek-1'
                       final tid = report.templateId.isNotEmpty

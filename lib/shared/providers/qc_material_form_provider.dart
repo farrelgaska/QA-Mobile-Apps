@@ -99,6 +99,8 @@ class QCMaterialFormProvider extends ChangeNotifier {
         orElse: () => dummyQCMaterialTemplates[0],
       );
     }
+    // Cache the resolved template so re-opening a draft can use the same template.
+    _state.templateCache[_template.id] = _template;
 
     if (editReportId != null) {
       final report = _state.reports.firstWhere((r) => r.id == editReportId,
@@ -130,8 +132,12 @@ class QCMaterialFormProvider extends ChangeNotifier {
         customLocAreaController.text = report.location.area;
         customLocSegmentController.text = report.location.detailLocation;
       } else {
-        selectedSite = dummySites.firstWhere((s) => s.id == report.location.siteId,
-            orElse: () => dummySites[0]);
+        if (report.location.siteId.isNotEmpty) {
+          final matchingSites = dummySites.where((s) => s.id == report.location.siteId);
+          selectedSite = matchingSites.isNotEmpty ? matchingSites.first : null;
+        } else {
+          selectedSite = null;
+        }
       }
 
       // Populate checklist items
@@ -270,9 +276,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
   void persistReport(QCReportStatus status) {
     final workLoc = WorkLocation(
-      siteName: isCustomLocation ? customLocNameController.text : (selectedSite?.name ?? 'Site Utama'),
-      area: isCustomLocation ? customLocAreaController.text : 'Area Site Utama',
-      segment: isCustomLocation ? customLocSegmentController.text : 'Segmen Default',
+      siteName: isCustomLocation ? customLocNameController.text : (selectedSite?.name ?? ''),
+      area: isCustomLocation ? customLocAreaController.text : (selectedSite != null ? 'Area Site Utama' : ''),
+      segment: isCustomLocation ? customLocSegmentController.text : (selectedSite != null ? 'Segmen Default' : ''),
       note: isCustomLocation ? customLocNoteController.text : '',
       isCustom: isCustomLocation,
     );
@@ -305,7 +311,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
         checkedByName: _state.currentUser.name,
         checkedByNik: _state.currentUser.nik,
         date: DateTime.now(), // submittedAt updated on resubmit
-        siteId: isCustomLocation ? 'custom-site' : (selectedSite?.id ?? 'custom-site'),
+        siteId: isCustomLocation ? 'custom-site' : (selectedSite?.id ?? ''),
         siteName: workLoc.siteName,
         area: workLoc.area ?? '',
         detailLocation: workLoc.segment ?? '',
@@ -330,7 +336,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
         checkedByName: _state.currentUser.name,
         checkedByNik: _state.currentUser.nik,
         date: DateTime.now(),
-        siteId: isCustomLocation ? 'custom-site' : (selectedSite?.id ?? 'custom-site'),
+        siteId: isCustomLocation ? 'custom-site' : (selectedSite?.id ?? ''),
         siteName: workLoc.siteName,
         area: workLoc.area ?? '',
         detailLocation: workLoc.segment ?? '',
