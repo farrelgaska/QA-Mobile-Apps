@@ -133,3 +133,57 @@ export async function requestFollowUpApi(
   };
   return patchReport(id, patch);
 }
+
+// ─── QC Templates API ─────────────────────────────────────────────────────────
+
+export interface ApiTemplateChecklistItem {
+  id: string;
+  parameter_name: string;
+  input_type: string;
+  standard_text: string;
+  unit?: string;
+  is_required: boolean;
+  name?: string;
+  standardLabel?: string;
+  minVal?: number;
+  maxVal?: number;
+  requiredPhoto?: boolean;
+  isActive?: boolean;
+}
+
+export interface ApiTemplate {
+  id: string;
+  type: 'MATERIAL' | 'WORK';
+  name: string;
+  formCode: string;
+  category: string;
+  standardCode: string;
+  checklistItems: ApiTemplateChecklistItem[];
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  segment?: 'provisioning' | 'assurance' | 'construction';
+}
+
+export async function fetchTemplates(): Promise<ApiTemplate[]> {
+  return request<ApiTemplate[]>('/templates');
+}
+
+export async function fetchTemplate(id: string): Promise<ApiTemplate> {
+  return request<ApiTemplate>(`/templates/${id}`);
+}
+
+export async function postTemplate(template: ApiTemplate): Promise<ApiTemplate> {
+  return request<ApiTemplate>('/templates', {
+    method: 'POST',
+    body: JSON.stringify(template),
+  });
+}
+
+export async function patchTemplate(id: string, patch: Partial<ApiTemplate>): Promise<ApiTemplate> {
+  return request<ApiTemplate>(`/templates/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+

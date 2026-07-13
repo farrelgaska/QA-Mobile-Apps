@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { QCPekerjaan } from '../types/pekerjaan';
-import { dummyPekerjaan } from '../data/dummyPekerjaan';
+import { fetchTemplates, postTemplate, patchTemplate } from '../services/reportApi';
+import type { ApiTemplate } from '../services/reportApi';
 import { Card, CardContent } from '../components/ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableCell } from '../components/ui/Table';
 import { PageTransition } from '../components/layout/PageTransition';
@@ -13,9 +14,48 @@ import { Select } from '../components/ui/Select';
 import { Modal } from '../components/ui/Modal';
 import { Search, Plus, Info } from 'lucide-react';
 
+const mapApiToPekerjaan = (t: ApiTemplate): QCPekerjaan => ({
+  id: t.id,
+  name: t.name,
+  category: t.category || '',
+  segment: t.segment || 'construction',
+  checklistCount: t.checklistItems?.length || 0,
+  isActive: t.isActive,
+  updatedAt: t.updatedAt || new Date().toISOString(),
+  checklistItems: (t.checklistItems || []).map((item) => ({
+    id: item.id,
+    name: item.parameter_name || item.name || '',
+    isActive: item.isActive !== undefined ? item.isActive : true
+  }))
+});
+
+const mapPekerjaanToApi = (p: QCPekerjaan): ApiTemplate => ({
+  id: p.id,
+  type: 'WORK',
+  name: p.name,
+  formCode: `FORM-${p.id}`,
+  category: p.category,
+  standardCode: '',
+  checklistItems: p.checklistItems.map(item => ({
+    id: item.id,
+    parameter_name: item.name,
+    input_type: 'choice',
+    standard_text: '',
+    unit: '',
+    is_required: true,
+    name: item.name,
+    isActive: item.isActive
+  })),
+  isActive: p.isActive,
+  updatedAt: p.updatedAt || new Date().toISOString(),
+  segment: p.segment
+});
+
 export const QCPekerjaanListPage: React.FC = () => {
   const navigate = useNavigate();
   const [pekerjaanList, setPekerjaanList] = useState<QCPekerjaan[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,32 +68,58 @@ export const QCPekerjaanListPage: React.FC = () => {
   const [newCategory, setNewCategory] = useState('');
   const [newSegment, setNewSegment] = useState<'provisioning' | 'assurance' | 'construction'>('construction');
 
-  useEffect(() => {
-    const stored = localStorage.getItem('pekerjaan');
-    if (stored) {
-      setPekerjaanList(JSON.parse(stored));
-    } else {
-      localStorage.setItem('pekerjaan', JSON.stringify(dummyPekerjaan));
-      setPekerjaanList(dummyPekerjaan);
+  const loadData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const all = await fetchTemplates();
+      const workTemplates = all
+        .filter(t => t.type === 'WORK')
+        .map(mapApiToPekerjaan);
+      setPekerjaanList(workTemplates);
+    } catch (e: any) {
+      console.error(e);
+      setError(e.message || 'Gagal memuat template pekerjaan.');
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
-
-  const handleToggleActive = (id: string) => {
-    const updated = pekerjaanList.map(work => {
-      if (work.id === id) {
-        return { ...work, isActive: !work.isActive, updatedAt: new Date().toISOString() };
-      }
-      return work;
-    });
-    setPekerjaanList(updated);
-    localStorage.setItem('pekerjaan', JSON.stringify(updated));
   };
 
-  const handleCreateTemplate = (e: React.FormEvent) => {
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleToggleActive = async (id: string) => {
+    const target = pekerjaanList.find(w => w.id === id);
+    if (!target) return;
+
+    const nextActive = !target.isActive;
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      await patchTemplate(id, { isActive: nextActive });
+
+      const updated = pekerjaanList.map(work => {
+        if (work.id === id) {
+          return { ...work, isActive: nextActive, updatedAt: new Date().toISOString() };
+        }
+        return work;
+      });
+      setPekerjaanList(updated);
+    } catch (e: any) {
+      console.error(e);
+      setError(e.message || 'Gagal mengubah status template.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName || !newCategory) return;
 
-    const newId = `WRK-0${pekerjaanList.length + 1}`;
+    const newId = `WRK-${Date.now()}`;
     const newTemplate: QCPekerjaan = {
       id: newId,
       name: newName,
@@ -65,18 +131,28 @@ export const QCPekerjaanListPage: React.FC = () => {
       checklistItems: []
     };
 
-    const updated = [newTemplate, ...pekerjaanList];
-    setPekerjaanList(updated);
-    localStorage.setItem('pekerjaan', JSON.stringify(updated));
+    setIsLoading(true);
+    setError(null);
+    try {
+      const apiPayload = mapPekerjaanToApi(newTemplate);
+      await postTemplate(apiPayload);
 
-    // Reset Form
-    setNewName('');
-    setNewCategory('');
-    setNewSegment('construction');
-    setIsCreateModalOpen(false);
+      setPekerjaanList(prev => [newTemplate, ...prev]);
 
-    // Redirect to detail page
-    navigate(`/data/qc-pekerjaan/${newId}`);
+      // Reset Form
+      setNewName('');
+      setNewCategory('');
+      setNewSegment('construction');
+      setIsCreateModalOpen(false);
+
+      // Redirect to detail page
+      navigate(`/data/qc-pekerjaan/${newId}`);
+    } catch (e: any) {
+      console.error(e);
+      setError(e.message || 'Gagal membuat template baru.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Filtered data
@@ -115,11 +191,24 @@ export const QCPekerjaanListPage: React.FC = () => {
         <Button
           onClick={() => setIsCreateModalOpen(true)}
           className="bg-[#006B5A] hover:bg-[#005244] text-white"
+          disabled={isLoading}
         >
           <Plus className="mr-2 h-4 w-4" />
           Tambah Template Baru
         </Button>
       </div>
+
+      {error && (
+        <div className="p-4 text-sm text-red-700 bg-red-50 rounded-lg border border-red-200">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="p-3 text-sm text-blue-700 bg-blue-50 rounded-lg border border-blue-200 animate-pulse">
+          Menghubungkan ke API...
+        </div>
+      )}
 
       {/* Filter and Search controls */}
       <Card className="overflow-visible relative z-30">
@@ -190,7 +279,13 @@ export const QCPekerjaanListPage: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPekerjaan.length === 0 ? (
+                {isLoading && filteredPekerjaan.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-12 text-gray-500 font-semibold">
+                      Memuat data template dari API...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredPekerjaan.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-12 text-gray-400">
                       Tidak ada kriteria pekerjaan yang cocok dengan kriteria pencarian.

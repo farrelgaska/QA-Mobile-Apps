@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { QCMaterial, MaterialChecklistTemplate } from '../types/material';
-import { dummyMaterials } from '../data/dummyMaterials';
+import { fetchTemplates, patchTemplate } from '../services/reportApi';
+import type { ApiTemplate } from '../services/reportApi';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { PageTransition } from '../components/layout/PageTransition';
@@ -11,12 +12,57 @@ import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
 import { Plus, Trash2, ShieldAlert } from 'lucide-react';
 
+const mapApiToMaterial = (t: ApiTemplate): QCMaterial => ({
+  id: t.id,
+  name: t.name,
+  category: t.category || '',
+  standard: t.standardCode || '',
+  checklistCount: t.checklistItems?.length || 0,
+  status: t.isActive ? 'Aktif' : 'Nonaktif',
+  updatedAt: t.updatedAt || new Date().toISOString(),
+  checklistItems: (t.checklistItems || []).map((item) => ({
+    id: item.id,
+    name: item.parameter_name || item.name || '',
+    standardLabel: item.standard_text || item.standardLabel || '',
+    unit: item.unit || '',
+    minVal: item.minVal,
+    maxVal: item.maxVal,
+    requiredPhoto: item.requiredPhoto !== undefined ? item.requiredPhoto : !!item.is_required
+  }))
+});
+
+const mapMaterialToApi = (m: QCMaterial): ApiTemplate => ({
+  id: m.id,
+  type: 'MATERIAL',
+  name: m.name,
+  formCode: `FORM-${m.id}`,
+  category: m.category,
+  standardCode: m.standard,
+  checklistItems: m.checklistItems.map(item => ({
+    id: item.id,
+    parameter_name: item.name,
+    input_type: (item.minVal !== undefined || item.maxVal !== undefined) ? 'number' : 'choice',
+    standard_text: item.standardLabel,
+    unit: item.unit,
+    is_required: item.requiredPhoto,
+    name: item.name,
+    standardLabel: item.standardLabel,
+    minVal: item.minVal,
+    maxVal: item.maxVal,
+    requiredPhoto: item.requiredPhoto
+  })),
+  isActive: m.status === 'Aktif',
+  updatedAt: m.updatedAt || new Date().toISOString()
+});
+
 export const QCMaterialDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [materials, setMaterials] = useState<QCMaterial[]>([]);
   const [template, setTemplate] = useState<QCMaterial | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -29,22 +75,50 @@ export const QCMaterialDetailPage: React.FC = () => {
   const [maxVal, setMaxVal] = useState('');
   const [requiredPhoto, setRequiredPhoto] = useState<boolean>(false);
 
-  useEffect(() => {
-    const stored = localStorage.getItem('materials');
-    const list: QCMaterial[] = stored ? JSON.parse(stored) : dummyMaterials;
-    setMaterials(list);
+  const loadData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const all = await fetchTemplates();
+      const list = all
+        .filter(t => t.type === 'MATERIAL')
+        .map(mapApiToMaterial);
+      setMaterials(list);
 
-    const found = list.find(m => m.id === id);
-    if (found) {
-      setTemplate(found);
+      const found = list.find(m => m.id === id);
+      if (found) {
+        setTemplate(found);
+      } else {
+        setError('Template tidak ditemukan di server.');
+      }
+    } catch (e: any) {
+      console.error(e);
+      setError(e.message || 'Gagal memuat template material.');
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    loadData();
   }, [id]);
 
-  const updateMaterialTemplate = (updatedTemplate: QCMaterial) => {
-    const updatedList = materials.map(m => m.id === updatedTemplate.id ? updatedTemplate : m);
-    setMaterials(updatedList);
-    setTemplate(updatedTemplate);
-    localStorage.setItem('materials', JSON.stringify(updatedList));
+  const updateMaterialTemplate = async (updatedTemplate: QCMaterial) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const apiPayload = mapMaterialToApi(updatedTemplate);
+      await patchTemplate(updatedTemplate.id, apiPayload);
+
+      const updatedList = materials.map(m => m.id === updatedTemplate.id ? updatedTemplate : m);
+      setMaterials(updatedList);
+      setTemplate(updatedTemplate);
+    } catch (e: any) {
+      console.error(e);
+      setError(e.message || 'Gagal memperbarui template.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDeleteItem = (itemId: string) => {
@@ -109,10 +183,22 @@ export const QCMaterialDetailPage: React.FC = () => {
 
   return (
     <PageTransition className="space-y-6 max-w-7xl mx-auto px-1">
+      {error && (
+        <div className="p-4 text-sm text-red-700 bg-red-50 rounded-lg border border-red-200">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="p-3 text-sm text-blue-700 bg-blue-50 rounded-lg border border-blue-200 animate-pulse">
+          Menyinkronkan data dengan API...
+        </div>
+      )}
+
       {/* Top Header Navigation */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => navigate('/data/qc-material')} className="hover:bg-gray-50">
+          <Button variant="outline" onClick={() => navigate('/data/qc-material')} className="hover:bg-gray-50" disabled={isLoading}>
             ← Kembali ke Master Material
           </Button>
           <Button 

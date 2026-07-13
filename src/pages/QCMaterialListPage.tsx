@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { QCMaterial, MaterialStatus } from '../types/material';
-import { dummyMaterials } from '../data/dummyMaterials';
+import { fetchTemplates, postTemplate, patchTemplate } from '../services/reportApi';
+import type { ApiTemplate } from '../services/reportApi';
 import { Card, CardContent } from '../components/ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableCell } from '../components/ui/Table';
 import { PageTransition } from '../components/layout/PageTransition';
@@ -13,9 +14,54 @@ import { Select } from '../components/ui/Select';
 import { Modal } from '../components/ui/Modal';
 import { Search, Plus, Info } from 'lucide-react';
 
+const mapApiToMaterial = (t: ApiTemplate): QCMaterial => ({
+  id: t.id,
+  name: t.name,
+  category: t.category || '',
+  standard: t.standardCode || '',
+  checklistCount: t.checklistItems?.length || 0,
+  status: t.isActive ? 'Aktif' : 'Nonaktif',
+  updatedAt: t.updatedAt || new Date().toISOString(),
+  checklistItems: (t.checklistItems || []).map((item) => ({
+    id: item.id,
+    name: item.parameter_name || item.name || '',
+    standardLabel: item.standard_text || item.standardLabel || '',
+    unit: item.unit || '',
+    minVal: item.minVal,
+    maxVal: item.maxVal,
+    requiredPhoto: item.requiredPhoto !== undefined ? item.requiredPhoto : !!item.is_required
+  }))
+});
+
+const mapMaterialToApi = (m: QCMaterial): ApiTemplate => ({
+  id: m.id,
+  type: 'MATERIAL',
+  name: m.name,
+  formCode: `FORM-${m.id}`,
+  category: m.category,
+  standardCode: m.standard,
+  checklistItems: m.checklistItems.map(item => ({
+    id: item.id,
+    parameter_name: item.name,
+    input_type: (item.minVal !== undefined || item.maxVal !== undefined) ? 'number' : 'choice',
+    standard_text: item.standardLabel,
+    unit: item.unit,
+    is_required: item.requiredPhoto,
+    name: item.name,
+    standardLabel: item.standardLabel,
+    minVal: item.minVal,
+    maxVal: item.maxVal,
+    requiredPhoto: item.requiredPhoto
+  })),
+  isActive: m.status === 'Aktif',
+  updatedAt: m.updatedAt || new Date().toISOString()
+});
+
 export const QCMaterialListPage: React.FC = () => {
   const navigate = useNavigate();
   const [materials, setMaterials] = useState<QCMaterial[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,33 +74,59 @@ export const QCMaterialListPage: React.FC = () => {
   const [newCategory, setNewCategory] = useState('Tiang Besi');
   const [newStandard, setNewStandard] = useState('');
 
-  useEffect(() => {
-    const stored = localStorage.getItem('materials');
-    if (stored) {
-      setMaterials(JSON.parse(stored));
-    } else {
-      localStorage.setItem('materials', JSON.stringify(dummyMaterials));
-      setMaterials(dummyMaterials);
+  const loadData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const all = await fetchTemplates();
+      const materialTemplates = all
+        .filter(t => t.type === 'MATERIAL')
+        .map(mapApiToMaterial);
+      setMaterials(materialTemplates);
+    } catch (e: any) {
+      console.error(e);
+      setError(e.message || 'Gagal memuat template material.');
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
-
-  const handleToggleStatus = (id: string) => {
-    const updated = materials.map(mat => {
-      if (mat.id === id) {
-        const nextStatus: MaterialStatus = mat.status === 'Aktif' ? 'Nonaktif' : 'Aktif';
-        return { ...mat, status: nextStatus, updatedAt: new Date().toISOString() };
-      }
-      return mat;
-    });
-    setMaterials(updated);
-    localStorage.setItem('materials', JSON.stringify(updated));
   };
 
-  const handleCreateTemplate = (e: React.FormEvent) => {
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleToggleStatus = async (id: string) => {
+    const target = materials.find(m => m.id === id);
+    if (!target) return;
+
+    const nextStatus: MaterialStatus = target.status === 'Aktif' ? 'Nonaktif' : 'Aktif';
+    const nextIsActive = nextStatus === 'Aktif';
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      await patchTemplate(id, { isActive: nextIsActive });
+      
+      const updated = materials.map(mat => {
+        if (mat.id === id) {
+          return { ...mat, status: nextStatus, updatedAt: new Date().toISOString() };
+        }
+        return mat;
+      });
+      setMaterials(updated);
+    } catch (e: any) {
+      console.error(e);
+      setError(e.message || 'Gagal mengubah status template.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName || !newStandard) return;
 
-    const newId = `MAT-0${materials.length + 1}`;
+    const newId = `MAT-${Date.now()}`;
     const newTemplate: QCMaterial = {
       id: newId,
       name: newName,
@@ -66,17 +138,27 @@ export const QCMaterialListPage: React.FC = () => {
       checklistItems: []
     };
 
-    const updated = [newTemplate, ...materials];
-    setMaterials(updated);
-    localStorage.setItem('materials', JSON.stringify(updated));
+    setIsLoading(true);
+    setError(null);
+    try {
+      const apiPayload = mapMaterialToApi(newTemplate);
+      await postTemplate(apiPayload);
 
-    // Reset fields
-    setNewName('');
-    setNewStandard('');
-    setIsCreateModalOpen(false);
+      setMaterials(prev => [newTemplate, ...prev]);
 
-    // Redirect to detail page to let them add checklist items
-    navigate(`/data/qc-material/${newId}`);
+      // Reset fields
+      setNewName('');
+      setNewStandard('');
+      setIsCreateModalOpen(false);
+
+      // Redirect to detail page to let them add checklist items
+      navigate(`/data/qc-material/${newId}`);
+    } catch (e: any) {
+      console.error(e);
+      setError(e.message || 'Gagal membuat template baru.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Filtered data
@@ -105,11 +187,24 @@ export const QCMaterialListPage: React.FC = () => {
         <Button
           onClick={() => setIsCreateModalOpen(true)}
           className="bg-[#006B5A] hover:bg-[#005244] text-white"
+          disabled={isLoading}
         >
           <Plus className="mr-2 h-4 w-4" />
           Tambah Template Baru
         </Button>
       </div>
+
+      {error && (
+        <div className="p-4 text-sm text-red-700 bg-red-50 rounded-lg border border-red-200">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="p-3 text-sm text-blue-700 bg-blue-50 rounded-lg border border-blue-200 animate-pulse">
+          Menghubungkan ke API...
+        </div>
+      )}
 
       {/* Filter and Search controls */}
       <Card className="overflow-visible relative z-30">
@@ -178,7 +273,13 @@ export const QCMaterialListPage: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredMaterials.length === 0 ? (
+                {isLoading && filteredMaterials.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-12 text-gray-500 font-semibold">
+                      Memuat data template dari API...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredMaterials.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-12 text-gray-400">
                       Tidak ada template material yang cocok dengan kriteria pencarian.
