@@ -136,17 +136,17 @@ class QCPekerjaanFormScreen extends StatelessWidget {
             default:
               qcInputType = QCInputType.text;
           }
-          // Map ChecklistStatus → QCResultStatus
+          // Map ChecklistStatus → QCResultStatus (staff-side: neutral states only, no pass/fail)
           QCResultStatus qcStatus;
           switch (p.itemStatuses[index]) {
-            case ChecklistStatus.lulus:
-              qcStatus = QCResultStatus.pass;
+            case ChecklistStatus.inputTidakValid:
+              qcStatus = QCResultStatus.notFilled; // show as not filled to allow correction
               break;
-            case ChecklistStatus.tidakSesuai:
-              qcStatus = QCResultStatus.fail;
+            case ChecklistStatus.perluDilengkapi:
+              qcStatus = QCResultStatus.notFilled; // incomplete, show as not filled
               break;
-            case ChecklistStatus.perluTindakLanjut:
-              qcStatus = QCResultStatus.needFollowUp;
+            case ChecklistStatus.sudahDiisi:
+              qcStatus = QCResultStatus.notFilled; // filled but Admin evaluates PASS/FAIL
               break;
             default:
               qcStatus = QCResultStatus.notFilled;

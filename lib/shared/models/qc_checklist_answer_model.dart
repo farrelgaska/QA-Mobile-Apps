@@ -86,15 +86,7 @@ class QCChecklistAnswer {
   }
 
   Map<String, dynamic> toJson() {
-    String evalStr = 'PENDING';
-    if (status == QCResultStatus.pass) {
-      evalStr = 'PASS';
-    } else if (status == QCResultStatus.fail) {
-      evalStr = 'FAIL';
-    } else if (status == QCResultStatus.needFollowUp) {
-      evalStr = 'NEEDS_FOLLOW_UP';
-    }
-    
+    // Staff never evaluates PASS/FAIL — always submit as NEEDS_REVIEW for Admin to evaluate.
     return {
       'id': itemId,
       'parameter_name': paramName,
@@ -104,7 +96,7 @@ class QCChecklistAnswer {
       'actual_value': value?.toString() ?? '',
       'staff_note': issueNote ?? '',
       'item_photos': photoPaths,
-      'admin_evaluation': evalStr,
+      'admin_evaluation': 'NEEDS_REVIEW',
       'admin_note': adminNote ?? '',
     };
   }

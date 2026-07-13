@@ -167,8 +167,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     final List<RenderItem> renderItems = [];
     if (report.checklistItems.isNotEmpty) {
       for (var ans in report.checklistItems) {
-        dynamic evalStatus = ans.status;
-        String? warning = ans.warningMessage;
+        // Admin evaluates pass/fail via QCEvaluationService against the template standard.
+        // Staff-side: always show neutral status (no pass/fail displayed).
+        dynamic evalStatus;
+        String? warning;
         if (state.currentUser.role == 'Admin') {
           final template = dummyQCMaterialTemplates.firstWhere(
             (t) => t.code == report.formCode,
@@ -187,6 +189,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           } else {
             warning = null;
           }
+        } else {
+          // Staff: no pass/fail evaluation — show as neutral/pending Admin review
+          evalStatus = QCResultStatus.notFilled;
+          warning = null;
         }
 
         renderItems.add(
@@ -206,13 +212,23 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       }
     } else if (report.checklistResults.isNotEmpty) {
       for (var res in report.checklistResults) {
-        dynamic evalStatus = res.status;
+        // Admin evaluates pass/fail via QCEvaluationService.
+        // Staff-side: always show neutral status (no pass/fail displayed).
+        dynamic evalStatus;
+        String? warning;
         if (state.currentUser.role == 'Admin') {
           evalStatus = QCEvaluationService.evaluatePekerjaanItem(
             title: res.paramName,
             inputType: res.inputType == 'Angka' ? InputType.number : (res.inputType == 'Pilihan' ? InputType.choice : InputType.text),
             value: res.resultValue,
           );
+          if (evalStatus == ChecklistStatus.tidakSesuai) {
+            warning = 'Kondisi tidak sesuai standar';
+          }
+        } else {
+          // Staff: no pass/fail evaluation, show as notFilled (neutral/pending Admin review)
+          evalStatus = QCResultStatus.notFilled;
+          warning = null;
         }
 
         renderItems.add(
@@ -222,7 +238,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             standard: res.standard,
             value: res.resultValue,
             status: evalStatus,
-            warningMessage: evalStatus == ChecklistStatus.tidakSesuai ? 'Kondisi tidak sesuai standar' : null,
+            warningMessage: warning,
             issueNote: res.issueNote,
             photos: res.photos,
             unit: res.unit,

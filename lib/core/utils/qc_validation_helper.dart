@@ -51,28 +51,24 @@ class QCValidationHelper {
 
     final lowerVal = valStr.trim().toLowerCase();
 
-    // 2. If it's a choice or booleanCheck, map status based on positive keywords
+    // 2. If it's a choice or booleanCheck — staff selects the option, Admin evaluates standard compliance
     if (item.inputType == QCInputType.choice || item.inputType == QCInputType.booleanCheck) {
-      final passKeywords = [
-        'sesuai', 'ya', 'ok', 'ada', 'lengkap', 'rapi', 'kencang', 'bersih', 
-        'tegak lurus', 'sesuai standar', 'true', 'diterima'
-      ];
-      final isPass = passKeywords.contains(lowerVal);
+      // Staff-side: just mark as filled, Admin evaluates PASS/FAIL
       return QCValidationResult(
-        status: isPass ? QCResultStatus.pass : QCResultStatus.fail,
-        warningMessage: null, // No warning message for out of standard
-        isValid: true, // Always valid
+        status: QCResultStatus.notFilled, // neutral: "filled but not evaluated"
+        warningMessage: null,
+        isValid: true,
       );
     }
 
-    // 3. Parse numeric value if validation expects numbers
+    // 3. Parse numeric value — staff only validates it's a valid number, not vs standard
     if (item.inputType == QCInputType.number) {
       // Replace commas with dots for decimals
       final normalizedVal = valStr.replaceAll(',', '.');
       final valNum = double.tryParse(normalizedVal);
       if (valNum == null) {
         return QCValidationResult(
-          status: QCResultStatus.fail,
+          status: QCResultStatus.notFilled,
           warningMessage: 'Input harus berupa angka',
           isValid: false,
         );
@@ -80,21 +76,23 @@ class QCValidationHelper {
 
       if (valNum < 0) {
         return QCValidationResult(
-          status: QCResultStatus.fail,
+          status: QCResultStatus.notFilled,
           warningMessage: 'Nilai tidak boleh negatif',
           isValid: false,
         );
       }
 
+      // Valid number — Admin will evaluate against standard
       return QCValidationResult(
-        status: QCResultStatus.pass,
+        status: QCResultStatus.notFilled, // neutral: filled, not yet evaluated
         warningMessage: null,
         isValid: true,
       );
     }
 
+    // For text input: valid as long as not empty
     return QCValidationResult(
-      status: QCResultStatus.pass,
+      status: QCResultStatus.notFilled, // neutral: filled, not yet evaluated
       warningMessage: null,
       isValid: true,
     );
