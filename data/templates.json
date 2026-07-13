@@ -3,6 +3,7 @@
     "id": "tiang_besi_7m_3_segmen",
     "type": "MATERIAL",
     "name": "Tiang Besi 7 Meter 3 Segmen",
+    "description": "Pemeriksaan Fisik Tiang Besi 7 Meter 3 Segmen",
     "formCode": "TA-FR-048-010-01",
     "category": "Tiang Besi",
     "standardCode": "SPLN T3.001-1:2020",
@@ -241,13 +242,14 @@
       }
     ],
     "isActive": true,
-    "createdAt": "2026-07-13T08:10:16.064Z",
-    "updatedAt": "2026-07-13T08:10:16.064Z"
+    "createdAt": "2026-07-13T08:17:17.470Z",
+    "updatedAt": "2026-07-13T08:17:17.470Z"
   },
   {
     "id": "tiang_besi_9m_3_segmen",
     "type": "MATERIAL",
     "name": "Tiang Besi 9 Meter 3 Segmen",
+    "description": "Pemeriksaan Fisik Tiang Besi 9 Meter 3 Segmen",
     "formCode": "TA-FR-048-010-05",
     "category": "Tiang Besi",
     "standardCode": "SPLN T3.001-1:2020",
@@ -486,13 +488,14 @@
       }
     ],
     "isActive": true,
-    "createdAt": "2026-07-13T08:10:16.064Z",
-    "updatedAt": "2026-07-13T08:10:16.064Z"
+    "createdAt": "2026-07-13T08:17:17.470Z",
+    "updatedAt": "2026-07-13T08:17:17.470Z"
   },
   {
     "id": "tiang_7m_2_segmen",
     "type": "MATERIAL",
     "name": "Tiang 7 Meter 2 Segmen",
+    "description": "Pemeriksaan Fisik Tiang 7 Meter 2 Segmen",
     "formCode": "TA-FR-048-010-02",
     "category": "Tiang Besi",
     "standardCode": "SPLN T3.001-1:2020",
@@ -681,13 +684,14 @@
       }
     ],
     "isActive": true,
-    "createdAt": "2026-07-13T08:10:16.064Z",
-    "updatedAt": "2026-07-13T08:10:16.064Z"
+    "createdAt": "2026-07-13T08:17:17.470Z",
+    "updatedAt": "2026-07-13T08:17:17.470Z"
   },
   {
     "id": "tiang_galvanis_6m_tanpa_sambungan",
     "type": "MATERIAL",
     "name": "Tiang Galvanis 6M Tanpa Sambungan",
+    "description": "Pemeriksaan Fisik Tiang Galvanis 6M Tanpa Sambungan",
     "formCode": "TA-FR-048-010-03",
     "category": "Tiang Besi",
     "standardCode": "SPLN T3.001-2:2021",
@@ -789,13 +793,14 @@
       }
     ],
     "isActive": true,
-    "createdAt": "2026-07-13T08:10:16.064Z",
-    "updatedAt": "2026-07-13T08:10:16.064Z"
+    "createdAt": "2026-07-13T08:17:17.470Z",
+    "updatedAt": "2026-07-13T08:17:17.470Z"
   },
   {
     "id": "tiang_beton_7m",
     "type": "MATERIAL",
     "name": "Tiang Beton 7 Meter",
+    "description": "Pemeriksaan Fisik Tiang Beton 7 Meter",
     "formCode": "TA-FR-048-010-04",
     "category": "Tiang Beton",
     "standardCode": "SNI 1911-2015",
@@ -942,13 +947,14 @@
       }
     ],
     "isActive": true,
-    "createdAt": "2026-07-13T08:10:16.064Z",
-    "updatedAt": "2026-07-13T08:10:16.064Z"
+    "createdAt": "2026-07-13T08:17:17.470Z",
+    "updatedAt": "2026-07-13T08:17:17.470Z"
   },
   {
     "id": "tiang_beton_9m",
     "type": "MATERIAL",
     "name": "Tiang Beton 9 Meter",
+    "description": "Pemeriksaan Fisik Tiang Beton 9 Meter",
     "formCode": "TA-FR-048-010-06",
     "category": "Tiang Beton",
     "standardCode": "SNI 1911-2015",
@@ -1125,291 +1131,388 @@
       }
     ],
     "isActive": false,
-    "createdAt": "2026-07-13T08:10:16.064Z",
-    "updatedAt": "2026-07-13T08:10:16.064Z"
+    "createdAt": "2026-07-13T08:17:17.470Z",
+    "updatedAt": "2026-07-13T08:17:17.470Z"
   },
   {
-    "id": "WRK-001",
+    "id": "pek-1",
     "type": "WORK",
-    "name": "Pondasi Tiang Beton/Besi",
-    "formCode": "FORM-WRK-001",
-    "category": "Sipil Konstruksi",
-    "segment": "construction",
-    "standardCode": "",
-    "isActive": true,
-    "checklistItems": [
-      {
-        "id": "WRK-001-C01",
-        "parameter_name": "Kedalaman galian tanah sesuai spesifikasi teknis",
-        "input_type": "choice",
-        "standard_text": "",
-        "unit": "",
-        "is_required": true,
-        "name": "Kedalaman galian tanah sesuai spesifikasi teknis",
-        "isActive": true
-      },
-      {
-        "id": "WRK-001-C02",
-        "parameter_name": "Dimensi cor pondasi beton (panjang x lebar x tinggi)",
-        "input_type": "choice",
-        "standard_text": "",
-        "unit": "",
-        "is_required": true,
-        "name": "Dimensi cor pondasi beton (panjang x lebar x tinggi)",
-        "isActive": true
-      },
-      {
-        "id": "WRK-001-C03",
-        "parameter_name": "Rasio campuran semen, pasir, dan batu pecah",
-        "input_type": "choice",
-        "standard_text": "",
-        "unit": "",
-        "is_required": true,
-        "name": "Rasio campuran semen, pasir, dan batu pecah",
-        "isActive": true
-      },
-      {
-        "id": "WRK-001-C04",
-        "parameter_name": "Pemasangan angkur tiang tegak lurus",
-        "input_type": "choice",
-        "standard_text": "",
-        "unit": "",
-        "is_required": true,
-        "name": "Pemasangan angkur tiang tegak lurus",
-        "isActive": true
-      }
-    ],
-    "createdAt": "2026-07-13T08:10:16.064Z",
-    "updatedAt": "2026-07-13T08:10:16.064Z"
-  },
-  {
-    "id": "WRK-002",
-    "type": "WORK",
-    "name": "Pemasangan Tiang (Erection)",
-    "formCode": "FORM-WRK-002",
-    "category": "Struktur Mekanikal",
-    "segment": "construction",
-    "standardCode": "",
-    "isActive": true,
-    "checklistItems": [
-      {
-        "id": "WRK-002-C01",
-        "parameter_name": "Kelurusan tiang diukur dengan waterpass",
-        "input_type": "choice",
-        "standard_text": "",
-        "unit": "",
-        "is_required": true,
-        "name": "Kelurusan tiang diukur dengan waterpass",
-        "isActive": true
-      },
-      {
-        "id": "WRK-002-C02",
-        "parameter_name": "Kekencangan baut angkur (torque check)",
-        "input_type": "choice",
-        "standard_text": "",
-        "unit": "",
-        "is_required": true,
-        "name": "Kekencangan baut angkur (torque check)",
-        "isActive": true
-      },
-      {
-        "id": "WRK-002-C03",
-        "parameter_name": "Pengecatan ulang area sambungan segmen",
-        "input_type": "choice",
-        "standard_text": "",
-        "unit": "",
-        "is_required": true,
-        "name": "Pengecatan ulang area sambungan segmen",
-        "isActive": true
-      }
-    ],
-    "createdAt": "2026-07-13T08:10:16.064Z",
-    "updatedAt": "2026-07-13T08:10:16.064Z"
-  },
-  {
-    "id": "WRK-003",
-    "type": "WORK",
-    "name": "Penarikan Kabel Udara (Stringing)",
-    "formCode": "FORM-WRK-003",
-    "category": "Kabel & Aksesoris",
+    "name": "Instalasi ONT",
+    "description": "Pemasangan unit ONT dan aktivasi layanan di lokasi pelanggan.",
+    "formCode": "FORM-PEK-1",
+    "category": "Pekerjaan Provisioning",
     "segment": "provisioning",
-    "standardCode": "",
-    "isActive": true,
+    "standardCode": "STD-WORK",
     "checklistItems": [
       {
-        "id": "WRK-003-C01",
-        "parameter_name": "Ketinggian andongan kabel dari permukaan jalan",
+        "id": "pek-1-c1",
+        "parameter_name": "Posisi ONT",
         "input_type": "choice",
-        "standard_text": "",
+        "standard_text": "Ditempatkan di tempat aman & tinggi rata-rata dada",
         "unit": "",
         "is_required": true,
-        "name": "Ketinggian andongan kabel dari permukaan jalan",
+        "name": "Posisi ONT",
+        "standardLabel": "Ditempatkan di tempat aman & tinggi rata-rata dada",
+        "requiredPhoto": true,
+        "isActive": true,
+        "choices": [
+          "Sesuai",
+          "TidakSesuai"
+        ]
+      },
+      {
+        "id": "pek-1-c2",
+        "parameter_name": "Instalasi Kabel Dropcore",
+        "input_type": "choice",
+        "standard_text": "Kabel dropcore tidak menekuk tajam & dipaku rapi",
+        "unit": "",
+        "is_required": true,
+        "name": "Instalasi Kabel Dropcore",
+        "standardLabel": "Kabel dropcore tidak menekuk tajam & dipaku rapi",
+        "requiredPhoto": true,
+        "isActive": true,
+        "choices": [
+          "Rapi",
+          "Bermasalah"
+        ]
+      },
+      {
+        "id": "pek-1-c3",
+        "parameter_name": "Pengukuran Nilai Redaman",
+        "input_type": "number",
+        "standard_text": "Nilai redaman ≤ -24 dBm",
+        "unit": "dBm",
+        "is_required": true,
+        "name": "Pengukuran Nilai Redaman",
+        "standardLabel": "Nilai redaman ≤ -24 dBm",
+        "requiredPhoto": true,
         "isActive": true
       },
       {
-        "id": "WRK-003-C02",
-        "parameter_name": "Penggunaan suspension/tension clamp standar",
-        "input_type": "choice",
-        "standard_text": "",
+        "id": "pek-1-c4",
+        "parameter_name": "Dokumentasi Before/After",
+        "input_type": "text",
+        "standard_text": "Mengambil foto kondisi sebelum dan sesudah instalasi",
         "unit": "",
         "is_required": true,
-        "name": "Penggunaan suspension/tension clamp standar",
-        "isActive": true
-      },
-      {
-        "id": "WRK-003-C03",
-        "parameter_name": "Radius kelengkungan kabel saat belok",
-        "input_type": "choice",
-        "standard_text": "",
-        "unit": "",
-        "is_required": true,
-        "name": "Radius kelengkungan kabel saat belok",
-        "isActive": true
-      },
-      {
-        "id": "WRK-003-C04",
-        "parameter_name": "Jarak aman dengan kabel tegangan listrik",
-        "input_type": "choice",
-        "standard_text": "",
-        "unit": "",
-        "is_required": true,
-        "name": "Jarak aman dengan kabel tegangan listrik",
+        "name": "Dokumentasi Before/After",
+        "standardLabel": "Mengambil foto kondisi sebelum dan sesudah instalasi",
+        "requiredPhoto": true,
         "isActive": true
       }
     ],
-    "createdAt": "2026-07-13T08:10:16.064Z",
-    "updatedAt": "2026-07-13T08:10:16.064Z"
+    "isActive": true,
+    "createdAt": "2026-07-13T08:17:17.470Z",
+    "updatedAt": "2026-07-13T08:17:17.470Z"
   },
   {
-    "id": "WRK-004",
+    "id": "pek-2",
     "type": "WORK",
-    "name": "Terminasi Kabel Serat Optik",
-    "formCode": "FORM-WRK-004",
-    "category": "Optical Termination",
+    "name": "Penarikan Kabel Dropcore",
+    "description": "Pemasangan kabel dropcore dari ODP terdekat menuju rumah pelanggan.",
+    "formCode": "FORM-PEK-2",
+    "category": "Pekerjaan Provisioning",
     "segment": "provisioning",
-    "standardCode": "",
-    "isActive": true,
+    "standardCode": "STD-WORK",
     "checklistItems": [
       {
-        "id": "WRK-004-C01",
-        "parameter_name": "Nilai redaman (loss) hasil splicing serat optik",
+        "id": "pek-2-c1",
+        "parameter_name": "Pemasangan S-Clamp",
         "input_type": "choice",
-        "standard_text": "",
+        "standard_text": "S-Clamp terpasang kencang di tiang & rumah",
         "unit": "",
         "is_required": true,
-        "name": "Nilai redaman (loss) hasil splicing serat optik",
+        "name": "Pemasangan S-Clamp",
+        "standardLabel": "S-Clamp terpasang kencang di tiang & rumah",
+        "requiredPhoto": true,
+        "isActive": true,
+        "choices": [
+          "Kencang",
+          "Kendor"
+        ]
+      },
+      {
+        "id": "pek-2-c2",
+        "parameter_name": "Rute Kabel",
+        "input_type": "text",
+        "standard_text": "Aman dari gesekan pohon/kabel listrik bertegangan tinggi",
+        "unit": "",
+        "is_required": true,
+        "name": "Rute Kabel",
+        "standardLabel": "Aman dari gesekan pohon/kabel listrik bertegangan tinggi",
+        "requiredPhoto": false,
         "isActive": true
       },
       {
-        "id": "WRK-004-C02",
-        "parameter_name": "Pelabelan core dan port di dalam OTB/ODP",
+        "id": "pek-2-c3",
+        "parameter_name": "Kerapian Dropwire",
         "input_type": "choice",
-        "standard_text": "",
+        "standard_text": "Dropwire masuk rapi, menggunakan flexible pipe jika perlu",
         "unit": "",
         "is_required": true,
-        "name": "Pelabelan core dan port di dalam OTB/ODP",
-        "isActive": true
-      },
-      {
-        "id": "WRK-004-C03",
-        "parameter_name": "Kebersihan area connector adapter",
-        "input_type": "choice",
-        "standard_text": "",
-        "unit": "",
-        "is_required": true,
-        "name": "Kebersihan area connector adapter",
-        "isActive": true
+        "name": "Kerapian Dropwire",
+        "standardLabel": "Dropwire masuk rapi, menggunakan flexible pipe jika perlu",
+        "requiredPhoto": true,
+        "isActive": true,
+        "choices": [
+          "Rapi",
+          "Kendor/Berantakan"
+        ]
       }
     ],
-    "createdAt": "2026-07-13T08:10:16.064Z",
-    "updatedAt": "2026-07-13T08:10:16.064Z"
+    "isActive": true,
+    "createdAt": "2026-07-13T08:17:17.470Z",
+    "updatedAt": "2026-07-13T08:17:17.470Z"
   },
   {
-    "id": "WRK-005",
+    "id": "pek-3",
     "type": "WORK",
-    "name": "Grounding System (Pentanahan)",
-    "formCode": "FORM-WRK-005",
-    "category": "Proteksi Kelistrikan",
+    "name": "Validasi Redaman FO",
+    "description": "Pengukuran daya optik pada titik distribusi ODP.",
+    "formCode": "FORM-PEK-3",
+    "category": "Pekerjaan Assurance",
     "segment": "assurance",
-    "standardCode": "",
-    "isActive": true,
+    "standardCode": "STD-WORK",
     "checklistItems": [
       {
-        "id": "WRK-005-C01",
-        "parameter_name": "Nilai resistansi pentanahan (Earth Ground Resistance)",
-        "input_type": "choice",
-        "standard_text": "",
-        "unit": "",
+        "id": "pek-3-c1",
+        "parameter_name": "Nilai Redaman Optik di ODP",
+        "input_type": "number",
+        "standard_text": "Maksimal -24 dBm",
+        "unit": "dBm",
         "is_required": true,
-        "name": "Nilai resistansi pentanahan (Earth Ground Resistance)",
+        "name": "Nilai Redaman Optik di ODP",
+        "standardLabel": "Maksimal -24 dBm",
+        "requiredPhoto": true,
         "isActive": true
       },
       {
-        "id": "WRK-005-C02",
-        "parameter_name": "Spesifikasi kabel tembaga grounding (BC)",
+        "id": "pek-3-c2",
+        "parameter_name": "Kebersihan Konektor Ferrule",
         "input_type": "choice",
-        "standard_text": "",
+        "standard_text": "Konektor ditiup pen/pembersih, tidak berdebu",
         "unit": "",
         "is_required": true,
-        "name": "Spesifikasi kabel tembaga grounding (BC)",
-        "isActive": true
-      },
-      {
-        "id": "WRK-005-C03",
-        "parameter_name": "Koneksi grounding clamp pada kaki tiang",
-        "input_type": "choice",
-        "standard_text": "",
-        "unit": "",
-        "is_required": true,
-        "name": "Koneksi grounding clamp pada kaki tiang",
-        "isActive": true
+        "name": "Kebersihan Konektor Ferrule",
+        "standardLabel": "Konektor ditiup pen/pembersih, tidak berdebu",
+        "requiredPhoto": true,
+        "isActive": true,
+        "choices": [
+          "Bersih",
+          "Kotor"
+        ]
       }
     ],
-    "createdAt": "2026-07-13T08:10:16.064Z",
-    "updatedAt": "2026-07-13T08:10:16.064Z"
+    "isActive": true,
+    "createdAt": "2026-07-13T08:17:17.470Z",
+    "updatedAt": "2026-07-13T08:17:17.470Z"
   },
   {
-    "id": "WRK-006",
+    "id": "pek-4",
     "type": "WORK",
-    "name": "Finishing & Kebersihan Site",
-    "formCode": "FORM-WRK-006",
-    "category": "Administratif & K3",
+    "name": "Pemeriksaan Kualitas Instalasi",
+    "description": "Verifikasi kelayakan instalasi jaringan optik pasca-pasang.",
+    "formCode": "FORM-PEK-4",
+    "category": "Pekerjaan Assurance",
     "segment": "assurance",
-    "standardCode": "",
-    "isActive": false,
+    "standardCode": "STD-WORK",
     "checklistItems": [
       {
-        "id": "WRK-006-C01",
-        "parameter_name": "Pembersihan sisa galian tanah and material semen",
+        "id": "pek-4-c1",
+        "parameter_name": "Pelabelan Kabel di ODP",
         "input_type": "choice",
-        "standard_text": "",
+        "standard_text": "Label nomor core & nama pelanggan tertulis jelas",
         "unit": "",
         "is_required": true,
-        "name": "Pembersihan sisa galian tanah and material semen",
-        "isActive": true
+        "name": "Pelabelan Kabel di ODP",
+        "standardLabel": "Label nomor core & nama pelanggan tertulis jelas",
+        "requiredPhoto": true,
+        "isActive": true,
+        "choices": [
+          "Ada&Jelas",
+          "TidakAda/Buram"
+        ]
       },
       {
-        "id": "WRK-006-C02",
-        "parameter_name": "Restorasi permukaan jalan / paving block",
-        "input_type": "choice",
-        "standard_text": "",
+        "id": "pek-4-c2",
+        "parameter_name": "Sisa Kabel (Slack)",
+        "input_type": "text",
+        "standard_text": "Sisa kabel dropcore digulung rapi dengan diameter min. 30 cm",
         "unit": "",
         "is_required": true,
-        "name": "Restorasi permukaan jalan / paving block",
-        "isActive": true
-      },
-      {
-        "id": "WRK-006-C03",
-        "parameter_name": "Pemasangan pelat identitas nomor tiang",
-        "input_type": "choice",
-        "standard_text": "",
-        "unit": "",
-        "is_required": true,
-        "name": "Pemasangan pelat identitas nomor tiang",
+        "name": "Sisa Kabel (Slack)",
+        "standardLabel": "Sisa kabel dropcore digulung rapi dengan diameter min. 30 cm",
+        "requiredPhoto": false,
         "isActive": true
       }
     ],
-    "createdAt": "2026-07-13T08:10:16.064Z",
-    "updatedAt": "2026-07-13T08:10:16.064Z"
+    "isActive": true,
+    "createdAt": "2026-07-13T08:17:17.470Z",
+    "updatedAt": "2026-07-13T08:17:17.470Z"
+  },
+  {
+    "id": "pek-5",
+    "type": "WORK",
+    "name": "Pemasangan Tiang",
+    "description": "Pekerjaan penanaman tiang beton/besi baru di lapangan.",
+    "formCode": "FORM-PEK-5",
+    "category": "Pekerjaan Construction",
+    "segment": "construction",
+    "standardCode": "STD-WORK",
+    "checklistItems": [
+      {
+        "id": "pek-5-c1",
+        "parameter_name": "Kedalaman Lubang Pondasi",
+        "input_type": "number",
+        "standard_text": "Kedalaman lubang pondasi minimal 1.2 meter",
+        "unit": "m",
+        "is_required": true,
+        "name": "Kedalaman Lubang Pondasi",
+        "standardLabel": "Kedalaman lubang pondasi minimal 1.2 meter",
+        "requiredPhoto": true,
+        "isActive": true
+      },
+      {
+        "id": "pek-5-c2",
+        "parameter_name": "Ketegakan Tiang",
+        "input_type": "choice",
+        "standard_text": "Kemiringan tiang maksimal 2 derajat",
+        "unit": "",
+        "is_required": true,
+        "name": "Ketegakan Tiang",
+        "standardLabel": "Kemiringan tiang maksimal 2 derajat",
+        "requiredPhoto": true,
+        "isActive": true,
+        "choices": [
+          "TegakLurus",
+          "Miring"
+        ]
+      },
+      {
+        "id": "pek-5-c3",
+        "parameter_name": "Pengecoran Base Pondasi",
+        "input_type": "text",
+        "standard_text": "Cor semen kokoh, permukaan rapi rata tanah",
+        "unit": "",
+        "is_required": true,
+        "name": "Pengecoran Base Pondasi",
+        "standardLabel": "Cor semen kokoh, permukaan rapi rata tanah",
+        "requiredPhoto": true,
+        "isActive": true
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-13T08:17:17.470Z",
+    "updatedAt": "2026-07-13T08:17:17.470Z"
+  },
+  {
+    "id": "pek-6",
+    "type": "WORK",
+    "name": "Pengecoran Pondasi",
+    "description": "Pengecoran pondasi untuk tiang atau kabinet outdoor.",
+    "formCode": "FORM-PEK-6",
+    "category": "Pekerjaan Construction",
+    "segment": "construction",
+    "standardCode": "STD-WORK",
+    "checklistItems": [
+      {
+        "id": "pek-6-c1",
+        "parameter_name": "Komposisi Campuran",
+        "input_type": "choice",
+        "standard_text": "Campuran semen, pasir, kerikil sesuai spek K-175",
+        "unit": "",
+        "is_required": true,
+        "name": "Komposisi Campuran",
+        "standardLabel": "Campuran semen, pasir, kerikil sesuai spek K-175",
+        "requiredPhoto": true,
+        "isActive": true,
+        "choices": [
+          "SesuaiStandar",
+          "KurangSemen"
+        ]
+      },
+      {
+        "id": "pek-6-c2",
+        "parameter_name": "Dimensi Cor Pondasi",
+        "input_type": "text",
+        "standard_text": "Ukuran min. 40cm x 40cm x 50cm",
+        "unit": "",
+        "is_required": true,
+        "name": "Dimensi Cor Pondasi",
+        "standardLabel": "Ukuran min. 40cm x 40cm x 50cm",
+        "requiredPhoto": true,
+        "isActive": true
+      },
+      {
+        "id": "pek-6-c3",
+        "parameter_name": "Waktu Pengeringan",
+        "input_type": "number",
+        "standard_text": "Minimal 24 jam sebelum diberi beban tiang",
+        "unit": "jam",
+        "is_required": true,
+        "name": "Waktu Pengeringan",
+        "standardLabel": "Minimal 24 jam sebelum diberi beban tiang",
+        "requiredPhoto": false,
+        "isActive": true
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-13T08:17:17.470Z",
+    "updatedAt": "2026-07-13T08:17:17.470Z"
+  },
+  {
+    "id": "pek-7",
+    "type": "WORK",
+    "name": "Penarikan Kabel Jalur Utama",
+    "description": "Penarikan kabel optik utama (aerial feeder/distribution).",
+    "formCode": "FORM-PEK-7",
+    "category": "Pekerjaan Construction",
+    "segment": "construction",
+    "standardCode": "STD-WORK",
+    "checklistItems": [
+      {
+        "id": "pek-7-c1",
+        "parameter_name": "Ketinggian Kabel",
+        "input_type": "number",
+        "standard_text": "Ketinggian kabel dari jalan raya min. 5 meter",
+        "unit": "m",
+        "is_required": true,
+        "name": "Ketinggian Kabel",
+        "standardLabel": "Ketinggian kabel dari jalan raya min. 5 meter",
+        "requiredPhoto": true,
+        "isActive": true
+      },
+      {
+        "id": "pek-7-c2",
+        "parameter_name": "Kerapian Ikatan Kabel",
+        "input_type": "text",
+        "standard_text": "Diikat rapi ke messenger wire dengan spacing teratur",
+        "unit": "",
+        "is_required": true,
+        "name": "Kerapian Ikatan Kabel",
+        "standardLabel": "Diikat rapi ke messenger wire dengan spacing teratur",
+        "requiredPhoto": false,
+        "isActive": true
+      },
+      {
+        "id": "pek-7-c3",
+        "parameter_name": "Pemasangan Accessoris Span Box",
+        "input_type": "choice",
+        "standard_text": "Aksesoris clamp, link, tensioner terpasang lengkap",
+        "unit": "",
+        "is_required": true,
+        "name": "Pemasangan Accessoris Span Box",
+        "standardLabel": "Aksesoris clamp, link, tensioner terpasang lengkap",
+        "requiredPhoto": true,
+        "isActive": true,
+        "choices": [
+          "Lengkap",
+          "TidakLengkap"
+        ]
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-07-13T08:17:17.470Z",
+    "updatedAt": "2026-07-13T08:17:17.470Z"
   }
 ]
