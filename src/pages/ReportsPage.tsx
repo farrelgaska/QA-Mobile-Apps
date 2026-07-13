@@ -107,10 +107,10 @@ export const ReportsPage: React.FC = () => {
                 onChange={(val) => setStatusFilter(val)}
                 options={[
                   { value: '', label: 'Semua Status' },
-                  { value: 'Draft', label: 'Draft' },
-                  { value: 'Menunggu Review', label: 'Menunggu Review' },
-                  { value: 'Disetujui', label: 'Disetujui' },
-                  { value: 'Perlu Perbaikan', label: 'Perlu Perbaikan' }
+                  { value: 'DRAFT', label: 'Draft' },
+                  { value: 'SUBMITTED', label: 'Menunggu Review' },
+                  { value: 'APPROVED', label: 'Disetujui' },
+                  { value: 'NEEDS_FOLLOW_UP', label: 'Perlu Tindak Lanjut' }
                 ]}
               />
             </div>

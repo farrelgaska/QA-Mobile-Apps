@@ -34,8 +34,8 @@ export const ApprovalPage: React.FC = () => {
   const navigate = useNavigate();
   const { reports, approveReport, requestRevision } = useReports();
 
-  // Only show "Menunggu Review" reports
-  const pendingReports = reports.filter(r => r.status === 'Menunggu Review');
+  // Only show "SUBMITTED" reports
+  const pendingReports = reports.filter(r => r.status === 'SUBMITTED');
 
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
@@ -384,7 +384,7 @@ export const ApprovalPage: React.FC = () => {
       <Modal
         isOpen={revisionTarget !== null}
         onClose={() => setRevisionTarget(null)}
-        title="Minta Perbaikan Laporan"
+        title="Minta Tindak Lanjut Laporan"
         footer={
           <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setRevisionTarget(null)}>Batal</Button>
@@ -395,7 +395,7 @@ export const ApprovalPage: React.FC = () => {
               disabled={!revisionNote.trim()}
             >
               <RefreshCw className="h-4 w-4 mr-1.5" />
-              Kirim Instruksi Perbaikan
+              Kirim Instruksi Tindak Lanjut
             </Button>
           </div>
         }
@@ -415,21 +415,21 @@ export const ApprovalPage: React.FC = () => {
             </div>
 
             <p className="text-sm text-gray-600 leading-relaxed">
-              Status laporan akan berubah menjadi <strong className="text-rose-700">Perlu Perbaikan</strong>.
-              Staf lapangan akan menerima instruksi untuk memperbaiki data.
+              Status laporan akan berubah menjadi <strong className="text-rose-700">Perlu Tindak Lanjut</strong>.
+              Staf lapangan akan menerima instruksi untuk menindaklanjuti data.
             </p>
 
             {/* Required note */}
             <div>
               <label htmlFor="revision-note" className="block text-xs font-semibold text-gray-700 mb-1.5">
-                Catatan Instruksi Perbaikan <span className="text-red-500">*</span>
+                Catatan Instruksi Tindak Lanjut <span className="text-red-500">*</span>
               </label>
               <textarea
                 id="revision-note"
                 rows={3}
                 value={revisionNote}
                 onChange={(e) => setRevisionNote(e.target.value)}
-                placeholder="Jelaskan bagian mana yang tidak memenuhi standar dan apa yang perlu diperbaiki oleh staf lapangan..."
+                placeholder="Jelaskan bagian mana yang tidak memenuhi standar dan tindak lanjut apa yang perlu dilakukan oleh staf lapangan..."
                 className={`w-full text-sm px-3 py-2.5 border rounded-lg bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 placeholder-gray-300 resize-none transition-all ${
                   !revisionNote.trim()
                     ? 'border-gray-200 focus:ring-rose-400/20 focus:border-rose-400'
@@ -440,7 +440,7 @@ export const ApprovalPage: React.FC = () => {
               {!revisionNote.trim() && (
                 <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
-                  Catatan wajib diisi sebelum mengirim instruksi perbaikan.
+                  Catatan wajib diisi sebelum mengirim instruksi tindak lanjut.
                 </p>
               )}
             </div>

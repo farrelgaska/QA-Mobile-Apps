@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { QCReport, StandardResult } from '../types/report';
 import { dummyReports } from '../data/dummyReports';
+import { normalizeReportStatus } from '../utils/status';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -26,13 +27,21 @@ const ReportsContext = createContext<ReportsContextValue | null>(null);
 const STORAGE_KEY = 'reports';
 
 function loadFromStorage(): QCReport[] {
+  let loadedReports: QCReport[] = [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as QCReport[];
+    if (raw) {
+      loadedReports = JSON.parse(raw) as QCReport[];
+    } else {
+      loadedReports = dummyReports;
+    }
   } catch {
-    // ignore malformed JSON
+    loadedReports = dummyReports;
   }
-  return dummyReports;
+  return loadedReports.map(r => ({
+    ...r,
+    status: normalizeReportStatus(r.status)
+  }));
 }
 
 function saveToStorage(reports: QCReport[]): void {
@@ -63,7 +72,7 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!report) return;
     updateReport({
       ...report,
-      status: 'Disetujui',
+      status: 'APPROVED',
       standardResult: 'Lulus',
       adminNote: adminNote || 'Laporan disetujui. Semua kriteria memenuhi standar teknis.',
     });
@@ -74,7 +83,7 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!report) return;
     updateReport({
       ...report,
-      status: 'Perlu Perbaikan',
+      status: 'NEEDS_FOLLOW_UP',
       adminNote,
     });
   }, [reports, updateReport]);

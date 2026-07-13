@@ -1,4 +1,4 @@
-export type ReportStatus = 'Draft' | 'Menunggu Review' | 'Disetujui' | 'Perlu Perbaikan';
+export type ReportStatus = 'DRAFT' | 'SUBMITTED' | 'NEEDS_FOLLOW_UP' | 'APPROVED';
 
 export type ReportType = 'material' | 'pekerjaan';
 

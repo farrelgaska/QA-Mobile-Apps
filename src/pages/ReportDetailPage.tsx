@@ -9,6 +9,7 @@ import { Modal } from '../components/ui/Modal';
 import { ReportStatusBadge } from '../components/reports/ReportStatusBadge';
 import { StandardResultBadge } from '../components/reports/StandardResultBadge';
 import { ChecklistEvaluationTable } from '../components/reports/ChecklistEvaluationTable';
+import { getReportStatusLabel } from '../utils/status';
 import {
   Calendar,
   User,
@@ -80,7 +81,7 @@ export const ReportDetailPage: React.FC = () => {
 
   const hasFailures = report.checklistItems.some(i => i.result === 'fail');
   const hasPendingReviews = report.checklistItems.some(i => i.result === 'review');
-  const isEditable = report.status === 'Menunggu Review';
+  const isEditable = report.status === 'SUBMITTED';
 
   // ─── Main render ──────────────────────────────────────────────────────────
   return (
@@ -103,7 +104,7 @@ export const ReportDetailPage: React.FC = () => {
       </div>
 
       {/* ── Status Banner ──────────────────── */}
-      {report.status === 'Menunggu Review' && (
+      {report.status === 'SUBMITTED' && (
         <div className={`flex items-start gap-4 p-4 rounded-xl border shadow-sm ${
           hasFailures
             ? 'bg-rose-50 border-rose-200 text-rose-800'
@@ -138,7 +139,7 @@ export const ReportDetailPage: React.FC = () => {
         </div>
       )}
 
-      {report.status === 'Disetujui' && (
+      {report.status === 'APPROVED' && (
         <div className="flex items-start gap-3 p-4 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-800">
           <CheckCircle className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
           <div>
@@ -147,11 +148,11 @@ export const ReportDetailPage: React.FC = () => {
           </div>
         </div>
       )}
-      {report.status === 'Perlu Perbaikan' && (
+      {report.status === 'NEEDS_FOLLOW_UP' && (
         <div className="flex items-start gap-3 p-4 rounded-xl border bg-rose-50 border-rose-200 text-rose-800">
           <RefreshCw className="h-5 w-5 text-rose-600 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold text-sm">Laporan ini diminta perbaikan</p>
+            <p className="font-bold text-sm">Laporan ini diminta tindak lanjut</p>
             {report.adminNote && <p className="text-xs mt-0.5 opacity-80">{report.adminNote}</p>}
           </div>
         </div>
@@ -283,7 +284,7 @@ export const ReportDetailPage: React.FC = () => {
                     </p>
                   </div>
                   <p className="text-xs text-gray-400">
-                    Status laporan telah ditetapkan sebagai <strong>{report.status}</strong>.
+                    Status laporan telah ditetapkan sebagai <strong>{getReportStatusLabel(report.status)}</strong>.
                   </p>
                 </div>
               ) : (
@@ -365,7 +366,7 @@ export const ReportDetailPage: React.FC = () => {
       <Modal
         isOpen={isRevisionModalOpen}
         onClose={() => setIsRevisionModalOpen(false)}
-        title="Minta Perbaikan Laporan"
+        title="Minta Tindak Lanjut Laporan"
         footer={
           <div className="flex gap-2 w-full justify-end">
             <Button variant="outline" onClick={() => setIsRevisionModalOpen(false)}>Batal</Button>
@@ -375,7 +376,7 @@ export const ReportDetailPage: React.FC = () => {
               onClick={handleRequestRevision}
               disabled={!adminFeedback.trim()}
             >
-              Kirim Instruksi Perbaikan
+              Kirim Instruksi Tindak Lanjut
             </Button>
           </div>
         }
@@ -383,18 +384,18 @@ export const ReportDetailPage: React.FC = () => {
         <div className="space-y-4">
           <p className="text-sm text-gray-600 leading-relaxed">
             Laporan <strong className="text-gray-900">{report.id}</strong> akan dikembalikan ke status{' '}
-            <strong className="text-rose-700">Perlu Perbaikan</strong>.
+            <strong className="text-rose-700">Perlu Tindak Lanjut</strong>.
           </p>
           <div>
             <label htmlFor="revision-feedback" className="block text-xs font-bold text-gray-700 mb-1.5">
-              Catatan Instruksi Perbaikan <span className="text-red-500">*</span>
+              Catatan Instruksi Tindak Lanjut <span className="text-red-500">*</span>
             </label>
             <textarea
               id="revision-feedback"
               rows={3}
               value={adminFeedback}
               onChange={(e) => setAdminFeedback(e.target.value)}
-              placeholder="Jelaskan bagian mana yang gagal dan perlu diperbaiki..."
+              placeholder="Jelaskan bagian mana yang gagal dan perlu ditindaklanjuti..."
               className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-400 focus:border-rose-400 placeholder-gray-300 resize-none"
               required
             />

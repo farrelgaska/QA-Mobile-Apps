@@ -28,9 +28,9 @@ export const DashboardPage: React.FC = () => {
 
   // Compute statistics
   const totalReports = reports.length;
-  const menungguReview = reports.filter(r => r.status === 'Menunggu Review').length;
-  const disetujui = reports.filter(r => r.status === 'Disetujui').length;
-  const perbaikan = reports.filter(r => r.status === 'Perlu Perbaikan').length;
+  const menungguReview = reports.filter(r => r.status === 'SUBMITTED').length;
+  const disetujui = reports.filter(r => r.status === 'APPROVED').length;
+  const perbaikan = reports.filter(r => r.status === 'NEEDS_FOLLOW_UP').length;
   const tidakLulus = reports.filter(r => r.standardResult === 'Tidak Lulus').length;
 
   // 5 most recent reports
@@ -128,7 +128,7 @@ export const DashboardPage: React.FC = () => {
           description="Lulus standar QC"
         />
         <StatCard
-          title="Perlu Perbaikan"
+          title="Perlu Tindak Lanjut"
           value={perbaikan}
           icon={<AlertTriangle className="h-6 w-6" />}
           tone="red"
