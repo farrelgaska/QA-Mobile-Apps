@@ -355,8 +355,12 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                     result.status == QCResultStatus.fail ||
                     result.status == QCResultStatus.needFollowUp;
 
+                // An item needs follow-up if:
+                //  a) The report is NEEDS_FOLLOW_UP AND
+                //  b) The admin left a note on this item (admin_evaluation == FAIL from the shared contract)
+                // Staff never sees PASS/FAIL labels — we only show the Admin's note.
                 final bool itemNeedsFollowUp = report.status == QCReportStatus.NEEDS_FOLLOW_UP &&
-                    (hasIssue || (result.adminNote != null && result.adminNote!.trim().isNotEmpty));
+                    (result.adminNote != null && result.adminNote!.trim().isNotEmpty);
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
@@ -554,28 +558,19 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   text: report.status == QCReportStatus.NEEDS_FOLLOW_UP ? 'Perbaiki Laporan' : 'Edit Laporan',
                   variant: AppButtonVariant.primary,
                   onPressed: () {
-                    // Navigate to form depending on type
+                    final isRevision = report.status == QCReportStatus.NEEDS_FOLLOW_UP;
                     if (report.type == QCType.material) {
-                      String templateId = 'tiang_besi_7m_3_segmen';
-                      final titleLower = report.title.toLowerCase();
-                      if (titleLower.contains('besi 7')) {
-                        templateId = 'tiang_besi_7m_3_segmen';
-                      } else if (titleLower.contains('besi 9')) {
-                        templateId = 'tiang_besi_9m_3_segmen';
-                      } else if (titleLower.contains('7 meter 2')) {
-                        templateId = 'tiang_7m_2_segmen';
-                      } else if (titleLower.contains('galvanis')) {
-                        templateId = 'tiang_galvanis_6m_tanpa_sambungan';
-                      } else if (titleLower.contains('beton 7')) {
-                        templateId = 'tiang_beton_7m';
-                      } else if (titleLower.contains('beton 9')) {
-                        templateId = 'tiang_beton_9m';
-                      }
-                      final isRevision = report.status == QCReportStatus.NEEDS_FOLLOW_UP;
-                      context.push('/qc-material/form/$templateId?editReportId=${report.id}${isRevision ? "&isRevision=true" : ""}');
+                      // Use report's own templateId/formCode — avoids fragile title matching
+                      final tid = report.templateId.isNotEmpty
+                          ? report.templateId
+                          : 'tiang_besi_7m_3_segmen'; // fallback for legacy data
+                      context.push('/qc-material/form/$tid?editReportId=${report.id}${isRevision ? "&isRevision=true" : ""}');
                     } else {
-                      final isRevision = report.status == QCReportStatus.NEEDS_FOLLOW_UP;
-                      context.push('/qc-pekerjaan/form/pek-1?editReportId=${report.id}${isRevision ? "&isRevision=true" : ""}');
+                      // QC Pekerjaan: use templateId if available, fallback to 'pek-1'
+                      final tid = report.templateId.isNotEmpty
+                          ? report.templateId
+                          : 'pek-1';
+                      context.push('/qc-pekerjaan/form/$tid?editReportId=${report.id}${isRevision ? "&isRevision=true" : ""}');
                     }
                   },
                 ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/dummy/dummy_pekerjaan.dart';
 import '../../core/dummy/dummy_state.dart';
 import '../../shared/models/enums.dart';
-import '../../shared/models/qc_report_model.dart';
+import '../../shared/models/qc_report_model.dart'; // QCReportModel, AdminReview
 import '../../shared/models/qc_checklist_answer_model.dart';
 import '../../shared/models/work_location_model.dart';
 import '../../core/utils/validators.dart';
@@ -261,7 +261,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         status: QCReportStatus.SUBMITTED,
         checkedByName: _state.currentUser.name,
         checkedByNik: _state.currentUser.nik,
-        date: DateTime.now(),
+        date: DateTime.now(), // submittedAt updated on resubmit
         siteId: _originalReport!.siteId,
         siteName: _originalReport!.siteName,
         area: workLoc.area ?? '',
@@ -269,7 +269,8 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         checklistAnswers: answers,
         photos: [],
         staffNote: staffNoteController.text,
-        adminNote: 'Menunggu review dari Admin (Revisi #${_originalReport!.revisionNumber + 1}).',
+        adminNote: null, // clear Admin note — Admin will re-evaluate
+        adminReview: AdminReview(), // reset Admin review for fresh evaluation
         formCode: _originalReport!.formCode,
         templateId: _originalReport!.templateId,
         revisionNumber: _originalReport!.revisionNumber + 1,
