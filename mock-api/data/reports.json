@@ -1,0 +1,66 @@
+[
+  {
+    "id": "QC-MAT-2026-0041",
+    "type": "MATERIAL",
+    "template_id": "tiang_besi_7m_3_segmen",
+    "form_code": "TA-FR-048-010-01",
+    "title": "Pemeriksaan Tiang Besi 7 Meter 3 Segmen",
+    "status": "APPROVED",
+    "staff": {
+      "name": "Yanuar Luthfi",
+      "nik": "NIK-908271"
+    },
+    "location": {
+      "site_id": "site-1",
+      "site_name": "Gudang Material Utama",
+      "area": "Sektor Timur",
+      "detail_location": "Bekasi Site"
+    },
+    "general_info": {
+      "poNumber": "PO-990"
+    },
+    "checklist_items": [
+      {
+        "id": "REP-001-C01",
+        "parameter_name": "Ketebalan Seng (Galvanize Thickness)",
+        "input_type": "number",
+        "standard_text": "min 80 micron",
+        "unit": "micron",
+        "actual_value": "82",
+        "staff_note": "",
+        "item_photos": [],
+        "admin_evaluation": "PASS",
+        "admin_note": ""
+      }
+    ],
+    "staff_note": "",
+    "submitted_at": "2026-07-09T08:30:00Z",
+    "admin_review": {
+      "admin_note": "Laporan disetujui.",
+      "conclusion": "Lulus",
+      "reviewed_at": "2026-07-09T09:30:00Z"
+    },
+    "general_photos": [],
+    "revision_number": 1,
+    "revision_history": []
+  },
+  {
+    "id": "QC-TEST-999",
+    "type": "WORK",
+    "title": "Test E2E Report Installation",
+    "status": "APPROVED",
+    "staff": {
+      "name": "Test QA",
+      "nik": "NIK-000000"
+    },
+    "location": {
+      "site_id": "site-999",
+      "site_name": "Test Site",
+      "area": "Test Area",
+      "detail_location": "Point A"
+    },
+    "checklist_items": [],
+    "staff_note": "Testing creation",
+    "submitted_at": "2026-07-13T02:16:37.662Z"
+  }
+]
