@@ -11,14 +11,14 @@ class ApiService {
 
   String get baseUrl {
     if (kIsWeb) {
-      return 'http://localhost:3001';
+      return 'http://localhost:3002';
     }
     try {
       if (Platform.isAndroid) {
-        return 'http://10.0.2.2:3001'; // Alias to host machine from Android Emulator
+        return 'http://10.0.2.2:3002'; // Alias to host machine from Android Emulator
       }
     } catch (_) {}
-    return 'http://localhost:3001';
+    return 'http://localhost:3002';
   }
 
   /// Fetch all reports from the mock API backend.
