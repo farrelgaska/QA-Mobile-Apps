@@ -1,1 +1,566 @@
-[]
+[
+  {
+    "id": "MAT-001",
+    "type": "MATERIAL",
+    "name": "Tiang Besi 7 Meter 3 Segmen",
+    "formCode": "FORM-MAT-001",
+    "category": "Tiang Besi",
+    "standardCode": "SPLN T3.001-1:2020",
+    "isActive": true,
+    "createdAt": "2026-07-01T10:00:00Z",
+    "updatedAt": "2026-07-01T10:00:00Z",
+    "checklistItems": [
+      {
+        "id": "MAT-001-C01",
+        "parameter_name": "Ketebalan Seng (Galvanize Thickness)",
+        "input_type": "number",
+        "standard_text": "min 80 micron",
+        "unit": "micron",
+        "is_required": true,
+        "minVal": 80,
+        "requiredPhoto": true
+      },
+      {
+        "id": "MAT-001-C02",
+        "parameter_name": "Tebal Segmen Bawah (Segment 1)",
+        "input_type": "number",
+        "standard_text": "min 4.0 mm",
+        "unit": "mm",
+        "is_required": false,
+        "minVal": 4.0,
+        "requiredPhoto": false
+      },
+      {
+        "id": "MAT-001-C03",
+        "parameter_name": "Tebal Segmen Tengah (Segment 2)",
+        "input_type": "number",
+        "standard_text": "min 3.5 mm",
+        "unit": "mm",
+        "is_required": false,
+        "minVal": 3.5,
+        "requiredPhoto": false
+      },
+      {
+        "id": "MAT-001-C04",
+        "parameter_name": "Tebal Segmen Atas (Segment 3)",
+        "input_type": "number",
+        "standard_text": "min 3.0 mm",
+        "unit": "mm",
+        "is_required": false,
+        "minVal": 3.0,
+        "requiredPhoto": false
+      }
+    ]
+  },
+  {
+    "id": "MAT-002",
+    "type": "MATERIAL",
+    "name": "Tiang Besi 9 Meter 3 Segmen",
+    "formCode": "FORM-MAT-002",
+    "category": "Tiang Besi",
+    "standardCode": "SPLN T3.001-1:2020",
+    "isActive": true,
+    "createdAt": "2026-07-02T10:00:00Z",
+    "updatedAt": "2026-07-02T10:00:00Z",
+    "checklistItems": [
+      {
+        "id": "MAT-002-C01",
+        "parameter_name": "Ketebalan Seng (Galvanize Thickness)",
+        "input_type": "number",
+        "standard_text": "min 85 micron",
+        "unit": "micron",
+        "is_required": true,
+        "minVal": 85,
+        "requiredPhoto": true
+      },
+      {
+        "id": "MAT-002-C02",
+        "parameter_name": "Tebal Segmen Bawah (Segment 1)",
+        "input_type": "number",
+        "standard_text": "min 4.5 mm",
+        "unit": "mm",
+        "is_required": false,
+        "minVal": 4.5,
+        "requiredPhoto": false
+      },
+      {
+        "id": "MAT-002-C03",
+        "parameter_name": "Tebal Segmen Tengah (Segment 2)",
+        "input_type": "number",
+        "standard_text": "min 4.0 mm",
+        "unit": "mm",
+        "is_required": false,
+        "minVal": 4.0,
+        "requiredPhoto": false
+      },
+      {
+        "id": "MAT-002-C04",
+        "parameter_name": "Tebal Segmen Atas (Segment 3)",
+        "input_type": "number",
+        "standard_text": "min 3.2 mm",
+        "unit": "mm",
+        "is_required": false,
+        "minVal": 3.2,
+        "requiredPhoto": false
+      }
+    ]
+  },
+  {
+    "id": "MAT-003",
+    "type": "MATERIAL",
+    "name": "Tiang 7 Meter 2 Segmen",
+    "formCode": "FORM-MAT-003",
+    "category": "Tiang Besi",
+    "standardCode": "SPLN T3.001-1:2020",
+    "isActive": true,
+    "createdAt": "2026-07-03T10:00:00Z",
+    "updatedAt": "2026-07-03T10:00:00Z",
+    "checklistItems": [
+      {
+        "id": "MAT-003-C01",
+        "parameter_name": "Ketebalan Seng (Galvanize Thickness)",
+        "input_type": "number",
+        "standard_text": "min 80 micron",
+        "unit": "micron",
+        "is_required": true,
+        "minVal": 80,
+        "requiredPhoto": true
+      },
+      {
+        "id": "MAT-003-C02",
+        "parameter_name": "Tebal Segmen Bawah",
+        "input_type": "number",
+        "standard_text": "min 4.0 mm",
+        "unit": "mm",
+        "is_required": false,
+        "minVal": 4.0,
+        "requiredPhoto": false
+      },
+      {
+        "id": "MAT-003-C03",
+        "parameter_name": "Tebal Segmen Atas",
+        "input_type": "number",
+        "standard_text": "min 3.2 mm",
+        "unit": "mm",
+        "is_required": false,
+        "minVal": 3.2,
+        "requiredPhoto": false
+      }
+    ]
+  },
+  {
+    "id": "MAT-004",
+    "type": "MATERIAL",
+    "name": "Tiang Galvanis 6M Tanpa Sambungan",
+    "formCode": "FORM-MAT-004",
+    "category": "Tiang Besi",
+    "standardCode": "SPLN T3.001-2:2021",
+    "isActive": true,
+    "createdAt": "2026-07-04T10:00:00Z",
+    "updatedAt": "2026-07-04T10:00:00Z",
+    "checklistItems": [
+      {
+        "id": "MAT-004-C01",
+        "parameter_name": "Ketebalan Seng (Galvanize Thickness)",
+        "input_type": "number",
+        "standard_text": "min 75 micron",
+        "unit": "micron",
+        "is_required": true,
+        "minVal": 75,
+        "requiredPhoto": true
+      },
+      {
+        "id": "MAT-004-C02",
+        "parameter_name": "Tebal Dinding Tiang",
+        "input_type": "number",
+        "standard_text": "min 3.0 mm",
+        "unit": "mm",
+        "is_required": false,
+        "minVal": 3.0,
+        "requiredPhoto": false
+      }
+    ]
+  },
+  {
+    "id": "MAT-005",
+    "type": "MATERIAL",
+    "name": "Tiang Beton 7 Meter Bulat",
+    "formCode": "FORM-MAT-005",
+    "category": "Tiang Beton",
+    "standardCode": "SNI 1911-2015",
+    "isActive": true,
+    "createdAt": "2026-07-05T10:00:00Z",
+    "updatedAt": "2026-07-05T10:00:00Z",
+    "checklistItems": [
+      {
+        "id": "MAT-005-C01",
+        "parameter_name": "Kuat Tekan Beton",
+        "input_type": "number",
+        "standard_text": "min 350 kg/cm2",
+        "unit": "kg/cm2",
+        "is_required": true,
+        "minVal": 350,
+        "requiredPhoto": true
+      },
+      {
+        "id": "MAT-005-C02",
+        "parameter_name": "Diameter Bawah",
+        "input_type": "number",
+        "standard_text": "140 - 150 mm",
+        "unit": "mm",
+        "is_required": false,
+        "minVal": 140,
+        "maxVal": 150,
+        "requiredPhoto": false
+      },
+      {
+        "id": "MAT-005-C03",
+        "parameter_name": "Diameter Atas",
+        "input_type": "number",
+        "standard_text": "110 - 120 mm",
+        "unit": "mm",
+        "is_required": false,
+        "minVal": 110,
+        "maxVal": 120,
+        "requiredPhoto": false
+      }
+    ]
+  },
+  {
+    "id": "MAT-006",
+    "type": "MATERIAL",
+    "name": "Tiang Besi 11 Meter 3 Segmen",
+    "formCode": "FORM-MAT-006",
+    "category": "Tiang Besi",
+    "standardCode": "SPLN T3.001-1:2020",
+    "isActive": false,
+    "createdAt": "2026-07-06T10:00:00Z",
+    "updatedAt": "2026-07-06T10:00:00Z",
+    "checklistItems": [
+      {
+        "id": "MAT-006-C01",
+        "parameter_name": "Ketebalan Seng (Galvanize Thickness)",
+        "input_type": "number",
+        "standard_text": "min 90 micron",
+        "unit": "micron",
+        "is_required": true,
+        "minVal": 90,
+        "requiredPhoto": true
+      },
+      {
+        "id": "MAT-006-C02",
+        "parameter_name": "Tebal Segmen Bawah (Segment 1)",
+        "input_type": "number",
+        "standard_text": "min 5.0 mm",
+        "unit": "mm",
+        "is_required": false,
+        "minVal": 5.0,
+        "requiredPhoto": false
+      },
+      {
+        "id": "MAT-006-C03",
+        "parameter_name": "Tebal Segmen Tengah (Segment 2)",
+        "input_type": "number",
+        "standard_text": "min 4.5 mm",
+        "unit": "mm",
+        "is_required": false,
+        "minVal": 4.5,
+        "requiredPhoto": false
+      },
+      {
+        "id": "MAT-006-C04",
+        "parameter_name": "Tebal Segmen Atas (Segment 3)",
+        "input_type": "number",
+        "standard_text": "min 3.6 mm",
+        "unit": "mm",
+        "is_required": false,
+        "minVal": 3.6,
+        "requiredPhoto": false
+      }
+    ]
+  },
+  {
+    "id": "WRK-001",
+    "type": "WORK",
+    "name": "Pondasi Tiang Beton/Besi",
+    "formCode": "FORM-WRK-001",
+    "category": "Sipil Konstruksi",
+    "segment": "construction",
+    "standardCode": "",
+    "isActive": true,
+    "createdAt": "2026-07-01T11:00:00Z",
+    "updatedAt": "2026-07-01T11:00:00Z",
+    "checklistItems": [
+      {
+        "id": "WRK-001-C01",
+        "parameter_name": "Kedalaman galian tanah sesuai spesifikasi teknis",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Kedalaman galian tanah sesuai spesifikasi teknis",
+        "isActive": true
+      },
+      {
+        "id": "WRK-001-C02",
+        "parameter_name": "Dimensi cor pondasi beton (panjang x lebar x tinggi)",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Dimensi cor pondasi beton (panjang x lebar x tinggi)",
+        "isActive": true
+      },
+      {
+        "id": "WRK-001-C03",
+        "parameter_name": "Rasio campuran semen, pasir, dan batu pecah",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Rasio campuran semen, pasir, dan batu pecah",
+        "isActive": true
+      },
+      {
+        "id": "WRK-001-C04",
+        "parameter_name": "Pemasangan angkur tiang tegak lurus",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Pemasangan angkur tiang tegak lurus",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "WRK-002",
+    "type": "WORK",
+    "name": "Pemasangan Tiang (Erection)",
+    "formCode": "FORM-WRK-002",
+    "category": "Struktur Mekanikal",
+    "segment": "construction",
+    "standardCode": "",
+    "isActive": true,
+    "createdAt": "2026-07-02T11:00:00Z",
+    "updatedAt": "2026-07-02T11:00:00Z",
+    "checklistItems": [
+      {
+        "id": "WRK-002-C01",
+        "parameter_name": "Kelurusan tiang diukur dengan waterpass",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Kelurusan tiang diukur dengan waterpass",
+        "isActive": true
+      },
+      {
+        "id": "WRK-002-C02",
+        "parameter_name": "Kekencangan baut angkur (torque check)",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Kekencangan baut angkur (torque check)",
+        "isActive": true
+      },
+      {
+        "id": "WRK-002-C03",
+        "parameter_name": "Pengecatan ulang area sambungan segmen",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Pengecatan ulang area sambungan segmen",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "WRK-003",
+    "type": "WORK",
+    "name": "Penarikan Kabel Udara (Stringing)",
+    "formCode": "FORM-WRK-003",
+    "category": "Kabel & Aksesoris",
+    "segment": "provisioning",
+    "standardCode": "",
+    "isActive": true,
+    "createdAt": "2026-07-03T11:00:00Z",
+    "updatedAt": "2026-07-03T11:00:00Z",
+    "checklistItems": [
+      {
+        "id": "WRK-003-C01",
+        "parameter_name": "Ketinggian andongan kabel dari permukaan jalan",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Ketinggian andongan kabel dari permukaan jalan",
+        "isActive": true
+      },
+      {
+        "id": "WRK-003-C02",
+        "parameter_name": "Penggunaan suspension/tension clamp standar",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Penggunaan suspension/tension clamp standar",
+        "isActive": true
+      },
+      {
+        "id": "WRK-003-C03",
+        "parameter_name": "Radius kelengkungan kabel saat belok",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Radius kelengkungan kabel saat belok",
+        "isActive": true
+      },
+      {
+        "id": "WRK-003-C04",
+        "parameter_name": "Jarak aman dengan kabel tegangan listrik",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Jarak aman dengan kabel tegangan listrik",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "WRK-004",
+    "type": "WORK",
+    "name": "Terminasi Kabel Serat Optik",
+    "formCode": "FORM-WRK-004",
+    "category": "Optical Termination",
+    "segment": "provisioning",
+    "standardCode": "",
+    "isActive": true,
+    "createdAt": "2026-07-04T11:00:00Z",
+    "updatedAt": "2026-07-04T11:00:00Z",
+    "checklistItems": [
+      {
+        "id": "WRK-004-C01",
+        "parameter_name": "Nilai redaman (loss) hasil splicing serat optik",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Nilai redaman (loss) hasil splicing serat optik",
+        "isActive": true
+      },
+      {
+        "id": "WRK-004-C02",
+        "parameter_name": "Pelabelan core dan port di dalam OTB/ODP",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Pelabelan core dan port di dalam OTB/ODP",
+        "isActive": true
+      },
+      {
+        "id": "WRK-004-C03",
+        "parameter_name": "Kebersihan area connector adapter",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Kebersihan area connector adapter",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "WRK-005",
+    "type": "WORK",
+    "name": "Grounding System (Pentanahan)",
+    "formCode": "FORM-WRK-005",
+    "category": "Proteksi Kelistrikan",
+    "segment": "assurance",
+    "standardCode": "",
+    "isActive": true,
+    "createdAt": "2026-07-05T11:00:00Z",
+    "updatedAt": "2026-07-05T11:00:00Z",
+    "checklistItems": [
+      {
+        "id": "WRK-005-C01",
+        "parameter_name": "Nilai resistansi pentanahan (Earth Ground Resistance)",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Nilai resistansi pentanahan (Earth Ground Resistance)",
+        "isActive": true
+      },
+      {
+        "id": "WRK-005-C02",
+        "parameter_name": "Spesifikasi kabel tembaga grounding (BC)",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Spesifikasi kabel tembaga grounding (BC)",
+        "isActive": true
+      },
+      {
+        "id": "WRK-005-C03",
+        "parameter_name": "Koneksi grounding clamp pada kaki tiang",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Koneksi grounding clamp pada kaki tiang",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "id": "WRK-006",
+    "type": "WORK",
+    "name": "Finishing & Kebersihan Site",
+    "formCode": "FORM-WRK-006",
+    "category": "Administratif & K3",
+    "segment": "assurance",
+    "standardCode": "",
+    "isActive": false,
+    "createdAt": "2026-07-06T11:00:00Z",
+    "updatedAt": "2026-07-06T11:00:00Z",
+    "checklistItems": [
+      {
+        "id": "WRK-006-C01",
+        "parameter_name": "Pembersihan sisa galian tanah and material semen",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Pembersihan sisa galian tanah and material semen",
+        "isActive": true
+      },
+      {
+        "id": "WRK-006-C02",
+        "parameter_name": "Restorasi permukaan jalan / paving block",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Restorasi permukaan jalan / paving block",
+        "isActive": true
+      },
+      {
+        "id": "WRK-006-C03",
+        "parameter_name": "Pemasangan pelat identitas nomor tiang",
+        "input_type": "choice",
+        "standard_text": "",
+        "unit": "",
+        "is_required": true,
+        "name": "Pemasangan pelat identitas nomor tiang",
+        "isActive": true
+      }
+    ]
+  }
+]

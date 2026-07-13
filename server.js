@@ -164,7 +164,11 @@ const server = http.createServer((req, res) => {
 
   // GET /templates
   if (pathname === '/templates' && req.method === 'GET') {
-    const templates = getTemplates();
+    let templates = getTemplates();
+    const typeFilter = url.searchParams.get('type');
+    if (typeFilter) {
+      templates = templates.filter(t => t.type === typeFilter);
+    }
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(templates));
     return;
