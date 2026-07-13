@@ -12,17 +12,17 @@ export const ReportTable: React.FC<ReportTableProps> = ({ reports, onDetail }) =
   return (
     <div className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="w-full overflow-x-auto">
-        <table className="w-full min-w-[1180px] table-fixed border-collapse">
+        <table className="w-full min-w-[1330px] table-fixed border-collapse">
           <colgroup>
-            <col className="w-[8%]" />
-            <col className="w-[9%]" />
-            <col className="w-[23%]" />
-            <col className="w-[12%]" />
-            <col className="w-[12%]" />
-            <col className="w-[10%]" />
-            <col className="w-[10%]" />
-            <col className="w-[10%]" />
-            <col className="w-[10%]" />
+            <col className="w-[110px]" />
+            <col className="w-[110px]" />
+            <col className="w-[320px]" />
+            <col className="w-[160px]" />
+            <col className="w-[160px]" />
+            <col className="w-[130px]" />
+            <col className="w-[160px]" />
+            <col className="w-[160px]" />
+            <col className="w-[120px]" />
           </colgroup>
 
           <thead>
@@ -45,13 +45,13 @@ export const ReportTable: React.FC<ReportTableProps> = ({ reports, onDetail }) =
               <th className="px-6 py-4 text-left align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
                 Tanggal Submit
               </th>
-              <th className="px-6 py-4 text-left align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
+              <th className="px-6 py-4 text-center align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
                 Status
               </th>
-              <th className="px-6 py-4 pr-8 text-left align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
+              <th className="px-6 py-4 text-center align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
                 Hasil Standar
               </th>
-              <th className="px-6 py-4 pl-8 text-center align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
+              <th className="px-6 py-4 text-center align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
                 Aksi
               </th>
             </tr>
@@ -135,20 +135,20 @@ export const ReportTable: React.FC<ReportTableProps> = ({ reports, onDetail }) =
 
                   {/* Status */}
                   <td className="px-6 py-5 align-middle text-sm text-slate-700">
-                    <div className="flex items-center whitespace-nowrap">
+                    <div className="flex justify-center whitespace-nowrap">
                       <ReportStatusBadge status={report.status} />
                     </div>
                   </td>
 
                   {/* Hasil Standar */}
-                  <td className="px-6 py-5 pr-8 align-middle text-sm text-slate-700">
-                    <div className="flex items-center whitespace-nowrap">
+                  <td className="px-6 py-5 align-middle text-sm text-slate-700">
+                    <div className="flex justify-center whitespace-nowrap">
                       <StandardResultBadge result={report.standardResult} />
                     </div>
                   </td>
 
                   {/* Aksi */}
-                  <td className="px-6 py-5 pl-8 align-middle text-center" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-6 py-5 align-middle text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-center">
                       <button
                         onClick={() => onDetail?.(report.id)}
