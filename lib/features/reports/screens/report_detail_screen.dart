@@ -52,6 +52,7 @@ class ReportDetailScreen extends StatefulWidget {
 class _ReportDetailScreenState extends State<ReportDetailScreen> {
   final _adminNoteController = TextEditingController();
   bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -63,12 +64,18 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     if (_isLoading) return;
     setState(() {
       _isLoading = true;
+      _errorMessage = null;
     });
-    await DummyState().fetchReportsFromApi();
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+    try {
+      await DummyState().fetchReportsFromApi();
+    } catch (e) {
+      _errorMessage = 'Gagal memuat detail laporan: $e';
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -87,11 +94,72 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   Widget build(BuildContext context) {
     final state = DummyState();
     
+    // Find the report index
+    final reportIdx = state.reports.indexWhere((r) => r.id == widget.reportId);
+
+    if (_isLoading && reportIdx == -1) {
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
+    if (_errorMessage != null && reportIdx == -1) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                  const SizedBox(height: 12),
+                  Text(
+                    _errorMessage!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: 120,
+                    height: 38,
+                    child: ElevatedButton(
+                      onPressed: _fetchDetail,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('Coba Lagi', style: TextStyle(fontSize: 13)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     // Find the report
-    final report = state.reports.firstWhere(
-      (r) => r.id == widget.reportId,
-      orElse: () => state.reports[0],
-    );
+    final report = reportIdx != -1 
+        ? state.reports[reportIdx] 
+        : (state.reports.isNotEmpty ? state.reports[0] : null);
+
+    if (report == null) {
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Text('Laporan tidak ditemukan', style: TextStyle(color: AppColors.textMuted)),
+        ),
+      );
+    }
 
     final isEditable = report.status == QCReportStatus.DRAFT || report.status == QCReportStatus.NEEDS_FOLLOW_UP;
 
