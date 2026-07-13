@@ -37,7 +37,7 @@ class StatusBadge extends StatelessWidget {
       }
     }
 
-    final style = StatusStyleMapper.getStyle(status);
+    final style = StatusStyleMapper.getStyle(status is String ? label : status);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

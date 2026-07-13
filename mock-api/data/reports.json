@@ -62,5 +62,306 @@
     "checklist_items": [],
     "staff_note": "Testing creation",
     "submitted_at": "2026-07-13T02:16:37.662Z"
+  },
+  {
+    "id": "QC-MAT-2026-1002",
+    "type": "MATERIAL",
+    "template_id": "tiang_galvanis_6m_tanpa_sambungan",
+    "form_code": "TA-FR-048-010-03",
+    "title": "Tiang Galvanis 6M Tanpa Sambungan",
+    "status": "APPROVED",
+    "staff": {
+      "name": "Yanuar Luthfi",
+      "nik": "NIK-908271"
+    },
+    "location": {
+      "site_id": "site-1",
+      "site_name": "Site Warehouse Jakarta Barat",
+      "area": "Area Site Utama",
+      "detail_location": "Segmen Default"
+    },
+    "general_info": {
+      "poNumber": "asep",
+      "poDate": "2026-07-01",
+      "doNumber": "asep",
+      "vendorName": "asep",
+      "materialId": "tiang_galvanis_6m_tanpa_sambungan",
+      "arrivalVolume": "100",
+      "samplingVolume": "5",
+      "brandName": "tiangis",
+      "warehouseLocation": "gudang garam",
+      "stelVersion": "STEL-QA-MYTA-2026",
+      "qaExpiryDate": "2028-12-31",
+      "tkdnNumber": "TKDN-TA-FR-048-010-03-2026",
+      "tkdnCertDate": "2026-01-15",
+      "tkdnValue": "40"
+    },
+    "checklist_items": [
+      {
+        "id": "tg6-1",
+        "parameter_name": "Kondisi fisik luar baik/tidak cacat",
+        "input_type": "text",
+        "standard_text": "tidak cacat",
+        "unit": "",
+        "actual_value": "Tidak",
+        "staff_note": "kacau",
+        "item_photos": [
+          "https://images.unsplash.com/photo-1590066070792-4aa7d9bf5df7?auto=format&fit=crop&w=150&q=80"
+        ],
+        "admin_evaluation": "PASS",
+        "admin_note": "cocok"
+      },
+      {
+        "id": "tg6-2",
+        "parameter_name": "Panjang total",
+        "input_type": "number",
+        "standard_text": "6000 ± 50 mm",
+        "unit": "mm",
+        "actual_value": "6000",
+        "staff_note": "",
+        "item_photos": [
+          "https://images.unsplash.com/photo-1590066070792-4aa7d9bf5df7?auto=format&fit=crop&w=150&q=80"
+        ],
+        "admin_evaluation": "PASS",
+        "admin_note": "cocok"
+      },
+      {
+        "id": "tg6-3",
+        "parameter_name": "Diameter luar",
+        "input_type": "number",
+        "standard_text": "76,3 mm ± 1%",
+        "unit": "mm",
+        "actual_value": "77",
+        "staff_note": "",
+        "item_photos": [
+          "https://images.unsplash.com/photo-1590066070792-4aa7d9bf5df7?auto=format&fit=crop&w=150&q=80"
+        ],
+        "admin_evaluation": "PASS",
+        "admin_note": "cocok"
+      },
+      {
+        "id": "tg6-4",
+        "parameter_name": "Tebal tiang",
+        "input_type": "number",
+        "standard_text": "4 mm +15% -12,2%",
+        "unit": "mm",
+        "actual_value": "4",
+        "staff_note": "",
+        "item_photos": [
+          "https://images.unsplash.com/photo-1590066070792-4aa7d9bf5df7?auto=format&fit=crop&w=150&q=80"
+        ],
+        "admin_evaluation": "PASS",
+        "admin_note": "cocok"
+      },
+      {
+        "id": "tg6-5",
+        "parameter_name": "Berat",
+        "input_type": "number",
+        "standard_text": "Minimal 43,78 kg",
+        "unit": "kg",
+        "actual_value": "44",
+        "staff_note": "",
+        "item_photos": [
+          "https://images.unsplash.com/photo-1590066070792-4aa7d9bf5df7?auto=format&fit=crop&w=150&q=80"
+        ],
+        "admin_evaluation": "PASS",
+        "admin_note": ""
+      },
+      {
+        "id": "tg6-6",
+        "parameter_name": "Terdapat tanda tanam",
+        "input_type": "text",
+        "standard_text": "Ada",
+        "unit": "",
+        "actual_value": "Ya",
+        "staff_note": "",
+        "item_photos": [
+          "https://images.unsplash.com/photo-1590066070792-4aa7d9bf5df7?auto=format&fit=crop&w=150&q=80"
+        ],
+        "admin_evaluation": "PASS",
+        "admin_note": ""
+      },
+      {
+        "id": "tg6-7",
+        "parameter_name": "Warna cat sesuai standar pengecatan",
+        "input_type": "choice",
+        "standard_text": "silver / cat identitas operator",
+        "unit": "",
+        "actual_value": "Sesuai",
+        "staff_note": "",
+        "item_photos": [
+          "https://images.unsplash.com/photo-1590066070792-4aa7d9bf5df7?auto=format&fit=crop&w=150&q=80"
+        ],
+        "admin_evaluation": "PASS",
+        "admin_note": ""
+      },
+      {
+        "id": "tg6-8",
+        "parameter_name": "Terdapat nama atau simbol merk pabrik tercetak jelas pada tutup atas",
+        "input_type": "text",
+        "standard_text": "Ada",
+        "unit": "",
+        "actual_value": "Ya",
+        "staff_note": "",
+        "item_photos": [],
+        "admin_evaluation": "PASS",
+        "admin_note": ""
+      }
+    ],
+    "staff_note": "",
+    "submitted_at": "2026-07-13T16:00:32.788",
+    "admin_review": {
+      "admin_note": "jos",
+      "conclusion": "PASSED",
+      "reviewed_at": "2026-07-13T09:01:44.266Z",
+      "reviewed_by": "Admin"
+    },
+    "general_photos": [],
+    "revision_number": 1,
+    "revision_history": []
+  },
+  {
+    "id": "QC-MAT-2026-1003",
+    "type": "MATERIAL",
+    "template_id": "tiang_galvanis_6m_tanpa_sambungan",
+    "form_code": "TA-FR-048-010-03",
+    "title": "Tiang Galvanis 6M Tanpa Sambungan",
+    "status": "DRAFT",
+    "staff": {
+      "name": "Yanuar Luthfi",
+      "nik": "NIK-908271"
+    },
+    "location": {
+      "site_id": "site-1",
+      "site_name": "Site Warehouse Jakarta Barat",
+      "area": "Area Site Utama",
+      "detail_location": "Segmen Default"
+    },
+    "general_info": {
+      "poNumber": "1234",
+      "poDate": "2026-07-01",
+      "doNumber": "1234",
+      "vendorName": "Asep Kopling",
+      "materialId": "tiang_galvanis_6m_tanpa_sambungan",
+      "arrivalVolume": "100",
+      "samplingVolume": "5",
+      "brandName": "Tiang yayaya",
+      "warehouseLocation": "Gudang Garam",
+      "stelVersion": "STEL-QA-MYTA-2026",
+      "qaExpiryDate": "2028-12-31",
+      "tkdnNumber": "TKDN-TA-FR-048-010-03-2026",
+      "tkdnCertDate": "2026-01-15",
+      "tkdnValue": "40"
+    },
+    "checklist_items": [
+      {
+        "id": "tg6-1",
+        "parameter_name": "Kondisi fisik luar baik/tidak cacat",
+        "input_type": "text",
+        "standard_text": "tidak cacat",
+        "unit": null,
+        "actual_value": "Ya",
+        "staff_note": "",
+        "item_photos": [
+          "https://images.unsplash.com/photo-1590066070792-4aa7d9bf5df7?auto=format&fit=crop&w=150&q=80"
+        ],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "tg6-2",
+        "parameter_name": "Panjang total",
+        "input_type": "number",
+        "standard_text": "6000 ± 50 mm",
+        "unit": "mm",
+        "actual_value": "",
+        "staff_note": "",
+        "item_photos": [],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "tg6-3",
+        "parameter_name": "Diameter luar",
+        "input_type": "number",
+        "standard_text": "76,3 mm ± 1%",
+        "unit": "mm",
+        "actual_value": "",
+        "staff_note": "",
+        "item_photos": [],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "tg6-4",
+        "parameter_name": "Tebal tiang",
+        "input_type": "number",
+        "standard_text": "4 mm +15% -12,2%",
+        "unit": "mm",
+        "actual_value": "",
+        "staff_note": "",
+        "item_photos": [],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "tg6-5",
+        "parameter_name": "Berat",
+        "input_type": "number",
+        "standard_text": "Minimal 43,78 kg",
+        "unit": "kg",
+        "actual_value": "",
+        "staff_note": "",
+        "item_photos": [],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "tg6-6",
+        "parameter_name": "Terdapat tanda tanam",
+        "input_type": "text",
+        "standard_text": "Ada",
+        "unit": null,
+        "actual_value": "",
+        "staff_note": "",
+        "item_photos": [],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "tg6-7",
+        "parameter_name": "Warna cat sesuai standar pengecatan",
+        "input_type": "choice",
+        "standard_text": "silver / cat identitas operator",
+        "unit": null,
+        "actual_value": "",
+        "staff_note": "",
+        "item_photos": [],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "tg6-8",
+        "parameter_name": "Terdapat nama atau simbol merk pabrik tercetak jelas pada tutup atas",
+        "input_type": "text",
+        "standard_text": "Ada",
+        "unit": null,
+        "actual_value": "",
+        "staff_note": "",
+        "item_photos": [],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      }
+    ],
+    "staff_note": "",
+    "submitted_at": "2026-07-13T16:02:57.265",
+    "admin_review": {
+      "admin_note": null,
+      "reviewed_at": null,
+      "conclusion": "Belum Lengkap"
+    },
+    "general_photos": [],
+    "revision_number": 1,
+    "revision_history": []
   }
 ]
