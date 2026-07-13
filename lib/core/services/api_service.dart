@@ -37,6 +37,23 @@ class ApiService {
     return null;
   }
 
+  /// Fetch all QC templates from the mock API backend.
+  /// Returns a list of raw JSON maps, or null if the API is unavailable.
+  Future<List<Map<String, dynamic>>?> fetchTemplates() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/templates')).timeout(
+        const Duration(seconds: 4),
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> list = jsonDecode(response.body);
+        return list.cast<Map<String, dynamic>>();
+      }
+    } catch (e) {
+      print('[Mock API Offline - Prototype Fallback] fetchTemplates failed: $e');
+    }
+    return null;
+  }
+
   /// Sync/post a report to the mock API backend.
   Future<bool> postReport(QCReportModel report) async {
     try {
