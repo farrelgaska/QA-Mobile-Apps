@@ -1,4 +1,4 @@
-const reportRepository = require('../repositories/json-report.repository');
+const { reportRepository } = require('../repositories');
 
 const validateObjectBody = (req, res, next) => {
   if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
@@ -7,18 +7,18 @@ const validateObjectBody = (req, res, next) => {
   next();
 };
 
-const getReports = (req, res, next) => {
+const getReports = async (req, res, next) => {
   try {
-    const reports = reportRepository.findAll();
+    const reports = await reportRepository.findAll();
     res.json(reports);
   } catch (err) {
     next(err);
   }
 };
 
-const getReportById = (req, res, next) => {
+const getReportById = async (req, res, next) => {
   try {
-    const report = reportRepository.findById(req.params.id);
+    const report = await reportRepository.findById(req.params.id);
     if (!report) {
       return res.status(404).json({ error: `Report with ID ${req.params.id} not found` });
     }
@@ -28,7 +28,7 @@ const getReportById = (req, res, next) => {
   }
 };
 
-const createReport = (req, res, next) => {
+const createReport = async (req, res, next) => {
   try {
     const reportData = req.body;
     
@@ -45,14 +45,14 @@ const createReport = (req, res, next) => {
       });
     }
 
-    const created = reportRepository.create(reportData);
+    const created = await reportRepository.create(reportData);
     res.status(201).json(created);
   } catch (err) {
     next(err);
   }
 };
 
-const patchReport = (req, res, next) => {
+const patchReport = async (req, res, next) => {
   try {
     const VALID_STATUSES = ['DRAFT', 'SUBMITTED', 'NEEDS_FOLLOW_UP', 'APPROVED'];
     if (req.body.status && !VALID_STATUSES.includes(req.body.status)) {
@@ -61,7 +61,7 @@ const patchReport = (req, res, next) => {
       });
     }
 
-    const updated = reportRepository.update(req.params.id, req.body);
+    const updated = await reportRepository.update(req.params.id, req.body);
     res.json(updated);
   } catch (err) {
     next(err);

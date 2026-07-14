@@ -3,8 +3,8 @@ const path = require('path');
 const { TEMPLATES_FILE } = require('../config/env');
 
 class JsonTemplateRepository {
-  constructor() {
-    this.filePath = TEMPLATES_FILE;
+  constructor(filePath = TEMPLATES_FILE) {
+    this.filePath = filePath;
   }
 
   _read() {
@@ -107,4 +107,6 @@ class JsonTemplateRepository {
   }
 }
 
-module.exports = new JsonTemplateRepository();
+const repository = new JsonTemplateRepository();
+repository.JsonTemplateRepository = JsonTemplateRepository;
+module.exports = repository;

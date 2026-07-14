@@ -8,13 +8,17 @@
     "dev": "nodemon src/server.js",
     "check": "node src/check.js",
     "check:contracts": "node scripts/check-contracts.js",
+    "test": "node scripts/run-repository-tests.js",
+    "test:repositories": "npm test",
     "normalize:templates": "node scripts/normalize-templates.js",
     "normalize:reports": "node scripts/normalize-reports.js"
   },
   "dependencies": {
+    "@vercel/functions": "^3.7.5",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "pg": "^8.16.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {

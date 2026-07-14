@@ -1,8 +1,8 @@
-const templateRepository = require('../repositories/json-template.repository');
+const { templateRepository } = require('../repositories');
 
-const getTemplates = (req, res, next) => {
+const getTemplates = async (req, res, next) => {
   try {
-    let templates = templateRepository.findAll();
+    let templates = await templateRepository.findAll();
     
     // Support optional query parameters
     const { type, active } = req.query;
@@ -13,7 +13,7 @@ const getTemplates = (req, res, next) => {
     
     if (active !== undefined) {
       const isActiveBool = active === 'true';
-      templates = templates.filter(t => t.isActive === isActiveBool);
+      templates = templates.filter(t => (t.is_active ?? t.isActive) === isActiveBool);
     }
 
     res.json(templates);
@@ -22,9 +22,9 @@ const getTemplates = (req, res, next) => {
   }
 };
 
-const getTemplateById = (req, res, next) => {
+const getTemplateById = async (req, res, next) => {
   try {
-    const template = templateRepository.findById(req.params.id);
+    const template = await templateRepository.findById(req.params.id);
     if (!template) {
       return res.status(404).json({ error: `Template with ID ${req.params.id} not found` });
     }
@@ -34,7 +34,7 @@ const getTemplateById = (req, res, next) => {
   }
 };
 
-const createTemplate = (req, res, next) => {
+const createTemplate = async (req, res, next) => {
   try {
     const templateData = req.body;
     
@@ -46,38 +46,39 @@ const createTemplate = (req, res, next) => {
 
     const nowIso = new Date().toISOString();
     const template = {
+      ...templateData,
       id: templateData.id,
       type: templateData.type || 'MATERIAL',
       name: templateData.name || '',
-      formCode: templateData.formCode || '',
+      formCode: templateData.formCode ?? templateData.form_code ?? '',
       category: templateData.category || '',
-      standardCode: templateData.standardCode || '',
-      checklistItems: templateData.checklistItems || [],
-      isActive: templateData.isActive !== undefined ? templateData.isActive : true,
-      createdAt: templateData.createdAt || nowIso,
+      standardCode: templateData.standardCode ?? templateData.standard_code ?? '',
+      checklistItems: templateData.checklistItems ?? templateData.checklist_items ?? [],
+      isActive: templateData.isActive ?? templateData.is_active ?? true,
+      createdAt: templateData.createdAt ?? templateData.created_at ?? nowIso,
       updatedAt: nowIso
     };
 
-    const created = templateRepository.create(template);
+    const created = await templateRepository.create(template);
     res.status(201).json(created);
   } catch (err) {
     next(err);
   }
 };
 
-const patchTemplate = (req, res, next) => {
+const patchTemplate = async (req, res, next) => {
   try {
-    const updated = templateRepository.update(req.params.id, req.body);
+    const updated = await templateRepository.update(req.params.id, req.body);
     res.json(updated);
   } catch (err) {
     next(err);
   }
 };
 
-const deleteTemplateItem = (req, res, next) => {
+const deleteTemplateItem = async (req, res, next) => {
   try {
     const { templateId, itemId } = req.params;
-    const updated = templateRepository.deleteChecklistItem(templateId, itemId);
+    const updated = await templateRepository.deleteChecklistItem(templateId, itemId);
     res.json(updated);
   } catch (err) {
     next(err);

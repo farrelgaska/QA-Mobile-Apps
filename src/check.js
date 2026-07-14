@@ -346,5 +346,14 @@ if (normalizationError) {
   process.exit(1);
 }
 
+console.log('\n5. Running repository integration tests...');
+try {
+  require('../scripts/run-repository-tests').runRepositoryTests();
+  console.log('[PASS] Repository integration tests passed.');
+} catch (err) {
+  console.error('[FAIL] Repository integration tests failed:', err.message);
+  process.exit(1);
+}
+
 console.log('\n=== All Checks Passed Successfully! ===');
 process.exit(0);

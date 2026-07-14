@@ -3,8 +3,8 @@ const path = require('path');
 const { REPORTS_FILE } = require('../config/env');
 
 class JsonReportRepository {
-  constructor() {
-    this.filePath = REPORTS_FILE;
+  constructor(filePath = REPORTS_FILE) {
+    this.filePath = filePath;
   }
 
   _read() {
@@ -83,4 +83,6 @@ class JsonReportRepository {
   }
 }
 
-module.exports = new JsonReportRepository();
+const repository = new JsonReportRepository();
+repository.JsonReportRepository = JsonReportRepository;
+module.exports = repository;
