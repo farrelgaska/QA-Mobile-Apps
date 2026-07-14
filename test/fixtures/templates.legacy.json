@@ -1,0 +1,37 @@
+[
+  {
+    "id": "tiang_besi_legacy",
+    "type": "MATERIAL",
+    "name": "Tiang Besi Legacy Test",
+    "description": "Legacy template description",
+    "formCode": "FORM-LEGACY-001",
+    "category": "Tiang Besi",
+    "segment": "construction",
+    "standardCode": "SPLN-LEGACY",
+    "isActive": true,
+    "truly_unknown_field_1": "value1",
+    "checklistItems": [
+      {
+        "id": "item-legacy-1",
+        "parameterName": "Diameter Tiang",
+        "inputType": "booleanCheck",
+        "standardText": "Min 140mm",
+        "required": true,
+        "requiredPhoto": true,
+        "isCritical": true,
+        "position": 1
+      },
+      {
+        "id": "item-legacy-2",
+        "name": "Ketebalan Galvanis",
+        "inputType": "number",
+        "standardLabel": "Min 80 micron",
+        "required": false,
+        "requiredPhoto": false,
+        "minVal": 80,
+        "maxVal": 150,
+        "truly_unknown_field_2": "value2"
+      }
+    ]
+  }
+]

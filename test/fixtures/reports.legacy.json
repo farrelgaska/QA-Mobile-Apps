@@ -1,0 +1,51 @@
+[
+  {
+    "id": "QC-REP-LEGACY-001",
+    "type": "MATERIAL",
+    "templateId": "tiang_besi_legacy",
+    "formCode": "FORM-LEGACY-001",
+    "title": "Legacy Test Report",
+    "status": "APPROVED",
+    "truly_unknown_field_3": "value3",
+    "staff": {
+      "name": "Alex",
+      "nik": "NIK-007"
+    },
+    "location": {
+      "siteId": "site-1",
+      "siteName": "Main Warehouse",
+      "area": "Zone A",
+      "detailLocation": "Corner A"
+    },
+    "general_info": {
+      "poNumber": "PO-123"
+    },
+    "checklistItems": [
+      {
+        "id": "item-legacy-1",
+        "parameterName": "Diameter Tiang",
+        "inputType": "booleanCheck",
+        "standardText": "Min 140mm",
+        "actualValue": "true",
+        "staffNote": "Matches",
+        "itemPhotos": ["photo1.jpg"],
+        "adminEvaluation": "PASS",
+        "adminNote": "Correct",
+        "truly_unknown_field_4": "value4"
+      }
+    ],
+    "staff_note": "Legacy report testing",
+    "submittedAt": "2026-07-09T08:30:00Z",
+    "adminReview": {
+      "adminNote": "Passed review",
+      "conclusion": "Lulus",
+      "reviewedAt": "2026-07-09T09:30:00Z",
+      "reviewedBy": "Supervisor John"
+    },
+    "general_photos": [],
+    "revision_number": 1,
+    "revision_history": [
+      { "rev": 1, "note": "initial draft" }
+    ]
+  }
+]
