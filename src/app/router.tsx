@@ -10,6 +10,7 @@ import { ApprovalPage } from '../pages/ApprovalPage';
 import { DataManagementPage } from '../pages/DataManagementPage';
 import { QCMaterialListPage } from '../pages/QCMaterialListPage';
 import { QCMaterialDetailPage } from '../pages/QCMaterialDetailPage';
+import { QCMaterialEditPage } from '../pages/QCMaterialEditPage';
 import { QCPekerjaanListPage } from '../pages/QCPekerjaanListPage';
 import { QCPekerjaanDetailPage } from '../pages/QCPekerjaanDetailPage';
 
@@ -57,6 +58,10 @@ export const router = createBrowserRouter([
       {
         path: 'data/qc-material/:id',
         element: <QCMaterialDetailPage />
+      },
+      {
+        path: 'data/qc-material/:id/edit',
+        element: <QCMaterialEditPage />
       },
       {
         path: 'data/qc-pekerjaan',

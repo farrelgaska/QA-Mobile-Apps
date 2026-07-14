@@ -18,6 +18,7 @@ export interface SelectProps {
   fullWidth?: boolean;
   className?: string;
   id?: string;
+  disabled?: boolean;
 }
 
 export const Select: React.FC<SelectProps> = ({
@@ -30,6 +31,7 @@ export const Select: React.FC<SelectProps> = ({
   fullWidth = true,
   className,
   id,
+  disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -72,10 +74,12 @@ export const Select: React.FC<SelectProps> = ({
         <button
           id={id}
           type="button"
+          disabled={disabled}
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
             'relative flex h-10 w-full items-center justify-between rounded-xl border border-gray-300 bg-white px-3 text-sm font-medium text-gray-800 shadow-sm transition-all duration-200 hover:border-[#006B5A]/40 focus:border-[#006B5A] focus:outline-none focus:ring-4 focus:ring-[#006B5A]/10 text-left',
             error && 'border-red-500 focus:border-red-500 focus:ring-red-500/20',
+            disabled && 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed pointer-events-none hover:border-gray-200',
             className
           )}
         >

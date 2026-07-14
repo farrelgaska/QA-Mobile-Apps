@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import type { QCMaterial, MaterialChecklistTemplate } from '../types/material';
-import { fetchTemplates, patchTemplate } from '../services/reportApi';
+import { fetchTemplates, patchTemplate, deleteTemplateChecklistItem } from '../services/reportApi';
 import type { ApiTemplate } from '../services/reportApi';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -58,14 +58,17 @@ const mapMaterialToApi = (m: QCMaterial): ApiTemplate => ({
 export const QCMaterialDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [materials, setMaterials] = useState<QCMaterial[]>([]);
   const [template, setTemplate] = useState<QCMaterial | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const success = location.state?.successMessage || null;
 
   // Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   // New Checklist Form fields
   const [paramName, setParamName] = useState('');
@@ -101,6 +104,9 @@ export const QCMaterialDetailPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
+    if (location.state?.successMessage) {
+      window.history.replaceState({}, document.title);
+    }
   }, [id]);
 
   const updateMaterialTemplate = async (updatedTemplate: QCMaterial) => {
@@ -122,17 +128,28 @@ export const QCMaterialDetailPage: React.FC = () => {
   };
 
   const handleDeleteItem = (itemId: string) => {
-    if (!template) return;
+    setItemToDelete(itemId);
+  };
 
-    const updatedItems = template.checklistItems.filter(item => item.id !== itemId);
-    const updatedTemplate: QCMaterial = {
-      ...template,
-      checklistItems: updatedItems,
-      checklistCount: updatedItems.length,
-      updatedAt: new Date().toISOString()
-    };
+  const confirmDelete = async () => {
+    if (!template || !itemToDelete) return;
 
-    updateMaterialTemplate(updatedTemplate);
+    setIsLoading(true);
+    setError(null);
+    try {
+      const updatedApiTemplate = await deleteTemplateChecklistItem(template.id, itemToDelete);
+      const updatedTemplate = mapApiToMaterial(updatedApiTemplate);
+
+      const updatedList = materials.map(m => m.id === updatedTemplate.id ? updatedTemplate : m);
+      setMaterials(updatedList);
+      setTemplate(updatedTemplate);
+      setItemToDelete(null);
+    } catch (e: any) {
+      console.error(e);
+      setError(e.message || 'Gagal menghapus parameter.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleAddParameter = (e: React.FormEvent) => {
@@ -183,6 +200,12 @@ export const QCMaterialDetailPage: React.FC = () => {
 
   return (
     <PageTransition className="space-y-6 max-w-7xl mx-auto px-1">
+      {success && (
+        <div className="p-4 text-sm text-emerald-700 bg-emerald-50 rounded-lg border border-emerald-200">
+          <strong>Sukses:</strong> {success}
+        </div>
+      )}
+
       {error && (
         <div className="p-4 text-sm text-red-700 bg-red-50 rounded-lg border border-red-200">
           <strong>Error:</strong> {error}
@@ -204,7 +227,7 @@ export const QCMaterialDetailPage: React.FC = () => {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => alert('Fitur Edit Metadata Template (Dummy)')}
+            onClick={() => navigate(`/data/qc-material/${id}/edit`)}
             className="text-xs text-gray-600 hover:text-gray-900"
           >
             Edit Template
@@ -429,6 +452,32 @@ export const QCMaterialDetailPage: React.FC = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={itemToDelete !== null}
+        onClose={() => setItemToDelete(null)}
+        title="Konfirmasi Hapus Parameter"
+      >
+        <div className="space-y-4 pt-2">
+          <p className="text-sm text-gray-500">
+            Apakah Anda yakin ingin menghapus parameter checklist ini? Tindakan ini tidak dapat dibatalkan.
+          </p>
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
+            <Button variant="outline" type="button" onClick={() => setItemToDelete(null)} disabled={isLoading}>
+              Batal
+            </Button>
+            <Button
+              variant="danger"
+              type="button"
+              onClick={confirmDelete}
+              disabled={isLoading}
+            >
+              Hapus
+            </Button>
+          </div>
+        </div>
       </Modal>
     </PageTransition>
   );

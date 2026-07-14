@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { QCPekerjaan, PekerjaanChecklistTemplate } from '../types/pekerjaan';
-import { fetchTemplates, patchTemplate } from '../services/reportApi';
+import { fetchTemplates, patchTemplate, deleteTemplateChecklistItem } from '../services/reportApi';
 import type { ApiTemplate } from '../services/reportApi';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -60,6 +60,7 @@ export const QCPekerjaanDetailPage: React.FC = () => {
 
   // Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [newItemName, setNewItemName] = useState('');
 
   const loadData = async () => {
@@ -109,17 +110,28 @@ export const QCPekerjaanDetailPage: React.FC = () => {
   };
 
   const handleDeleteItem = (itemId: string) => {
-    if (!template) return;
+    setItemToDelete(itemId);
+  };
 
-    const updatedItems = template.checklistItems.filter(item => item.id !== itemId);
-    const updatedTemplate: QCPekerjaan = {
-      ...template,
-      checklistItems: updatedItems,
-      checklistCount: updatedItems.length,
-      updatedAt: new Date().toISOString()
-    };
+  const confirmDelete = async () => {
+    if (!template || !itemToDelete) return;
 
-    updatePekerjaanTemplate(updatedTemplate);
+    setIsLoading(true);
+    setError(null);
+    try {
+      const updatedApiTemplate = await deleteTemplateChecklistItem(template.id, itemToDelete);
+      const updatedTemplate = mapApiToPekerjaan(updatedApiTemplate);
+
+      const updatedList = pekerjaanList.map(w => w.id === updatedTemplate.id ? updatedTemplate : w);
+      setPekerjaanList(updatedList);
+      setTemplate(updatedTemplate);
+      setItemToDelete(null);
+    } catch (e: any) {
+      console.error(e);
+      setError(e.message || 'Gagal menghapus instruksi.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleToggleItemActive = (itemId: string) => {
@@ -354,6 +366,32 @@ export const QCPekerjaanDetailPage: React.FC = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={itemToDelete !== null}
+        onClose={() => setItemToDelete(null)}
+        title="Konfirmasi Hapus Instruksi"
+      >
+        <div className="space-y-4 pt-2">
+          <p className="text-sm text-gray-500">
+            Apakah Anda yakin ingin menghapus instruksi checklist ini? Tindakan ini tidak dapat dibatalkan.
+          </p>
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
+            <Button variant="outline" type="button" onClick={() => setItemToDelete(null)} disabled={isLoading}>
+              Batal
+            </Button>
+            <Button
+              variant="danger"
+              type="button"
+              onClick={confirmDelete}
+              disabled={isLoading}
+            >
+              Hapus
+            </Button>
+          </div>
+        </div>
       </Modal>
     </PageTransition>
   );

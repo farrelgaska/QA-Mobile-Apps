@@ -188,3 +188,9 @@ export async function patchTemplate(id: string, patch: Partial<ApiTemplate>): Pr
   });
 }
 
+export async function deleteTemplateChecklistItem(templateId: string, itemId: string): Promise<ApiTemplate> {
+  return request<ApiTemplate>(`/templates/${templateId}/items/${itemId}`, {
+    method: 'DELETE',
+  });
+}
+
