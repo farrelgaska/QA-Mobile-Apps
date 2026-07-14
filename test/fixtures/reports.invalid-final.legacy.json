@@ -1,0 +1,26 @@
+[
+  {
+    "id": "submitted-incomplete-placeholder",
+    "type": "MATERIAL",
+    "title": "Invalid submitted placeholder",
+    "status": "SUBMITTED",
+    "checklist_items": [],
+    "admin_review": {
+      "conclusion": "Belum Lengkap"
+    }
+  },
+  {
+    "id": "submitted-missing-conclusion",
+    "type": "MATERIAL",
+    "title": "Invalid submitted missing conclusion",
+    "status": "SUBMITTED",
+    "checklist_items": []
+  },
+  {
+    "id": "approved-missing-conclusion",
+    "type": "WORK",
+    "title": "Approved report requiring manual conclusion resolution",
+    "status": "APPROVED",
+    "checklist_items": []
+  }
+]

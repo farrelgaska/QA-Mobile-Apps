@@ -2,3 +2,7 @@ node_modules/
 .env
 *.tmp
 *.log
+tmp/
+test/.tmp/
+*.normalization.tmp
+test/fixtures/*.canonical.json

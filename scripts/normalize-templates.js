@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { isDeepStrictEqual } = require('util');
 const { templateSchema } = require('../src/contracts/template.contract');
 
 const args = process.argv.slice(2);
@@ -44,27 +45,59 @@ if (!Array.isArray(rawData)) {
 
 const CANONICAL_TEMPLATE_KEYS = new Set([
   'id', 'type', 'name', 'description', 'form_code', 'category', 'segment', 
-  'standard_code', 'is_active', 'version', 'created_at', 'updated_at', 'checklist_items'
+  'standard_code', 'is_active', 'workflow_status', 'version', 'created_at', 'updated_at',
+  'checklist_items', 'migration_metadata'
 ]);
 
 const CANONICAL_ITEM_KEYS = new Set([
   'id', 'parameter_name', 'input_type', 'standard_text', 'unit', 'is_required', 
-  'required_photo', 'is_active', 'is_critical', 'position', 'choices', 'validation_rule'
+  'required_photo', 'is_active', 'is_critical', 'position', 'choices', 'category',
+  'validation_rule', 'migration_metadata'
 ]);
 
-const KNOWN_LEGACY_TEMPLATE_KEYS = new Set(['formCode', 'isActive', 'checklistItems', 'createdAt', 'updatedAt']);
-const KNOWN_LEGACY_ITEM_KEYS = new Set(['parameterName', 'name', 'inputType', 'standardText', 'standardLabel', 'required', 'requiredPhoto', 'isCritical', 'validationRule', 'minVal', 'maxVal']);
+const KNOWN_LEGACY_TEMPLATE_KEYS = new Set(['formCode', 'standardCode', 'status', 'isActive', 'checklistItems', 'createdAt', 'updatedAt']);
+const KNOWN_LEGACY_ITEM_KEYS = new Set(['parameterName', 'name', 'inputType', 'standardText', 'standardLabel', 'required', 'requiredPhoto', 'isActive', 'isCritical', 'validationRule', 'minVal', 'maxVal']);
 
 let warningCount = 0;
 let errorCount = 0;
 const warnings = [];
+const duplicateIdWarnings = [];
 const errors = [];
 const unknownFields = new Set();
 const normalizedTemplates = [];
 const templateIds = new Set();
 
+const LEGACY_INPUT_TYPE_MAP = new Map([
+  ['number', 'number'],
+  ['text', 'text'],
+  ['choice', 'choice'],
+  ['boolean', 'boolean'],
+  ['booleancheck', 'boolean']
+]);
+
+const LEGACY_WORKFLOW_STATUS_MAP = new Map([
+  ['onprogress', 'IN_PROGRESS'],
+  ['inprogress', 'IN_PROGRESS'],
+  ['selesai', 'COMPLETED'],
+  ['completed', 'COMPLETED']
+]);
+
+const normalizeInputType = rawValue => {
+  if (typeof rawValue !== 'string') return null;
+  return LEGACY_INPUT_TYPE_MAP.get(rawValue.replace(/\s+/g, '').toLowerCase()) || null;
+};
+
 rawData.forEach((tpl, tplIdx) => {
   const tplId = tpl.id || `unknown_template_${tplIdx}`;
+  let hasTemplateMigrationError = false;
+  const recordUnknownFields = {
+    ...((tpl.migration_metadata && tpl.migration_metadata.unknown_fields) || {})
+  };
+
+  const preserveUnknownField = (fieldPath, value) => {
+    recordUnknownFields[fieldPath] = value;
+    unknownFields.add(`Template.${fieldPath}`);
+  };
   
   if (templateIds.has(tplId)) {
     errorCount++;
@@ -75,7 +108,7 @@ rawData.forEach((tpl, tplIdx) => {
   // Track unknown keys on the root template
   Object.keys(tpl).forEach(key => {
     if (!CANONICAL_TEMPLATE_KEYS.has(key) && !KNOWN_LEGACY_TEMPLATE_KEYS.has(key)) {
-      unknownFields.add(`Template.${key}`);
+      preserveUnknownField(key, tpl[key]);
     }
   });
 
@@ -90,6 +123,27 @@ rawData.forEach((tpl, tplIdx) => {
   } else {
     warningCount++;
     warnings.push(`[Template: ${tplId}] Missing "is_active", defaulting to true`);
+  }
+
+  let workflow_status = tpl.workflow_status;
+  if (tpl.status !== undefined) {
+    const workflowKey = typeof tpl.status === 'string'
+      ? tpl.status.replace(/\s+/g, '').toLowerCase()
+      : '';
+    const mappedWorkflowStatus = LEGACY_WORKFLOW_STATUS_MAP.get(workflowKey);
+    if (!mappedWorkflowStatus) {
+      errorCount++;
+      hasTemplateMigrationError = true;
+      errors.push(`[Template: ${tplId}] Unsupported legacy workflow status ${JSON.stringify(tpl.status)}`);
+    } else if (workflow_status === undefined) {
+      workflow_status = mappedWorkflowStatus;
+    } else if (workflow_status !== mappedWorkflowStatus) {
+      errorCount++;
+      hasTemplateMigrationError = true;
+      errors.push(`[Template: ${tplId}] Canonical workflow_status "${workflow_status}" conflicts with legacy status ${JSON.stringify(tpl.status)}`);
+    }
+    warningCount++;
+    warnings.push(`[Template: ${tplId}] Preserving legacy workflow status ${JSON.stringify(tpl.status)} as "${mappedWorkflowStatus || 'UNSUPPORTED'}"`);
   }
 
   let form_code = tpl.form_code || '';
@@ -119,20 +173,46 @@ rawData.forEach((tpl, tplIdx) => {
 
   const checklist_items = [];
   const itemIds = new Set();
+  const originalItemsById = new Map();
 
   rawItems.forEach((item, itemIdx) => {
-    const itemId = item.id || `unknown_item_${itemIdx}`;
-    
-    if (itemIds.has(itemId)) {
-      errorCount++;
-      errors.push(`[Template: ${tplId}] Duplicate checklist item ID: "${itemId}"`);
+    const originalItemId = item.id || `unknown_item_${itemIdx}`;
+    let itemId = originalItemId;
+    let itemMigrationMetadata = item.migration_metadata;
+    const previousItem = originalItemsById.get(originalItemId);
+
+    if (previousItem) {
+      previousItem.count++;
+      if (isDeepStrictEqual(previousItem.item, item)) {
+        errorCount++;
+        hasTemplateMigrationError = true;
+        errors.push(`[Template: ${tplId}] Duplicate checklist item ID "${originalItemId}" has an identical repeated item; refusing to delete or merge it`);
+      } else {
+        let duplicateSuffix = previousItem.count;
+        itemId = `${originalItemId}__duplicate_${duplicateSuffix}`;
+        while (itemIds.has(itemId)) {
+          duplicateSuffix++;
+          itemId = `${originalItemId}__duplicate_${duplicateSuffix}`;
+        }
+        itemMigrationMetadata = {
+          ...(item.migration_metadata || {}),
+          original_id: originalItemId,
+          duplicate_id_occurrence: previousItem.count
+        };
+        const duplicateWarning = `[Template: ${tplId}, Item: ${originalItemId}] Migrating genuinely different duplicate checklist ID to "${itemId}"`;
+        warningCount++;
+        warnings.push(duplicateWarning);
+        duplicateIdWarnings.push(duplicateWarning);
+      }
+    } else {
+      originalItemsById.set(originalItemId, { item, count: 1 });
     }
     itemIds.add(itemId);
 
     // Track unknown keys on the checklist item
     Object.keys(item).forEach(key => {
       if (!CANONICAL_ITEM_KEYS.has(key) && !KNOWN_LEGACY_ITEM_KEYS.has(key)) {
-        unknownFields.add(`Item.${key}`);
+        preserveUnknownField(`checklist_items.${itemId}.${key}`, item[key]);
       }
     });
 
@@ -149,15 +229,20 @@ rawData.forEach((tpl, tplIdx) => {
     }
 
     // Input type mapping
-    let input_type = item.input_type || item.inputType || 'text';
+    const rawInputType = item.input_type !== undefined ? item.input_type : item.inputType;
+    let input_type = rawInputType === undefined ? 'text' : normalizeInputType(rawInputType);
     if (item.inputType !== undefined) {
       warningCount++;
       warnings.push(`[Template: ${tplId}, Item: ${itemId}] Using legacy property alias "inputType"`);
     }
-    if (input_type === 'booleanCheck') {
-      input_type = 'boolean';
+    if (input_type === null) {
+      errorCount++;
+      hasTemplateMigrationError = true;
+      errors.push(`[Template: ${tplId}, Item: ${itemId}] Unsupported input type ${JSON.stringify(rawInputType)}; supported canonical values are number, text, choice, and boolean`);
+      input_type = rawInputType;
+    } else if (rawInputType !== undefined && rawInputType !== input_type) {
       warningCount++;
-      warnings.push(`[Template: ${tplId}, Item: ${itemId}] Normalizing "booleanCheck" input_type to "boolean"`);
+      warnings.push(`[Template: ${tplId}, Item: ${itemId}] Normalizing input type ${JSON.stringify(rawInputType)} to "${input_type}"`);
     }
 
     // Standard text mapping
@@ -268,12 +353,20 @@ rawData.forEach((tpl, tplIdx) => {
       is_critical,
       position,
       choices: item.choices || [],
-      validation_rule
+      category: item.category || '',
+      validation_rule,
+      migration_metadata: itemMigrationMetadata
     });
   });
 
   // Sort checklist items by position
   checklist_items.sort((a, b) => a.position - b.position);
+
+  const migration_metadata = {
+    ...(tpl.migration_metadata || {}),
+    ...(tpl.status !== undefined ? { legacy_workflow_status: tpl.status } : {}),
+    ...(Object.keys(recordUnknownFields).length > 0 ? { unknown_fields: recordUnknownFields } : {})
+  };
 
   const normalized = {
     id: tplId,
@@ -285,10 +378,12 @@ rawData.forEach((tpl, tplIdx) => {
     segment: tpl.segment || 'construction',
     standard_code: tpl.standard_code || tpl.standardCode || '',
     is_active,
+    workflow_status,
     version: tpl.version || 1,
     created_at,
     updated_at,
-    checklist_items
+    checklist_items,
+    migration_metadata: Object.keys(migration_metadata).length > 0 ? migration_metadata : undefined
   };
 
   if (tpl.standardCode !== undefined) {
@@ -297,11 +392,13 @@ rawData.forEach((tpl, tplIdx) => {
   }
 
   // Zod validation
-  try {
-    templateSchema.parse(normalized);
-  } catch (zodErr) {
-    errorCount++;
-    errors.push(`[Template: ${tplId}] Zod validation failed: ${JSON.stringify(zodErr.format())}`);
+  if (!hasTemplateMigrationError) {
+    try {
+      templateSchema.parse(normalized);
+    } catch (zodErr) {
+      errorCount++;
+      errors.push(`[Template: ${tplId}] Zod validation failed: ${JSON.stringify(zodErr.format())}`);
+    }
   }
 
   normalizedTemplates.push(normalized);
@@ -315,7 +412,7 @@ console.log(`Warnings generated: ${warningCount}`);
 console.log(`Errors encountered: ${errorCount}`);
 
 if (unknownFields.size > 0) {
-  console.log('Unknown fields detected (will be skipped):');
+  console.log('Unknown fields detected (preserved in migration_metadata.unknown_fields):');
   unknownFields.forEach(f => console.log(` - ${f}`));
 }
 
@@ -323,6 +420,11 @@ if (warnings.length > 0) {
   console.log('\nWarnings Details (first 10):');
   warnings.slice(0, 10).forEach(w => console.log(`  [WARN] ${w}`));
   if (warnings.length > 10) console.log(`  ... and ${warnings.length - 10} more warnings.`);
+}
+
+if (duplicateIdWarnings.length > 0) {
+  console.log('\nDuplicate ID Migration Warnings:');
+  duplicateIdWarnings.forEach(w => console.log(`  [WARN] ${w}`));
 }
 
 if (errors.length > 0) {

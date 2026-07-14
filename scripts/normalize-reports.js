@@ -5,12 +5,18 @@ const { reportSchema } = require('../src/contracts/report.contract');
 const args = process.argv.slice(2);
 let inputPath = '';
 let outputPath = '';
+let quarantineManifestPath = '';
+let quarantineOutputPath = '';
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--input' && args[i + 1]) {
     inputPath = path.resolve(args[i + 1]);
   } else if (args[i] === '--output' && args[i + 1]) {
     outputPath = path.resolve(args[i + 1]);
+  } else if (args[i] === '--quarantine-manifest' && args[i + 1]) {
+    quarantineManifestPath = path.resolve(args[i + 1]);
+  } else if (args[i] === '--quarantine-output' && args[i + 1]) {
+    quarantineOutputPath = path.resolve(args[i + 1]);
   }
 }
 
@@ -21,6 +27,25 @@ if (!inputPath || !outputPath) {
 
 if (inputPath === outputPath) {
   console.error('Error: Input and output paths must resolve to different locations');
+  process.exit(1);
+}
+
+if (quarantineOutputPath && !quarantineManifestPath) {
+  console.error('Error: --quarantine-output requires --quarantine-manifest');
+  process.exit(1);
+}
+
+if (quarantineManifestPath && !quarantineOutputPath) {
+  const extension = path.extname(outputPath) || '.json';
+  const outputStem = path.extname(outputPath)
+    ? outputPath.slice(0, -path.extname(outputPath).length)
+    : outputPath;
+  quarantineOutputPath = `${outputStem}.quarantine${extension}`;
+}
+
+const resolvedPaths = [inputPath, outputPath, quarantineManifestPath, quarantineOutputPath].filter(Boolean);
+if (new Set(resolvedPaths).size !== resolvedPaths.length) {
+  console.error('Error: Input, output, quarantine manifest, and quarantine output paths must be distinct');
   process.exit(1);
 }
 
@@ -42,6 +67,55 @@ if (!Array.isArray(rawData)) {
   process.exit(1);
 }
 
+const quarantineById = new Map();
+if (quarantineManifestPath) {
+  if (!fs.existsSync(quarantineManifestPath)) {
+    console.error(`Error: Quarantine manifest does not exist at ${quarantineManifestPath}`);
+    process.exit(1);
+  }
+
+  let manifestData;
+  try {
+    manifestData = JSON.parse(fs.readFileSync(quarantineManifestPath, 'utf8'));
+  } catch (e) {
+    console.error('Error: Quarantine manifest is not valid JSON:', e.message);
+    process.exit(1);
+  }
+
+  if (!Array.isArray(manifestData)) {
+    console.error('Error: Quarantine manifest must be a JSON array');
+    process.exit(1);
+  }
+
+  manifestData.forEach((entry, index) => {
+    if (!entry || typeof entry.id !== 'string' || entry.id.trim() === '') {
+      console.error(`Error: Quarantine manifest entry at index ${index} must have a non-empty id`);
+      process.exit(1);
+    }
+    if (quarantineById.has(entry.id)) {
+      console.error(`Error: Quarantine manifest contains duplicate ID "${entry.id}"`);
+      process.exit(1);
+    }
+    if (typeof entry.reason !== 'string' || entry.reason.trim() === '') {
+      console.error(`Error: Quarantine manifest entry "${entry.id}" must have a non-empty reason`);
+      process.exit(1);
+    }
+    if (typeof entry.disposition !== 'string' || entry.disposition.trim() === '') {
+      console.error(`Error: Quarantine manifest entry "${entry.id}" must have a non-empty disposition`);
+      process.exit(1);
+    }
+    quarantineById.set(entry.id, entry);
+  });
+
+  const sourceIds = new Set(rawData.map(report => report && report.id).filter(Boolean));
+  quarantineById.forEach((_, id) => {
+    if (!sourceIds.has(id)) {
+      console.error(`Error: Quarantined ID "${id}" does not exist in the source`);
+      process.exit(1);
+    }
+  });
+}
+
 const CANONICAL_REPORT_KEYS = new Set([
   'id', 'type', 'template_id', 'form_code', 'title', 'status', 'staff', 'location', 
   'general_info', 'checklist_items', 'staff_note', 'submitted_at', 'admin_review', 
@@ -50,13 +124,18 @@ const CANONICAL_REPORT_KEYS = new Set([
 
 const CANONICAL_STAFF_KEYS = new Set(['name', 'nik']);
 const CANONICAL_LOCATION_KEYS = new Set(['site_id', 'site_name', 'area', 'detail_location']);
-const CANONICAL_REVIEW_KEYS = new Set(['admin_note', 'conclusion', 'reviewed_at']);
+const CANONICAL_REVIEW_KEYS = new Set(['admin_note', 'conclusion', 'reviewed_at', 'reviewed_by']);
 const CANONICAL_ITEM_KEYS = new Set([
   'id', 'parameter_name', 'input_type', 'standard_text', 'unit', 'actual_value', 
   'staff_note', 'item_photos', 'admin_evaluation', 'admin_note'
 ]);
 
-const KNOWN_LEGACY_REPORT_KEYS = new Set(['revision_history', 'templateId', 'formCode', 'submittedAt']);
+const KNOWN_LEGACY_REPORT_KEYS = new Set([
+  'revision_history', 'revisionHistory', 'templateId', 'formCode', 'checklistItems',
+  'staffNote', 'submittedAt', 'adminReview', 'generalPhotos', 'revisionNumber'
+]);
+const KNOWN_LEGACY_LOCATION_KEYS = new Set(['siteId', 'siteName', 'detailLocation']);
+const KNOWN_LEGACY_REVIEW_KEYS = new Set(['adminNote', 'reviewedAt', 'reviewedBy']);
 const KNOWN_LEGACY_ITEM_KEYS = new Set(['parameterName', 'inputType', 'standardText', 'standardLabel', 'actualValue', 'staffNote', 'itemPhotos', 'adminEvaluation', 'adminNote']);
 
 let warningCount = 0;
@@ -65,10 +144,31 @@ const warnings = [];
 const errors = [];
 const unknownFields = new Set();
 const normalizedReports = [];
+const quarantinedReports = [];
 const reportIds = new Set();
 
 rawData.forEach((rep, repIdx) => {
   const repId = rep.id || `unknown_report_${repIdx}`;
+  const quarantineEntry = quarantineById.get(repId);
+  if (quarantineEntry) {
+    quarantinedReports.push({
+      record: rep,
+      reason: quarantineEntry.reason,
+      disposition: quarantineEntry.disposition
+    });
+    return;
+  }
+  const reportStatus = rep.status || 'DRAFT';
+  const existingMigrationMetadata = rep.migration_metadata || {};
+  let conclusionMigrationMetadata = existingMigrationMetadata.conclusion_migration;
+  const recordUnknownFields = {
+    ...(existingMigrationMetadata.unknown_fields || {})
+  };
+
+  const preserveUnknownField = (fieldPath, value) => {
+    recordUnknownFields[fieldPath] = value;
+    unknownFields.add(`Report.${fieldPath}`);
+  };
   
   if (reportIds.has(repId)) {
     errorCount++;
@@ -79,7 +179,7 @@ rawData.forEach((rep, repIdx) => {
   // Track unknown keys on root
   Object.keys(rep).forEach(key => {
     if (!CANONICAL_REPORT_KEYS.has(key) && !KNOWN_LEGACY_REPORT_KEYS.has(key)) {
-      unknownFields.add(`Report.${key}`);
+      preserveUnknownField(key, rep[key]);
     }
   });
 
@@ -87,7 +187,7 @@ rawData.forEach((rep, repIdx) => {
   const rawStaff = rep.staff || {};
   Object.keys(rawStaff).forEach(key => {
     if (!CANONICAL_STAFF_KEYS.has(key)) {
-      unknownFields.add(`Report.staff.${key}`);
+      preserveUnknownField(`staff.${key}`, rawStaff[key]);
     }
   });
   const staff = {
@@ -98,8 +198,8 @@ rawData.forEach((rep, repIdx) => {
   // Location normalization
   const rawLocation = rep.location || {};
   Object.keys(rawLocation).forEach(key => {
-    if (!CANONICAL_LOCATION_KEYS.has(key)) {
-      unknownFields.add(`Report.location.${key}`);
+    if (!CANONICAL_LOCATION_KEYS.has(key) && !KNOWN_LEGACY_LOCATION_KEYS.has(key)) {
+      preserveUnknownField(`location.${key}`, rawLocation[key]);
     }
   });
   const location = {
@@ -108,7 +208,7 @@ rawData.forEach((rep, repIdx) => {
     area: rawLocation.area || '',
     detail_location: rawLocation.detail_location || rawLocation.detailLocation || ''
   };
-  if (rawLocation.siteId || rawLocation.siteName || rawLocation.detailLocation) {
+  if (rawLocation.siteId !== undefined || rawLocation.siteName !== undefined || rawLocation.detailLocation !== undefined) {
     warningCount++;
     warnings.push(`[Report: ${repId}] Using legacy property aliases in location object`);
   }
@@ -123,40 +223,78 @@ rawData.forEach((rep, repIdx) => {
     }
 
     Object.keys(rawReview).forEach(key => {
-      if (!CANONICAL_REVIEW_KEYS.has(key)) {
-        unknownFields.add(`Report.admin_review.${key}`);
+      if (!CANONICAL_REVIEW_KEYS.has(key) && !KNOWN_LEGACY_REVIEW_KEYS.has(key)) {
+        preserveUnknownField(`admin_review.${key}`, rawReview[key]);
       }
     });
 
     let conclusion = null;
     const rawConclusion = rawReview.conclusion;
-    if (rawConclusion === 'Lulus' || rawConclusion === 'PASSED') {
+    const conclusionKey = typeof rawConclusion === 'string'
+      ? rawConclusion.trim().replace(/\s+/g, ' ').toUpperCase()
+      : rawConclusion;
+    if (conclusionKey === 'LULUS' || conclusionKey === 'PASSED') {
       conclusion = 'PASSED';
-      if (rawConclusion === 'Lulus') {
+      if (rawConclusion !== 'PASSED') {
         warningCount++;
-        warnings.push(`[Report: ${repId}] Normalizing legacy conclusion "Lulus" to "PASSED"`);
+        warnings.push(`[Report: ${repId}] Normalizing legacy conclusion ${JSON.stringify(rawConclusion)} to "PASSED"`);
       }
-    } else if (rawConclusion === 'Tidak Lulus' || rawConclusion === 'NOT_PASSED') {
+    } else if (conclusionKey === 'TIDAK LULUS' || conclusionKey === 'NOT_PASSED') {
       conclusion = 'NOT_PASSED';
-      if (rawConclusion === 'Tidak Lulus') {
+      if (rawConclusion !== 'NOT_PASSED') {
         warningCount++;
-        warnings.push(`[Report: ${repId}] Normalizing legacy conclusion "Tidak Lulus" to "NOT_PASSED"`);
+        warnings.push(`[Report: ${repId}] Normalizing legacy conclusion ${JSON.stringify(rawConclusion)} to "NOT_PASSED"`);
       }
-    } else if (rawConclusion !== undefined && rawConclusion !== null) {
+    } else if (conclusionKey === 'FAILED' || conclusionKey === 'FAIL') {
+      conclusion = 'FAILED';
+      if (rawConclusion !== 'FAILED') {
+        warningCount++;
+        warnings.push(`[Report: ${repId}] Normalizing legacy conclusion ${JSON.stringify(rawConclusion)} to "FAILED"`);
+      }
+    } else if (conclusionKey === 'NEEDS_FOLLOW_UP' || conclusionKey === 'NEED_FOLLOW_UP') {
+      conclusion = 'NEEDS_FOLLOW_UP';
+      if (rawConclusion !== 'NEEDS_FOLLOW_UP') {
+        warningCount++;
+        warnings.push(`[Report: ${repId}] Normalizing legacy conclusion ${JSON.stringify(rawConclusion)} to "NEEDS_FOLLOW_UP"`);
+      }
+    } else if (conclusionKey === 'BELUM LENGKAP' && reportStatus === 'DRAFT') {
+      conclusionMigrationMetadata = {
+        original_value: String(rawConclusion),
+        canonical_value: null,
+        reason: 'UNFINISHED_REPORT',
+        source_status: reportStatus
+      };
       warningCount++;
-      warnings.push(`[Report: ${repId}] Unknown conclusion value "${rawConclusion}", mapping to null`);
+      warnings.push(`[Report: ${repId}] Preserving unfinished legacy conclusion ${JSON.stringify(rawConclusion)} as null for DRAFT report`);
+    } else if (rawConclusion !== undefined && rawConclusion !== null) {
+      errorCount++;
+      errors.push(`[Report: ${repId}] Unsupported conclusion ${JSON.stringify(rawConclusion)} for report status ${reportStatus}; refusing to map it to null`);
     }
 
     admin_review = {
       admin_note: rawReview.admin_note || rawReview.adminNote || '',
       conclusion,
-      reviewed_at: rawReview.reviewed_at || rawReview.reviewedAt || null
+      reviewed_at: rawReview.reviewed_at || rawReview.reviewedAt || null,
+      reviewed_by: rawReview.reviewed_by || rawReview.reviewedBy || null
     };
 
-    if (rawReview.adminNote || rawReview.reviewedAt) {
+    if (rawReview.adminNote !== undefined || rawReview.reviewedAt !== undefined || rawReview.reviewedBy !== undefined) {
       warningCount++;
       warnings.push(`[Report: ${repId}] Using legacy property aliases in admin_review`);
     }
+  }
+
+  const requiresFinalConclusion = ['SUBMITTED', 'NEEDS_FOLLOW_UP', 'APPROVED'].includes(reportStatus);
+  if (requiresFinalConclusion && (!admin_review || admin_review.conclusion === null)) {
+    const rawReview = rep.admin_review || rep.adminReview;
+    const diagnostic = {
+      status: reportStatus,
+      original_conclusion: rawReview?.conclusion ?? null,
+      admin_review_present: Boolean(rawReview),
+      checklist_item_count: (rep.checklist_items || rep.checklistItems || []).length
+    };
+    errorCount++;
+    errors.push(`[Report: ${repId}] Final report is missing a valid conclusion; manual resolution required. Source preserved. Diagnostic: ${JSON.stringify(diagnostic)}`);
   }
 
   // Checklist items
@@ -180,7 +318,7 @@ rawData.forEach((rep, repIdx) => {
 
     Object.keys(item).forEach(key => {
       if (!CANONICAL_ITEM_KEYS.has(key) && !KNOWN_LEGACY_ITEM_KEYS.has(key)) {
-        unknownFields.add(`Report.Item.${key}`);
+        preserveUnknownField(`checklist_items.${itemId}.${key}`, item[key]);
       }
     });
 
@@ -271,9 +409,15 @@ rawData.forEach((rep, repIdx) => {
   });
 
   // Preserve legacy revision_history as migration metadata
-  const revision_history = rep.revision_history || [];
+  const revision_history = existingMigrationMetadata.legacy_revision_history
+    || rep.revision_history
+    || rep.revisionHistory
+    || [];
   const migration_metadata = {
-    legacy_revision_history: revision_history
+    ...existingMigrationMetadata,
+    legacy_revision_history: revision_history,
+    ...(conclusionMigrationMetadata ? { conclusion_migration: conclusionMigrationMetadata } : {}),
+    ...(Object.keys(recordUnknownFields).length > 0 ? { unknown_fields: recordUnknownFields } : {})
   };
 
   const normalized = {
@@ -282,16 +426,18 @@ rawData.forEach((rep, repIdx) => {
     template_id: rep.template_id || rep.templateId || '',
     form_code: rep.form_code || rep.formCode || '',
     title: rep.title || '',
-    status: rep.status || 'DRAFT',
+    status: reportStatus,
     staff,
     location,
     general_info: rep.general_info || {},
     checklist_items,
-    staff_note: rep.staff_note || '',
+    staff_note: rep.staff_note !== undefined ? rep.staff_note : (rep.staffNote || ''),
     submitted_at: rep.submitted_at || rep.submittedAt || null,
     admin_review,
-    general_photos: rep.general_photos || [],
-    revision_number: rep.revision_number !== undefined ? rep.revision_number : 1,
+    general_photos: rep.general_photos !== undefined ? rep.general_photos : (rep.generalPhotos || []),
+    revision_number: rep.revision_number !== undefined
+      ? rep.revision_number
+      : (rep.revisionNumber !== undefined ? rep.revisionNumber : 1),
     migration_metadata
   };
 
@@ -306,6 +452,22 @@ rawData.forEach((rep, repIdx) => {
   if (rep.submittedAt !== undefined) {
     warningCount++;
     warnings.push(`[Report: ${repId}] Using legacy property alias "submittedAt"`);
+  }
+  if (rep.staffNote !== undefined) {
+    warningCount++;
+    warnings.push(`[Report: ${repId}] Using legacy property alias "staffNote"`);
+  }
+  if (rep.generalPhotos !== undefined) {
+    warningCount++;
+    warnings.push(`[Report: ${repId}] Using legacy property alias "generalPhotos"`);
+  }
+  if (rep.revisionNumber !== undefined) {
+    warningCount++;
+    warnings.push(`[Report: ${repId}] Using legacy property alias "revisionNumber"`);
+  }
+  if (rep.revisionHistory !== undefined) {
+    warningCount++;
+    warnings.push(`[Report: ${repId}] Using legacy property alias "revisionHistory"`);
   }
 
   // Zod validation
@@ -323,11 +485,19 @@ rawData.forEach((rep, repIdx) => {
 console.log('--- Report Normalization Summary ---');
 console.log(`Total records read: ${rawData.length}`);
 console.log(`Normalized records: ${normalizedReports.length}`);
+console.log(`Quarantined records: ${quarantinedReports.length}`);
 console.log(`Warnings generated: ${warningCount}`);
 console.log(`Errors encountered: ${errorCount}`);
 
+if (quarantinedReports.length > 0) {
+  console.log('Quarantined record details:');
+  quarantinedReports.forEach(entry => {
+    console.log(` - ${entry.record.id}: ${entry.reason} [${entry.disposition}]`);
+  });
+}
+
 if (unknownFields.size > 0) {
-  console.log('Unknown fields detected (will be skipped):');
+  console.log('Unknown fields detected (preserved in migration_metadata.unknown_fields):');
   unknownFields.forEach(f => console.log(` - ${f}`));
 }
 
@@ -343,23 +513,34 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-// Atomic output write
-const tempPath = `${outputPath}.${Date.now()}.tmp`;
+// Atomic output writes
+const outputTargets = [
+  { outputPath, data: normalizedReports, label: 'normalized reports' },
+  ...(quarantineManifestPath
+    ? [{ outputPath: quarantineOutputPath, data: quarantinedReports, label: 'quarantined reports' }]
+    : [])
+];
+const tempTargets = outputTargets.map((target, index) => ({
+  ...target,
+  tempPath: `${target.outputPath}.${Date.now()}.${index}.tmp`
+}));
 try {
-  const dir = path.dirname(outputPath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  fs.writeFileSync(tempPath, JSON.stringify(normalizedReports, null, 2), 'utf8');
-  fs.renameSync(tempPath, outputPath);
-  console.log(`\nSuccessfully wrote normalized reports to ${outputPath}`);
+  tempTargets.forEach(target => {
+    const dir = path.dirname(target.outputPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(target.tempPath, JSON.stringify(target.data, null, 2), 'utf8');
+  });
+  tempTargets.forEach(target => fs.renameSync(target.tempPath, target.outputPath));
+  tempTargets.forEach(target => console.log(`\nSuccessfully wrote ${target.label} to ${target.outputPath}`));
   process.exit(0);
 } catch (e) {
-  try {
-    if (fs.existsSync(tempPath)) {
-      fs.unlinkSync(tempPath);
-    }
-  } catch (_) {}
-  console.error(`\nFailed to write normalized output file: ${e.message}`);
+  tempTargets.forEach(target => {
+    try {
+      if (fs.existsSync(target.tempPath)) fs.unlinkSync(target.tempPath);
+    } catch (_) {}
+  });
+  console.error(`\nFailed to write migration output file: ${e.message}`);
   process.exit(1);
 }

@@ -28,13 +28,21 @@ const reportChecklistItemSchema = z.object({
 
 const adminReviewSchema = z.object({
   admin_note: z.string().nullable().optional().default(""),
-  conclusion: z.enum(["PASSED", "NOT_PASSED"]).nullable().optional().default(null),
+  conclusion: z.enum(["PASSED", "NOT_PASSED", "FAILED", "NEEDS_FOLLOW_UP"]).nullable().optional().default(null),
   reviewed_at: isoDateSchema.nullable().optional(),
   reviewed_by: z.string().nullable().optional().default(null)
 }).nullable().optional();
 
+const conclusionMigrationSchema = z.object({
+  original_value: z.string().nullable(),
+  canonical_value: z.enum(["PASSED", "NOT_PASSED", "FAILED", "NEEDS_FOLLOW_UP"]).nullable(),
+  reason: z.literal("UNFINISHED_REPORT"),
+  source_status: z.enum(["DRAFT", "SUBMITTED", "NEEDS_FOLLOW_UP", "APPROVED"])
+}).optional();
+
 const migrationMetadataSchema = z.object({
   legacy_revision_history: z.array(z.any()).optional(),
+  conclusion_migration: conclusionMigrationSchema,
   unknown_fields: z.record(z.any()).optional()
 }).nullable().optional();
 
@@ -55,6 +63,17 @@ const reportSchema = z.object({
   general_photos: z.array(z.string()).default([]),
   revision_number: z.number().int().default(1),
   migration_metadata: migrationMetadataSchema
+}).superRefine((report, ctx) => {
+  const conclusion = report.admin_review?.conclusion ?? null;
+  const requiresFinalConclusion = ['SUBMITTED', 'NEEDS_FOLLOW_UP', 'APPROVED'].includes(report.status);
+
+  if (requiresFinalConclusion && conclusion === null) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['admin_review', 'conclusion'],
+      message: `Report status ${report.status} requires an explicit final conclusion; manual resolution is required`
+    });
+  }
 });
 
 module.exports = {
@@ -62,6 +81,7 @@ module.exports = {
   locationSchema,
   reportChecklistItemSchema,
   adminReviewSchema,
+  conclusionMigrationSchema,
   migrationMetadataSchema,
   reportSchema
 };

@@ -8,6 +8,11 @@ const validationRuleSchema = z.object({
   exact_value: z.any().nullable().optional()
 }).nullable().optional();
 
+const checklistItemMigrationMetadataSchema = z.object({
+  original_id: z.string().optional(),
+  duplicate_id_occurrence: z.number().int().min(2).optional()
+}).optional();
+
 const checklistItemSchema = z.object({
   id: z.string(),
   parameter_name: z.string(),
@@ -20,10 +25,13 @@ const checklistItemSchema = z.object({
   is_critical: z.boolean().default(false),
   position: z.number().int().default(0),
   choices: z.array(z.string()).nullable().optional().default([]),
-  validation_rule: validationRuleSchema
+  category: z.string().nullable().optional().default(""),
+  validation_rule: validationRuleSchema,
+  migration_metadata: checklistItemMigrationMetadataSchema
 });
 
 const migrationMetadataSchema = z.object({
+  legacy_workflow_status: z.string().optional(),
   unknown_fields: z.record(z.any()).optional()
 }).nullable().optional();
 
@@ -37,6 +45,7 @@ const templateSchema = z.object({
   segment: z.string().nullable().optional().default("construction"),
   standard_code: z.string().nullable().optional().default(""),
   is_active: z.boolean().default(true),
+  workflow_status: z.enum(["IN_PROGRESS", "COMPLETED"]).optional(),
   version: z.number().int().default(1),
   created_at: isoDateSchema,
   updated_at: isoDateSchema,
@@ -46,6 +55,7 @@ const templateSchema = z.object({
 
 module.exports = {
   validationRuleSchema,
+  checklistItemMigrationMetadataSchema,
   checklistItemSchema,
   migrationMetadataSchema,
   templateSchema

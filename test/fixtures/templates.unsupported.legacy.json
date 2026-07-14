@@ -1,0 +1,10 @@
+[
+  {
+    "id": "unsupported-input-type",
+    "type": "MATERIAL",
+    "name": "Unsupported input type regression",
+    "checklistItems": [
+      { "id": "unsupported-slider", "name": "Slider", "inputType": "slider" }
+    ]
+  }
+]

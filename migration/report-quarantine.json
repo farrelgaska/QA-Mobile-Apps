@@ -1,0 +1,7 @@
+[
+  {
+    "id": "QC-TEST-999",
+    "reason": "Dummy E2E report is marked APPROVED but has no admin review, no conclusion, and no checklist items; it cannot satisfy the production report contract.",
+    "disposition": "EXCLUDE_FROM_PRODUCTION_MIGRATION"
+  }
+]

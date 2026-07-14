@@ -1,4 +1,4 @@
-const { templateSchema } = require('../src/contracts/template.contract');
+  const { templateSchema } = require('../src/contracts/template.contract');
 const { reportSchema } = require('../src/contracts/report.contract');
 
 console.log('Validating Zod contract schemas...');

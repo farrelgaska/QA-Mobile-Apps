@@ -19,6 +19,7 @@
         "required": true,
         "requiredPhoto": true,
         "isCritical": true,
+        "choices": ["PASS", "FAIL"],
         "position": 1
       },
       {

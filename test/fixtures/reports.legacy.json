@@ -34,7 +34,7 @@
         "truly_unknown_field_4": "value4"
       }
     ],
-    "staff_note": "Legacy report testing",
+    "staffNote": "Legacy report testing",
     "submittedAt": "2026-07-09T08:30:00Z",
     "adminReview": {
       "adminNote": "Passed review",
@@ -42,9 +42,9 @@
       "reviewedAt": "2026-07-09T09:30:00Z",
       "reviewedBy": "Supervisor John"
     },
-    "general_photos": [],
-    "revision_number": 1,
-    "revision_history": [
+    "generalPhotos": ["report-overview.jpg"],
+    "revisionNumber": 1,
+    "revisionHistory": [
       { "rev": 1, "note": "initial draft" }
     ]
   }

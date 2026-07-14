@@ -1,0 +1,40 @@
+[
+  {
+    "id": "draft-incomplete",
+    "type": "MATERIAL",
+    "title": "Draft incomplete report",
+    "status": "DRAFT",
+    "checklist_items": [
+      {
+        "id": "draft-item",
+        "parameter_name": "Required value",
+        "input_type": "text",
+        "actual_value": "",
+        "admin_evaluation": "NEEDS_REVIEW"
+      }
+    ],
+    "admin_review": {
+      "conclusion": "  Belum   Lengkap  "
+    }
+  },
+  {
+    "id": "approved-failed-conclusion",
+    "type": "WORK",
+    "title": "Approved report with failed conclusion",
+    "status": "APPROVED",
+    "checklist_items": [],
+    "admin_review": {
+      "conclusion": "FAILED"
+    }
+  },
+  {
+    "id": "approved-follow-up-conclusion",
+    "type": "WORK",
+    "title": "Approved report with follow-up conclusion",
+    "status": "APPROVED",
+    "checklist_items": [],
+    "admin_review": {
+      "conclusion": "NEEDS_FOLLOW_UP"
+    }
+  }
+]
