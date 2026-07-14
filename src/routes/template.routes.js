@@ -7,6 +7,7 @@ router.get('/', templateController.getTemplates);
 router.get('/:id', templateController.getTemplateById);
 router.post('/', reportController.validateObjectBody, templateController.createTemplate);
 router.patch('/:id', reportController.validateObjectBody, templateController.patchTemplate);
+router.delete('/:id', templateController.deleteTemplate);
 router.delete('/:templateId/items/:itemId', templateController.deleteTemplateItem);
 
 module.exports = router;

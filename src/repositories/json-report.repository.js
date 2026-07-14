@@ -81,6 +81,18 @@ class JsonReportRepository {
     this._write(reports);
     return updated;
   }
+
+  delete(id) {
+    const reports = this._read();
+    const index = reports.findIndex(report => report.id === id);
+    if (index === -1) {
+      const err = new Error(`Report with ID ${id} not found`);
+      err.statusCode = 404;
+      throw err;
+    }
+    reports.splice(index, 1);
+    this._write(reports);
+  }
 }
 
 const repository = new JsonReportRepository();

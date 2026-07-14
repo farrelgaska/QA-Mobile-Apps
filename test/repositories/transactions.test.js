@@ -23,6 +23,24 @@ class FailingPool {
   }
 }
 
+class DeletePool {
+  constructor() {
+    this.commands = [];
+    this.client = {
+      query: async (text, parameters = []) => {
+        this.commands.push(text.trim().split(/\s+/).slice(0, 5).join(' '));
+        if (text.startsWith('delete from public.')) {
+          return { rows: parameters[0].includes('MISSING') ? [] : [{ id: parameters[0] }], rowCount: parameters[0].includes('MISSING') ? 0 : 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+      release: () => {}
+    };
+  }
+
+  async connect() { return this.client; }
+}
+
 test('template aggregate write rolls back when an item write fails', async () => {
   const pool = new FailingPool('insert into public.qc_template_items');
   const repository = new PostgresTemplateRepository(pool);
@@ -66,11 +84,39 @@ test('successful aggregate transaction commits and releases its client', async (
   assert.equal(pool.released, true);
 });
 
+test('PostgreSQL aggregate deletes commit after deleting only the parent row', async () => {
+  const templatePool = new DeletePool();
+  const reportPool = new DeletePool();
+  await new PostgresTemplateRepository(templatePool).delete('MAT-DELETE');
+  await new PostgresReportRepository(reportPool).delete('QC-DELETE');
+  assert.deepEqual(templatePool.commands, [
+    'BEGIN', 'delete from public.qc_templates where id', 'COMMIT'
+  ]);
+  assert.deepEqual(reportPool.commands, [
+    'BEGIN', 'delete from public.qc_reports where id', 'COMMIT'
+  ]);
+});
+
+test('PostgreSQL aggregate deletes roll back and return 404 for missing IDs', async () => {
+  const templatePool = new DeletePool();
+  const reportPool = new DeletePool();
+  await assert.rejects(
+    new PostgresTemplateRepository(templatePool).delete('MAT-MISSING'),
+    error => error.statusCode === 404
+  );
+  await assert.rejects(
+    new PostgresReportRepository(reportPool).delete('QC-MISSING'),
+    error => error.statusCode === 404
+  );
+  assert.equal(templatePool.commands.at(-1), 'ROLLBACK');
+  assert.equal(reportPool.commands.at(-1), 'ROLLBACK');
+});
+
 test('PostgreSQL implementations expose the shared repository methods', () => {
   const pool = new FailingPool('never');
   const templates = new PostgresTemplateRepository(pool);
   const reports = new PostgresReportRepository(pool);
-  for (const method of ['findAll', 'findById', 'create', 'update']) {
+  for (const method of ['findAll', 'findById', 'create', 'update', 'delete']) {
     assert.equal(typeof templates[method], 'function');
     assert.equal(typeof reports[method], 'function');
   }

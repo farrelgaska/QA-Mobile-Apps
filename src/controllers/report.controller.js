@@ -68,10 +68,20 @@ const patchReport = async (req, res, next) => {
   }
 };
 
+const deleteReport = async (req, res, next) => {
+  try {
+    await reportRepository.delete(req.params.id);
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   validateObjectBody,
   getReports,
   getReportById,
   createReport,
-  patchReport
+  patchReport,
+  deleteReport
 };

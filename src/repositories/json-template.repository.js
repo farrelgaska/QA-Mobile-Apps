@@ -82,6 +82,18 @@ class JsonTemplateRepository {
     return updated;
   }
 
+  delete(id) {
+    const templates = this._read();
+    const index = templates.findIndex(template => template.id === id);
+    if (index === -1) {
+      const err = new Error(`Template with ID ${id} not found`);
+      err.statusCode = 404;
+      throw err;
+    }
+    templates.splice(index, 1);
+    this._write(templates);
+  }
+
   deleteChecklistItem(templateId, itemId) {
     const templates = this._read();
     const templateIndex = templates.findIndex(t => t.id === templateId);

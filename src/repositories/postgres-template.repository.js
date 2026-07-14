@@ -155,6 +155,16 @@ class PostgresTemplateRepository {
       return this._findById(client, templateId);
     });
   }
+
+  async delete(id) {
+    return this._transaction(async client => {
+      const result = await client.query(
+        'delete from public.qc_templates where id = $1 returning id',
+        [id]
+      );
+      if (result.rowCount === 0) throw notFound(`Template with ID ${id} not found`);
+    });
+  }
 }
 
 module.exports = { PostgresTemplateRepository };

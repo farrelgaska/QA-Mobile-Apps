@@ -181,6 +181,16 @@ class PostgresReportRepository {
       return this._findById(client, id);
     });
   }
+
+  async delete(id) {
+    return this._transaction(async client => {
+      const result = await client.query(
+        'delete from public.qc_reports where id = $1 returning id',
+        [id]
+      );
+      if (result.rowCount === 0) throw notFound(`Report with ID ${id} not found`);
+    });
+  }
 }
 
 module.exports = { PostgresReportRepository };

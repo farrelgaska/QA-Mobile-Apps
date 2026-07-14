@@ -75,6 +75,15 @@ const patchTemplate = async (req, res, next) => {
   }
 };
 
+const deleteTemplate = async (req, res, next) => {
+  try {
+    await templateRepository.delete(req.params.id);
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+};
+
 const deleteTemplateItem = async (req, res, next) => {
   try {
     const { templateId, itemId } = req.params;
@@ -90,5 +99,6 @@ module.exports = {
   getTemplateById,
   createTemplate,
   patchTemplate,
+  deleteTemplate,
   deleteTemplateItem
 };
