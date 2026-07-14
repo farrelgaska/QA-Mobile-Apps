@@ -18,9 +18,26 @@
     }
   },
   {
+    "id": "submitted-without-admin-review",
+    "type": "MATERIAL",
+    "title": "Submitted report awaiting admin review",
+    "status": "SUBMITTED",
+    "checklist_items": []
+  },
+  {
+    "id": "submitted-incomplete-placeholder",
+    "type": "MATERIAL",
+    "title": "Submitted legacy placeholder awaiting admin review",
+    "status": "SUBMITTED",
+    "checklist_items": [],
+    "admin_review": {
+      "conclusion": "Belum Lengkap"
+    }
+  },
+  {
     "id": "approved-failed-conclusion",
     "type": "WORK",
-    "title": "Approved report with failed conclusion",
+    "title": "Approved report with legacy failed conclusion",
     "status": "APPROVED",
     "checklist_items": [],
     "admin_review": {
@@ -28,10 +45,10 @@
     }
   },
   {
-    "id": "approved-follow-up-conclusion",
+    "id": "needs-follow-up-legacy-conclusion",
     "type": "WORK",
-    "title": "Approved report with follow-up conclusion",
-    "status": "APPROVED",
+    "title": "Follow-up report with legacy follow-up conclusion",
+    "status": "NEEDS_FOLLOW_UP",
     "checklist_items": [],
     "admin_review": {
       "conclusion": "NEEDS_FOLLOW_UP"

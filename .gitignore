@@ -6,3 +6,5 @@ tmp/
 test/.tmp/
 *.normalization.tmp
 test/fixtures/*.canonical.json
+
+supabase/.temp/

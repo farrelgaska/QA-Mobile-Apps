@@ -246,18 +246,14 @@ rawData.forEach((rep, repIdx) => {
         warnings.push(`[Report: ${repId}] Normalizing legacy conclusion ${JSON.stringify(rawConclusion)} to "NOT_PASSED"`);
       }
     } else if (conclusionKey === 'FAILED' || conclusionKey === 'FAIL') {
-      conclusion = 'FAILED';
-      if (rawConclusion !== 'FAILED') {
-        warningCount++;
-        warnings.push(`[Report: ${repId}] Normalizing legacy conclusion ${JSON.stringify(rawConclusion)} to "FAILED"`);
-      }
+      conclusion = 'NOT_PASSED';
+      warningCount++;
+      warnings.push(`[Report: ${repId}] Normalizing legacy conclusion ${JSON.stringify(rawConclusion)} to "NOT_PASSED"`);
     } else if (conclusionKey === 'NEEDS_FOLLOW_UP' || conclusionKey === 'NEED_FOLLOW_UP') {
-      conclusion = 'NEEDS_FOLLOW_UP';
-      if (rawConclusion !== 'NEEDS_FOLLOW_UP') {
-        warningCount++;
-        warnings.push(`[Report: ${repId}] Normalizing legacy conclusion ${JSON.stringify(rawConclusion)} to "NEEDS_FOLLOW_UP"`);
-      }
-    } else if (conclusionKey === 'BELUM LENGKAP' && reportStatus === 'DRAFT') {
+      conclusion = 'NOT_PASSED';
+      warningCount++;
+      warnings.push(`[Report: ${repId}] Normalizing legacy conclusion ${JSON.stringify(rawConclusion)} to "NOT_PASSED"`);
+    } else if (conclusionKey === 'BELUM LENGKAP' && ['DRAFT', 'SUBMITTED'].includes(reportStatus)) {
       conclusionMigrationMetadata = {
         original_value: String(rawConclusion),
         canonical_value: null,
@@ -265,7 +261,7 @@ rawData.forEach((rep, repIdx) => {
         source_status: reportStatus
       };
       warningCount++;
-      warnings.push(`[Report: ${repId}] Preserving unfinished legacy conclusion ${JSON.stringify(rawConclusion)} as null for DRAFT report`);
+      warnings.push(`[Report: ${repId}] Preserving unfinished legacy conclusion ${JSON.stringify(rawConclusion)} as null for ${reportStatus} report`);
     } else if (rawConclusion !== undefined && rawConclusion !== null) {
       errorCount++;
       errors.push(`[Report: ${repId}] Unsupported conclusion ${JSON.stringify(rawConclusion)} for report status ${reportStatus}; refusing to map it to null`);
@@ -284,7 +280,7 @@ rawData.forEach((rep, repIdx) => {
     }
   }
 
-  const requiresFinalConclusion = ['SUBMITTED', 'NEEDS_FOLLOW_UP', 'APPROVED'].includes(reportStatus);
+  const requiresFinalConclusion = ['NEEDS_FOLLOW_UP', 'APPROVED'].includes(reportStatus);
   if (requiresFinalConclusion && (!admin_review || admin_review.conclusion === null)) {
     const rawReview = rep.admin_review || rep.adminReview;
     const diagnostic = {

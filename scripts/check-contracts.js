@@ -1,4 +1,5 @@
-  const { templateSchema } = require('../src/contracts/template.contract');
+const assert = require('assert');
+const { templateSchema } = require('../src/contracts/template.contract');
 const { reportSchema } = require('../src/contracts/report.contract');
 
 console.log('Validating Zod contract schemas...');
@@ -102,6 +103,37 @@ try {
   console.error('[FAIL] reportSchema failed to parse mockReport:', e.message);
   process.exit(1);
 }
+
+const submittedWithoutReview = {
+  ...mockReport,
+  id: 'QC-REP-SUBMITTED-WITHOUT-REVIEW',
+  status: 'SUBMITTED',
+  admin_review: null
+};
+assert.strictEqual(reportSchema.safeParse(submittedWithoutReview).success, true);
+
+for (const status of ['APPROVED', 'NEEDS_FOLLOW_UP']) {
+  const missingConclusion = {
+    ...mockReport,
+    id: `QC-REP-${status}-WITHOUT-CONCLUSION`,
+    status,
+    admin_review: null
+  };
+  assert.strictEqual(
+    reportSchema.safeParse(missingConclusion).success,
+    false,
+    `${status} without a conclusion must fail contract validation`
+  );
+}
+
+const approvedNotPassed = {
+  ...mockReport,
+  id: 'QC-REP-APPROVED-NOT-PASSED',
+  status: 'APPROVED',
+  admin_review: { ...mockReport.admin_review, conclusion: 'NOT_PASSED' }
+};
+assert.strictEqual(reportSchema.safeParse(approvedNotPassed).success, true);
+console.log('[PASS] Report lifecycle matrix accepts waiting review and rejects missing final conclusions.');
 
 console.log('All Zod contracts check passed successfully!');
 process.exit(0);

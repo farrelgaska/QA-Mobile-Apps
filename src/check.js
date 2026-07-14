@@ -142,8 +142,9 @@ try {
   assert.match(invalidFinalLogs, /refusing to map it to null/);
   assert.match(invalidFinalLogs, /manual resolution required/);
   assert.match(invalidFinalLogs, /\[Report: approved-missing-conclusion\]/);
+  assert.match(invalidFinalLogs, /\[Report: follow-up-missing-conclusion\]/);
   assert.strictEqual(fs.existsSync(invalidFinalOutput), false, 'Invalid final reports produced canonical output');
-  console.log('   [OK] Final report statuses require valid final conclusions.');
+  console.log('   [OK] SUBMITTED may await review; APPROVED and NEEDS_FOLLOW_UP require conclusions.');
 
   console.log(' - Running explicit report quarantine regressions...');
   const unquarantinedOutput = path.join(normalizationTempDir, 'reports.unquarantined.canonical.json');
@@ -230,7 +231,13 @@ try {
   const [inputTypeTemplate, completedWorkflowTemplate] = JSON.parse(fs.readFileSync(canonicalInputTypeTemplates, 'utf8'));
   const [inputTypeSource] = JSON.parse(fs.readFileSync(legacyInputTypeTemplates, 'utf8'));
   const [report] = JSON.parse(fs.readFileSync(canonicalReports, 'utf8'));
-  const [draftIncompleteReport, approvedFailedReport, approvedFollowUpReport] = JSON.parse(fs.readFileSync(canonicalUnfinishedReports, 'utf8'));
+  const [
+    draftIncompleteReport,
+    submittedWithoutReviewReport,
+    submittedPlaceholderReport,
+    approvedFailedReport,
+    needsFollowUpLegacyReport
+  ] = JSON.parse(fs.readFileSync(canonicalUnfinishedReports, 'utf8'));
   const firstTemplateItem = template.checklist_items.find(item => item.id === 'item-legacy-1');
   const secondTemplateItem = template.checklist_items.find(item => item.id === 'item-legacy-2');
   const firstReportItem = report.checklist_items.find(item => item.id === 'item-legacy-1');
@@ -283,10 +290,15 @@ try {
     reason: 'UNFINISHED_REPORT',
     source_status: 'DRAFT'
   });
+  assert.strictEqual(submittedWithoutReviewReport.status, 'SUBMITTED');
+  assert.strictEqual(submittedWithoutReviewReport.admin_review, null);
+  assert.strictEqual(submittedPlaceholderReport.status, 'SUBMITTED');
+  assert.strictEqual(submittedPlaceholderReport.admin_review.conclusion, null);
+  assert.strictEqual(submittedPlaceholderReport.migration_metadata.conclusion_migration.source_status, 'SUBMITTED');
   assert.strictEqual(approvedFailedReport.status, 'APPROVED');
-  assert.strictEqual(approvedFailedReport.admin_review.conclusion, 'FAILED');
-  assert.strictEqual(approvedFollowUpReport.status, 'APPROVED');
-  assert.strictEqual(approvedFollowUpReport.admin_review.conclusion, 'NEEDS_FOLLOW_UP');
+  assert.strictEqual(approvedFailedReport.admin_review.conclusion, 'NOT_PASSED');
+  assert.strictEqual(needsFollowUpLegacyReport.status, 'NEEDS_FOLLOW_UP');
+  assert.strictEqual(needsFollowUpLegacyReport.admin_review.conclusion, 'NOT_PASSED');
 
   assert.deepStrictEqual(report.location, {
     site_id: 'site-1',
