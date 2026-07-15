@@ -4,6 +4,7 @@ const { CORS_ORIGINS } = require('./config/env');
 const healthRoutes = require('./routes/health.routes');
 const reportRoutes = require('./routes/report.routes');
 const templateRoutes = require('./routes/template.routes');
+const uploadRoutes = require('./routes/upload.routes');
 const notFoundMiddleware = require('./middleware/not-found');
 const errorHandlerMiddleware = require('./middleware/error-handler');
 
@@ -32,6 +33,7 @@ app.get('/', (req, res) => {
 app.use('/health', healthRoutes);
 app.use('/reports', reportRoutes);
 app.use('/templates', templateRoutes);
+app.use('/uploads', uploadRoutes);
 
 // Fallbacks
 app.use(notFoundMiddleware);

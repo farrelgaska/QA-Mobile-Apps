@@ -28,6 +28,28 @@ test('STORAGE_PROVIDER is reserved for supported object storage providers', () =
   assert.throws(() => parseEnvironment({ STORAGE_PROVIDER: 'postgres' }), /supabase.*s3.*gcs/);
 });
 
+test('Supabase Storage provider requires both backend credentials', () => {
+  assert.throws(
+    () => parseEnvironment({ STORAGE_PROVIDER: 'supabase' }),
+    /required when STORAGE_PROVIDER=supabase/
+  );
+  assert.throws(
+    () => parseEnvironment({
+      STORAGE_PROVIDER: 'supabase',
+      SUPABASE_URL: 'https://example.supabase.co'
+    }),
+    /required when STORAGE_PROVIDER=supabase/
+  );
+  const config = parseEnvironment({
+    STORAGE_PROVIDER: 'supabase',
+    SUPABASE_URL: 'https://example.supabase.co',
+    SUPABASE_SERVICE_ROLE_KEY: 'placeholder'
+  });
+  assert.equal(config.STORAGE_PROVIDER, 'supabase');
+  assert.equal(config.SUPABASE_URL, 'https://example.supabase.co');
+  assert.equal(config.SUPABASE_SERVICE_ROLE_KEY, 'placeholder');
+});
+
 test('pool manager creates one shared pool and attaches it once on Vercel', () => {
   const sharedPool = { query: async () => ({ rows: [{ '?column?': 1 }] }) };
   let created = 0;

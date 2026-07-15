@@ -35,6 +35,14 @@ const parseEnvironment = (environment) => {
     throw new Error('DATABASE_URL is required when DATA_PROVIDER=postgres');
   }
 
+  const supabaseUrl = environment.SUPABASE_URL?.trim() || null;
+  const supabaseServiceRoleKey = environment.SUPABASE_SERVICE_ROLE_KEY?.trim() || null;
+  if (storageProvider === 'supabase' && (!supabaseUrl || !supabaseServiceRoleKey)) {
+    throw new Error(
+      'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required when STORAGE_PROVIDER=supabase'
+    );
+  }
+
   return {
     PORT: parseInteger('PORT', environment.PORT, 3002, { max: 65535 }),
     CORS_ORIGINS: environment.CORS_ORIGINS
@@ -42,6 +50,8 @@ const parseEnvironment = (environment) => {
       : ['http://localhost:5173', 'http://localhost:3000'],
     DATA_PROVIDER: dataProvider,
     STORAGE_PROVIDER: storageProvider,
+    SUPABASE_URL: supabaseUrl,
+    SUPABASE_SERVICE_ROLE_KEY: supabaseServiceRoleKey,
     DATABASE_URL: databaseUrl,
     DATABASE_POOL_MAX: parseInteger('DATABASE_POOL_MAX', environment.DATABASE_POOL_MAX, 2, { max: 20 }),
     VERCEL: environment.VERCEL === '1' || environment.VERCEL === 'true',
