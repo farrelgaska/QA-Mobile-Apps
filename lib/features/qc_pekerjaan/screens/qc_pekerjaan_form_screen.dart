@@ -1,6 +1,8 @@
 // Refactored QC Pekerjaan Form using Provider
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
@@ -20,20 +22,17 @@ class QCPekerjaanFormScreen extends StatelessWidget {
   final bool isRevision;
 
   const QCPekerjaanFormScreen({
-    Key? key,
+    super.key,
     required this.pekerjaanId,
     this.editReportId,
     this.isRevision = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => QCPekerjaanFormProvider()..init(
-        pekerjaanId,
-        editReportId: editReportId,
-        isRevision: isRevision,
-      ),
+      create: (_) => QCPekerjaanFormProvider()
+        ..init(pekerjaanId, editReportId: editReportId, isRevision: isRevision),
       child: Consumer<QCPekerjaanFormProvider>(
         builder: (context, provider, _) {
           if (!provider.isReady) {
@@ -49,7 +48,9 @@ class QCPekerjaanFormScreen extends StatelessWidget {
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 20.0, vertical: 16.0),
+                  horizontal: 20.0,
+                  vertical: 16.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -59,7 +60,7 @@ class QCPekerjaanFormScreen extends StatelessWidget {
                     ),
                     _buildDetailCard(provider),
                     const SizedBox(height: 24),
-                    _buildChecklistSection(provider),
+                    _buildChecklistSection(context, provider),
                     _buildStaffNoteCard(provider),
                     const SizedBox(height: 28),
                     _buildActionButtons(context, provider),
@@ -81,8 +82,7 @@ class QCPekerjaanFormScreen extends StatelessWidget {
         children: [
           AppInput(
             label: 'Lokasi Site (Aktif)',
-            controller: TextEditingController(
-                text: p.state.currentSite.name),
+            controller: TextEditingController(text: p.state.currentSite.name),
             prefixIcon: Icons.location_on_outlined,
           ),
           const SizedBox(height: 16),
@@ -111,16 +111,22 @@ class QCPekerjaanFormScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildChecklistSection(QCPekerjaanFormProvider p) {
+  Widget _buildChecklistSection(
+    BuildContext context,
+    QCPekerjaanFormProvider p,
+  ) {
     final items = p.pekerjaan.checklistItems as List;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Parameter Checklist Pekerjaan',
-            style: TextStyle(
-                color: AppColors.textMain,
-                fontWeight: FontWeight.bold,
-                fontSize: 16)),
+        const Text(
+          'Parameter Checklist Pekerjaan',
+          style: TextStyle(
+            color: AppColors.textMain,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
         const SizedBox(height: 12),
         ...List.generate(items.length, (index) {
           final item = items[index];
@@ -140,13 +146,16 @@ class QCPekerjaanFormScreen extends StatelessWidget {
           QCResultStatus qcStatus;
           switch (p.itemStatuses[index]) {
             case ChecklistStatus.inputTidakValid:
-              qcStatus = QCResultStatus.notFilled; // show as not filled to allow correction
+              qcStatus = QCResultStatus
+                  .notFilled; // show as not filled to allow correction
               break;
             case ChecklistStatus.perluDilengkapi:
-              qcStatus = QCResultStatus.notFilled; // incomplete, show as not filled
+              qcStatus =
+                  QCResultStatus.notFilled; // incomplete, show as not filled
               break;
             case ChecklistStatus.sudahDiisi:
-              qcStatus = QCResultStatus.notFilled; // filled but Admin evaluates PASS/FAIL
+              qcStatus = QCResultStatus
+                  .notFilled; // filled but Admin evaluates PASS/FAIL
               break;
             default:
               qcStatus = QCResultStatus.notFilled;
@@ -165,15 +174,19 @@ class QCPekerjaanFormScreen extends StatelessWidget {
                 resultValue: p.itemResults[index],
                 issueDescription: p.itemIssues[index],
                 photos: p.itemPhotos[index],
+                localPhotos: p.pendingItemPhotos[index],
                 warningMessage: p.itemWarnings[index],
                 isLocked: false,
                 onStatusChanged: (status) => p.updateStatus(index, status),
                 onResultValueChanged: (val) => p.updateResult(index, val),
-                onIssueDescriptionChanged: (val) => p.updateIssueNote(index, val),
-                onAddPhoto: () => p.addPhoto(index),
+                onIssueDescriptionChanged: (val) =>
+                    p.updateIssueNote(index, val),
+                onAddPhoto: () => _showPhotoSourceOptions(context, p, index),
                 onDeletePhoto: (pIdx) => p.removePhoto(index, pIdx),
               ),
-              if (p.isRevisionMode && p.itemAdminNotes[index] != null && p.itemAdminNotes[index]!.isNotEmpty) ...[
+              if (p.isRevisionMode &&
+                  p.itemAdminNotes[index] != null &&
+                  p.itemAdminNotes[index]!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Container(
                   width: double.infinity,
@@ -182,14 +195,21 @@ class QCPekerjaanFormScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.rejectedBg,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.rejectedText, width: 0.5),
+                    border: Border.all(
+                      color: AppColors.rejectedText,
+                      width: 0.5,
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.info_outline, color: AppColors.rejectedText, size: 14),
+                          const Icon(
+                            Icons.info_outline,
+                            color: AppColors.rejectedText,
+                            size: 14,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             'Catatan Perbaikan Admin (Item ${index + 1}):',
@@ -222,6 +242,67 @@ class QCPekerjaanFormScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _showPhotoSourceOptions(
+    BuildContext context,
+    QCPekerjaanFormProvider provider,
+    int itemIndex,
+  ) async {
+    if (provider.isPersisting) return;
+    if (provider.photoCount(itemIndex) >=
+        QCPekerjaanFormProvider.maxPhotosPerItem) {
+      AppSnackbar.warning(
+        context,
+        'Maksimal ${QCPekerjaanFormProvider.maxPhotosPerItem} foto untuk setiap checklist.',
+      );
+      return;
+    }
+
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      useSafeArea: true,
+      builder: (sheetContext) => Wrap(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.camera_alt_outlined),
+            title: const Text('Take Photo'),
+            onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined),
+            title: const Text('Choose from Gallery'),
+            onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+          ),
+        ],
+      ),
+    );
+
+    if (source == null || !context.mounted) return;
+
+    try {
+      final result = await provider.addPhoto(itemIndex, source);
+      if (!context.mounted || result == PhotoAddResult.cancelled) return;
+      if (result == PhotoAddResult.limitReached) {
+        AppSnackbar.warning(
+          context,
+          'Maksimal ${QCPekerjaanFormProvider.maxPhotosPerItem} foto untuk setiap checklist.',
+        );
+      }
+    } on PlatformException {
+      if (!context.mounted) return;
+      final sourceName = source == ImageSource.camera ? 'kamera' : 'galeri';
+      AppSnackbar.error(
+        context,
+        'Tidak dapat mengakses $sourceName. Periksa izin aplikasi lalu coba lagi.',
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      AppSnackbar.error(
+        context,
+        'Foto tidak dapat dipilih. Silakan coba lagi.',
+      );
+    }
+  }
+
   Widget _buildStaffNoteCard(QCPekerjaanFormProvider p) {
     return AppCard(
       padding: const EdgeInsets.all(20),
@@ -243,15 +324,24 @@ class QCPekerjaanFormScreen extends StatelessWidget {
             child: AppButton(
               text: 'Simpan Draft',
               variant: AppButtonVariant.secondary,
-              onPressed: () {
-                if (!p.hasAnyDraftContent) {
-                  AppSnackbar.warning(context, 'Isi minimal satu data pemeriksaan sebelum menyimpan draft.');
-                  return;
-                }
-                p.persistReport(QCReportStatus.DRAFT);
-                AppSnackbar.success(context, 'Draft berhasil disimpan');
-                context.pop();
-              },
+              isLoading: p.isPersisting,
+              onPressed: p.isPersisting
+                  ? null
+                  : () async {
+                      if (!p.hasAnyDraftContent) {
+                        AppSnackbar.warning(
+                          context,
+                          'Isi minimal satu data pemeriksaan sebelum menyimpan draft.',
+                        );
+                        return;
+                      }
+                      await _persistAndExit(
+                        context,
+                        p,
+                        QCReportStatus.DRAFT,
+                        'Draft berhasil disimpan',
+                      );
+                    },
             ),
           ),
           const SizedBox(width: 12),
@@ -261,31 +351,60 @@ class QCPekerjaanFormScreen extends StatelessWidget {
           child: AppButton(
             text: p.isRevisionMode ? 'Kirim Ulang' : 'Submit Laporan',
             variant: AppButtonVariant.primary,
-            onPressed: () {
-              final err = p.validateForm();
-              if (err != null) {
-                AppSnackbar.error(context, err);
-                return;
-              }
-              showDialog(
-                context: context,
-                builder: (c) => ConfirmationModal(
-                  title: p.isRevisionMode ? 'Kirim Ulang Laporan' : 'Submit Laporan QC',
-                  message: p.isRevisionMode
-                      ? 'Apakah perbaikan data inspeksi sudah lengkap dan siap dikirim ulang?'
-                      : 'Apakah seluruh data inspeksi pekerjaan konstruksi sudah lengkap dan siap dikirim?',
-                  confirmText: p.isRevisionMode ? 'Kirim Ulang' : 'Kirim',
-                  onConfirm: () {
-                    p.persistReport(QCReportStatus.SUBMITTED);
-                    Navigator.pop(c);
-                    context.pop();
+            isLoading: p.isPersisting,
+            onPressed: p.isPersisting
+                ? null
+                : () {
+                    final err = p.validateForm();
+                    if (err != null) {
+                      AppSnackbar.error(context, err);
+                      return;
+                    }
+                    showDialog(
+                      context: context,
+                      builder: (c) => ConfirmationModal(
+                        title: p.isRevisionMode
+                            ? 'Kirim Ulang Laporan'
+                            : 'Submit Laporan QC',
+                        message: p.isRevisionMode
+                            ? 'Apakah perbaikan data inspeksi sudah lengkap dan siap dikirim ulang?'
+                            : 'Apakah seluruh data inspeksi pekerjaan konstruksi sudah lengkap dan siap dikirim?',
+                        confirmText: p.isRevisionMode ? 'Kirim Ulang' : 'Kirim',
+                        onConfirm: () async {
+                          if (p.isPersisting) return;
+                          Navigator.pop(c);
+                          await _persistAndExit(
+                            context,
+                            p,
+                            QCReportStatus.SUBMITTED,
+                            p.isRevisionMode
+                                ? 'Laporan berhasil dikirim ulang'
+                                : 'Laporan berhasil dikirim',
+                          );
+                        },
+                      ),
+                    );
                   },
-                ),
-              );
-            },
           ),
         ),
       ],
     );
+  }
+
+  Future<void> _persistAndExit(
+    BuildContext context,
+    QCPekerjaanFormProvider provider,
+    QCReportStatus status,
+    String successMessage,
+  ) async {
+    try {
+      await provider.persistReport(status);
+      if (!context.mounted) return;
+      AppSnackbar.success(context, successMessage);
+      context.pop();
+    } on ReportPersistenceException catch (error) {
+      if (!context.mounted) return;
+      AppSnackbar.error(context, error.message);
+    }
   }
 }

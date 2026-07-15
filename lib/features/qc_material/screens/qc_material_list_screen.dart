@@ -10,7 +10,7 @@ import '../../../shared/widgets/search_bar_field.dart';
 import '../../../shared/widgets/status_badge.dart';
 
 class QCMaterialListScreen extends StatefulWidget {
-  const QCMaterialListScreen({Key? key}) : super(key: key);
+  const QCMaterialListScreen({super.key});
 
   @override
   State<QCMaterialListScreen> createState() => _QCMaterialListScreenState();
@@ -31,49 +31,119 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
   /// Converts a raw API template JSON map to a [QCMaterialTemplate].
   /// Returns null if the required fields are missing.
   QCMaterialTemplate _mapApiTemplate(Map<String, dynamic> json) {
-    final checklistItems = (json['checklistItems'] as List<dynamic>? ?? [])
-        .map<QCChecklistItem>((item) {
-      final inputTypeStr = (item['input_type'] as String? ?? 'choice').toLowerCase();
-      final QCInputType inputType;
-      if (inputTypeStr == 'number') {
-        inputType = QCInputType.number;
-      } else if (inputTypeStr == 'text') {
-        inputType = QCInputType.text;
-      } else {
-        inputType = QCInputType.choice;
-      }
+    final checklistItems =
+        ((json['checklist_items'] ?? json['checklistItems'])
+                    as List<dynamic>? ??
+                [])
+            .map<QCChecklistItem>((item) {
+              final inputTypeStr =
+                  ((item['input_type'] ?? item['inputType']) as String? ??
+                          'choice')
+                      .toLowerCase();
+              final QCInputType inputType;
+              if (inputTypeStr == 'number') {
+                inputType = QCInputType.number;
+              } else if (inputTypeStr == 'text') {
+                inputType = QCInputType.text;
+              } else if (inputTypeStr == 'boolean' ||
+                  inputTypeStr == 'booleancheck') {
+                inputType = QCInputType.booleanCheck;
+              } else {
+                inputType = QCInputType.choice;
+              }
 
-      final standardText = item['standard_text'] as String? ?? '';
-      final unit = (item['unit'] as String?)?.isNotEmpty == true ? item['unit'] as String : null;
+              final standardText =
+                  (item['standard_text'] ?? item['standardText']) as String? ??
+                  '';
+              final unit = (item['unit'] as String?)?.isNotEmpty == true
+                  ? item['unit'] as String
+                  : null;
+              final rawValidationRule =
+                  (item['validation_rule'] ?? item['validationRule'])
+                      as Map<String, dynamic>?;
 
-      QCValidationRule? validationRule;
-      if (inputType == QCInputType.number && unit != null) {
-        validationRule = QCValidationRule(
-          type: QCValidationType.min,
-          minValue: 0,
-        );
-      }
+              QCValidationRule? validationRule;
+              final validationType = _parseValidationType(
+                rawValidationRule?['type'],
+              );
+              if (validationType != null) {
+                validationRule = QCValidationRule(
+                  type: validationType,
+                  minValue: _parseNumericValue(
+                    rawValidationRule?['min_value'] ??
+                        rawValidationRule?['minValue'],
+                  ),
+                  maxValue: _parseNumericValue(
+                    rawValidationRule?['max_value'] ??
+                        rawValidationRule?['maxValue'],
+                  ),
+                  exactValue: _parseNumericValue(
+                    rawValidationRule?['exact_value'] ??
+                        rawValidationRule?['exactValue'],
+                  ),
+                );
+              }
 
-      return QCChecklistItem(
-        id: item['id'] as String? ?? '',
-        label: item['parameter_name'] as String? ?? '',
-        category: 'Parameter',
-        inputType: inputType,
-        unit: unit,
-        standardText: standardText,
-        validationRule: validationRule,
-        required: item['is_required'] as bool? ?? true,
-        requiredPhoto: false,
-      );
-    }).toList();
+              final rawChoices = item['choices'];
+              final choices = rawChoices is List
+                  ? rawChoices.whereType<String>().toList()
+                  : <String>[];
+
+              return QCChecklistItem(
+                id: item['id'] as String? ?? '',
+                label:
+                    (item['parameter_name'] ?? item['parameterName'])
+                        as String? ??
+                    '',
+                category: item['category'] as String? ?? 'Parameter',
+                inputType: inputType,
+                unit: unit,
+                standardText: standardText,
+                validationRule: validationRule,
+                required:
+                    (item['is_required'] ?? item['required']) as bool? ?? true,
+                requiredPhoto:
+                    (item['required_photo'] ?? item['requiredPhoto'])
+                        as bool? ??
+                    false,
+                choices: choices,
+              );
+            })
+            .toList();
 
     return QCMaterialTemplate(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
-      code: json['formCode'] as String? ?? '',
-      description: json['category'] as String? ?? '',
+      code: (json['form_code'] ?? json['formCode']) as String? ?? '',
+      description: json['description'] as String? ?? '',
       checklistItems: checklistItems,
     );
+  }
+
+  double? _parseNumericValue(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value.trim());
+    return null;
+  }
+
+  QCValidationType? _parseValidationType(dynamic value) {
+    if (value is! String) return null;
+
+    switch (value.toUpperCase()) {
+      case 'RANGE':
+        return QCValidationType.range;
+      case 'MIN':
+        return QCValidationType.min;
+      case 'MAX':
+        return QCValidationType.max;
+      case 'EXACT':
+        return QCValidationType.exact;
+      case 'BOOLEANREQUIRED':
+      case 'BOOLEAN_REQUIRED':
+        return QCValidationType.booleanRequired;
+      default:
+        return null;
+    }
   }
 
   Future<void> _loadTemplates() async {
@@ -84,21 +154,22 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
     });
 
     try {
-      final rawTemplates = await ApiService().fetchTemplates();
+      final rawTemplates = await ApiService().fetchTemplates('MATERIAL');
 
       if (rawTemplates != null) {
         // Filter only MATERIAL type and active templates
         final materialTemplates = rawTemplates
-            .where((t) =>
-                t['type'] == 'MATERIAL' && (t['isActive'] == true))
+            .where(
+              (t) =>
+                  t['type'] == 'MATERIAL' &&
+                  ((t['is_active'] ?? t['isActive']) == true),
+            )
             .map(_mapApiTemplate)
             .toList();
 
         if (mounted) {
           setState(() {
-            _templates = materialTemplates.isNotEmpty
-                ? materialTemplates
-                : dummyQCMaterialTemplates;
+            _templates = materialTemplates;
             _isLoading = false;
           });
         }
@@ -125,7 +196,8 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
   @override
   Widget build(BuildContext context) {
     final filteredTemplates = _templates.where((m) {
-      final matchesSearch = m.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+      final matchesSearch =
+          m.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           m.code.toLowerCase().contains(_searchQuery.toLowerCase());
       return matchesSearch;
     }).toList();
@@ -153,7 +225,10 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
               if (_errorMessage != null) ...[
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.amber.shade50,
                     borderRadius: BorderRadius.circular(10),
@@ -161,12 +236,19 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, size: 16, color: Colors.amber.shade700),
+                      Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: Colors.amber.shade700,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _errorMessage!,
-                          style: TextStyle(fontSize: 12, color: Colors.amber.shade800),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.amber.shade800,
+                          ),
                         ),
                       ),
                     ],
@@ -184,157 +266,177 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
                             SizedBox(height: 12),
                             Text(
                               'Memuat template...',
-                              style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 14,
+                              ),
                             ),
                           ],
                         ),
                       )
                     : filteredTemplates.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.inventory_2_outlined, color: AppColors.textSoft, size: 48),
-                                const SizedBox(height: 12),
-                                const Text(
-                                  'Material tidak ditemukan',
-                                  style: TextStyle(color: AppColors.textMuted, fontSize: 14),
-                                ),
-                                const SizedBox(height: 16),
-                                TextButton.icon(
-                                  onPressed: _loadTemplates,
-                                  icon: const Icon(Icons.refresh),
-                                  label: const Text('Coba lagi'),
-                                ),
-                              ],
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.inventory_2_outlined,
+                              color: AppColors.textSoft,
+                              size: 48,
                             ),
-                          )
-                        : ListView.builder(
-                            itemCount: filteredTemplates.length,
-                            physics: const BouncingScrollPhysics(),
-                            itemBuilder: (context, index) {
-                              final template = filteredTemplates[index];
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 16.0),
-                                child: Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(24),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.04),
-                                        blurRadius: 16,
-                                        offset: const Offset(0, 8),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Material tidak ditemukan',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextButton.icon(
+                              onPressed: _loadTemplates,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Coba lagi'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: filteredTemplates.length,
+                        physics: const BouncingScrollPhysics(),
+                        itemBuilder: (context, index) {
+                          final template = filteredTemplates[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16.0),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.04),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              template.name,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                color: AppColors.textMain,
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              'Kode Form: ${template.code}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: AppColors.textMuted,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
+                                      const SizedBox(width: 12),
+                                      const StatusBadge(status: 'Aktif'),
                                     ],
                                   ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                  const SizedBox(height: 20),
+                                  Row(
                                     children: [
-                                      Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  template.name,
-                                                  maxLines: 2,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: const TextStyle(
-                                                    color: AppColors.textMain,
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 8),
-                                                Text(
-                                                  'Kode Form: ${template.code}',
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                    color: AppColors.textMuted,
-                                                  ),
-                                                ),
-                                              ],
+                                      Expanded(
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.checklist_rounded,
+                                              size: 18,
+                                              color: AppColors.textSoft,
                                             ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          const StatusBadge(status: 'Aktif'),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 20),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Row(
-                                              children: [
-                                                const Icon(
-                                                  Icons.checklist_rounded,
-                                                  size: 18,
+                                            const SizedBox(width: 6),
+                                            Flexible(
+                                              child: Text(
+                                                '${template.checklistItems.length} Poin Checklist',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w600,
                                                   color: AppColors.textSoft,
+                                                  fontSize: 12,
                                                 ),
-                                                const SizedBox(width: 6),
-                                                Flexible(
-                                                  child: Text(
-                                                    '${template.checklistItems.length} Poin Checklist',
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                    style: const TextStyle(
-                                                      fontWeight: FontWeight.w600,
-                                                      color: AppColors.textSoft,
-                                                      fontSize: 12,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
+                                              ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          ConstrainedBox(
-                                            constraints: const BoxConstraints(
-                                              minWidth: 96,
-                                              maxWidth: 120,
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          minWidth: 96,
+                                          maxWidth: 120,
+                                        ),
+                                        child: SizedBox(
+                                          height: 44,
+                                          child: ElevatedButton(
+                                            onPressed: () {
+                                              context.push(
+                                                '/qc-material/form/${template.id}',
+                                                extra: template,
+                                              );
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  AppColors.primary,
+                                              foregroundColor: Colors.white,
+                                              elevation: 0,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 14,
+                                                  ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
                                             ),
-                                            child: SizedBox(
-                                              height: 44,
-                                              child: ElevatedButton(
-                                                onPressed: () {
-                                                  context.push('/qc-material/form/${template.id}', extra: template);
-                                                },
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: AppColors.primary,
-                                                  foregroundColor: Colors.white,
-                                                  elevation: 0,
-                                                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius.circular(16),
-                                                  ),
-                                                ),
-                                                child: const FittedBox(
-                                                  fit: BoxFit.scaleDown,
-                                                  child: Text(
-                                                    'Mulai QC',
-                                                    maxLines: 1,
-                                                    style: TextStyle(
-                                                      fontWeight: FontWeight.w700,
-                                                    ),
-                                                  ),
+                                            child: const FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: Text(
+                                                'Mulai QC',
+                                                maxLines: 1,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
                                                 ),
                                               ),
                                             ),
                                           ),
-                                        ],
+                                        ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              );
-                            },
-                          ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
               ),
             ],
           ),
