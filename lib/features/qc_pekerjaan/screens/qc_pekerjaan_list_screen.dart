@@ -13,10 +13,7 @@ import '../../../shared/widgets/status_badge.dart';
 class QCPekerjaanListScreen extends StatefulWidget {
   final String segment;
 
-  const QCPekerjaanListScreen({
-    Key? key,
-    required this.segment,
-  }) : super(key: key);
+  const QCPekerjaanListScreen({super.key, required this.segment});
 
   @override
   State<QCPekerjaanListScreen> createState() => _QCPekerjaanListScreenState();
@@ -58,7 +55,7 @@ class _QCPekerjaanListScreenState extends State<QCPekerjaanListScreen> {
   PekerjaanModel _mapApiTemplate(Map<String, dynamic> json) {
     final categoryStr = (json['category'] as String? ?? '').toLowerCase();
     final segmentStr = (json['segment'] as String? ?? '').toLowerCase();
-    
+
     WorkSegment segment = WorkSegment.construction;
     if (segmentStr.isNotEmpty) {
       segment = _parseSegment(segmentStr);
@@ -70,29 +67,47 @@ class _QCPekerjaanListScreenState extends State<QCPekerjaanListScreen> {
       }
     }
 
-    final checklistItems = (json['checklistItems'] as List<dynamic>? ?? [])
-        .map<ChecklistItemModel>((item) {
-      final inputTypeStr = (item['input_type'] as String? ?? 'choice').toLowerCase();
-      final InputType inputType;
-      if (inputTypeStr == 'number') {
-        inputType = InputType.number;
-      } else if (inputTypeStr == 'text') {
-        inputType = InputType.text;
-      } else {
-        inputType = InputType.choice;
-      }
+    final checklistItems =
+        ((json['checklist_items'] ?? json['checklistItems'])
+                    as List<dynamic>? ??
+                [])
+            .map<ChecklistItemModel>((item) {
+              final inputTypeStr =
+                  ((item['input_type'] ?? item['inputType']) as String? ??
+                          'choice')
+                      .toLowerCase();
+              final InputType inputType;
+              if (inputTypeStr == 'number') {
+                inputType = InputType.number;
+              } else if (inputTypeStr == 'text') {
+                inputType = InputType.text;
+              } else {
+                inputType = InputType.choice;
+              }
 
-      final unit = (item['unit'] as String?)?.isNotEmpty == true ? item['unit'] as String : null;
+              final unit = (item['unit'] as String?)?.isNotEmpty == true
+                  ? item['unit'] as String
+                  : null;
 
-      return ChecklistItemModel(
-        id: item['id'] as String? ?? '',
-        title: item['parameter_name'] as String? ?? '',
-        inputType: inputType,
-        unit: unit,
-        standard: item['standard_text'] as String? ?? '',
-        requiredPhoto: false,
-      );
-    }).toList();
+              return ChecklistItemModel(
+                id: item['id'] as String? ?? '',
+                title:
+                    (item['parameter_name'] ?? item['parameterName'])
+                        as String? ??
+                    '',
+                inputType: inputType,
+                unit: unit,
+                standard:
+                    (item['standard_text'] ?? item['standardText'])
+                        as String? ??
+                    '',
+                requiredPhoto:
+                    (item['required_photo'] ?? item['requiredPhoto'])
+                        as bool? ??
+                    false,
+              );
+            })
+            .toList();
 
     return PekerjaanModel(
       id: json['id'] as String? ?? '',
@@ -116,7 +131,11 @@ class _QCPekerjaanListScreenState extends State<QCPekerjaanListScreen> {
 
       if (rawTemplates != null) {
         final workTemplates = rawTemplates
-            .where((t) => t['type'] == 'WORK' && (t['isActive'] == true))
+            .where(
+              (t) =>
+                  t['type'] == 'WORK' &&
+                  ((t['is_active'] ?? t['isActive']) == true),
+            )
             .map(_mapApiTemplate)
             .toList();
 
@@ -159,7 +178,8 @@ class _QCPekerjaanListScreenState extends State<QCPekerjaanListScreen> {
 
     final filteredJobs = _allJobs.where((job) {
       final matchesSegment = job.segment == activeSegment;
-      final matchesSearch = job.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+      final matchesSearch =
+          job.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           job.description.toLowerCase().contains(_searchQuery.toLowerCase());
       return matchesSegment && matchesSearch;
     }).toList();
@@ -187,7 +207,10 @@ class _QCPekerjaanListScreenState extends State<QCPekerjaanListScreen> {
               if (_errorMessage != null) ...[
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.amber.shade50,
                     borderRadius: BorderRadius.circular(10),
@@ -195,12 +218,19 @@ class _QCPekerjaanListScreenState extends State<QCPekerjaanListScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, size: 16, color: Colors.amber.shade700),
+                      Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: Colors.amber.shade700,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _errorMessage!,
-                          style: TextStyle(fontSize: 12, color: Colors.amber.shade800),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.amber.shade800,
+                          ),
                         ),
                       ),
                     ],
@@ -218,157 +248,176 @@ class _QCPekerjaanListScreenState extends State<QCPekerjaanListScreen> {
                             SizedBox(height: 12),
                             Text(
                               'Memuat template...',
-                              style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 14,
+                              ),
                             ),
                           ],
                         ),
                       )
                     : filteredJobs.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.engineering_outlined, color: AppColors.textSoft, size: 48),
-                                const SizedBox(height: 12),
-                                const Text(
-                                  'Pekerjaan tidak ditemukan',
-                                  style: TextStyle(color: AppColors.textMuted, fontSize: 14),
-                                ),
-                                const SizedBox(height: 16),
-                                TextButton.icon(
-                                  onPressed: _loadJobs,
-                                  icon: const Icon(Icons.refresh),
-                                  label: const Text('Coba lagi'),
-                                ),
-                              ],
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.engineering_outlined,
+                              color: AppColors.textSoft,
+                              size: 48,
                             ),
-                          )
-                        : ListView.builder(
-                            itemCount: filteredJobs.length,
-                            physics: const BouncingScrollPhysics(),
-                            itemBuilder: (context, index) {
-                              final job = filteredJobs[index];
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 14.0),
-                                child: Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(22),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.04),
-                                        blurRadius: 16,
-                                        offset: const Offset(0, 8),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Pekerjaan tidak ditemukan',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextButton.icon(
+                              onPressed: _loadJobs,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Coba lagi'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: filteredJobs.length,
+                        physics: const BouncingScrollPhysics(),
+                        itemBuilder: (context, index) {
+                          final job = filteredJobs[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 14.0),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(22),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.04),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              job.name,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                color: AppColors.textMain,
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              job.description,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                color: AppColors.textMuted,
+                                                fontSize: 12,
+                                                height: 1.3,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
+                                      const SizedBox(width: 10),
+                                      StatusBadge(status: job.status),
                                     ],
                                   ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                  const SizedBox(height: 14),
+                                  Row(
                                     children: [
-                                      Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  job.name,
-                                                  maxLines: 2,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: const TextStyle(
-                                                    color: AppColors.textMain,
-                                                    fontWeight: FontWeight.w700,
-                                                    fontSize: 16,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 6),
-                                                Text(
-                                                  job.description,
-                                                  maxLines: 2,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: const TextStyle(
-                                                    color: AppColors.textMuted,
-                                                    fontSize: 12,
-                                                    height: 1.3,
-                                                  ),
-                                                ),
-                                              ],
+                                      Expanded(
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.checklist_rounded,
+                                              size: 18,
+                                              color: AppColors.textSoft,
                                             ),
-                                          ),
-                                          const SizedBox(width: 10),
-                                          StatusBadge(status: job.status),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 14),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Row(
-                                              children: [
-                                                const Icon(
-                                                  Icons.checklist_rounded,
-                                                  size: 18,
+                                            const SizedBox(width: 6),
+                                            Flexible(
+                                              child: Text(
+                                                '${job.checklistItems.length} Parameter Inspeksi',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w600,
                                                   color: AppColors.textSoft,
+                                                  fontSize: 12,
                                                 ),
-                                                const SizedBox(width: 6),
-                                                Flexible(
-                                                  child: Text(
-                                                    '${job.checklistItems.length} Parameter Inspeksi',
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                    style: const TextStyle(
-                                                      fontWeight: FontWeight.w600,
-                                                      color: AppColors.textSoft,
-                                                      fontSize: 12,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
+                                              ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 10),
-                                          ConstrainedBox(
-                                            constraints: const BoxConstraints(
-                                              minWidth: 96,
-                                              maxWidth: 118,
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          minWidth: 96,
+                                          maxWidth: 118,
+                                        ),
+                                        child: SizedBox(
+                                          height: 42,
+                                          child: ElevatedButton(
+                                            onPressed: () {
+                                              context.push(
+                                                '/qc-pekerjaan/form/${job.id}',
+                                              );
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  AppColors.primary,
+                                              foregroundColor: Colors.white,
+                                              elevation: 0,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 14,
+                                                  ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
                                             ),
-                                            child: SizedBox(
-                                              height: 42,
-                                              child: ElevatedButton(
-                                                onPressed: () {
-                                                  context.push('/qc-pekerjaan/form/${job.id}');
-                                                },
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: AppColors.primary,
-                                                  foregroundColor: Colors.white,
-                                                  elevation: 0,
-                                                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius.circular(16),
-                                                  ),
-                                                ),
-                                                child: const FittedBox(
-                                                  fit: BoxFit.scaleDown,
-                                                  child: Text(
-                                                    'Mulai QC',
-                                                    style: TextStyle(
-                                                      fontWeight: FontWeight.w700,
-                                                    ),
-                                                  ),
+                                            child: const FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: Text(
+                                                'Mulai QC',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
                                                 ),
                                               ),
                                             ),
                                           ),
-                                        ],
+                                        ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              );
-                            },
-                          ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
               ),
             ],
           ),

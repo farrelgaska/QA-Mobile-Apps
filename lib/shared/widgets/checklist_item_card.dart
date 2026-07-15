@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_colors.dart';
 import '../../shared/models/enums.dart';
 import 'app_card.dart';
@@ -15,11 +16,12 @@ class ChecklistItemCard extends StatefulWidget {
   final QCInputType inputType;
   final String? unit;
   final List<String>? choices;
-  
+
   final QCResultStatus currentStatus;
   final String resultValue;
   final String issueDescription;
   final List<String> photos;
+  final List<XFile> localPhotos;
   final String? warningMessage;
   final bool isLocked; // locked if auto-validation fails/succeeds on numerics
 
@@ -30,7 +32,7 @@ class ChecklistItemCard extends StatefulWidget {
   final Function(int) onDeletePhoto;
 
   const ChecklistItemCard({
-    Key? key,
+    super.key,
     required this.itemNumber,
     required this.title,
     required this.standardText,
@@ -41,6 +43,7 @@ class ChecklistItemCard extends StatefulWidget {
     required this.resultValue,
     required this.issueDescription,
     required this.photos,
+    this.localPhotos = const [],
     this.warningMessage,
     required this.isLocked,
     required this.onStatusChanged,
@@ -48,7 +51,7 @@ class ChecklistItemCard extends StatefulWidget {
     required this.onIssueDescriptionChanged,
     required this.onAddPhoto,
     required this.onDeletePhoto,
-  }) : super(key: key);
+  });
 
   @override
   State<ChecklistItemCard> createState() => _ChecklistItemCardState();
@@ -85,14 +88,26 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isBooleanOrChoice = widget.inputType == QCInputType.booleanCheck || 
-                                    widget.inputType == QCInputType.choice;
-    final bool isNonIdeal = widget.resultValue == 'Tidak' || 
-                            widget.resultValue == 'Tidak Sesuai' ||
-                            (widget.inputType == QCInputType.choice && 
-                             widget.resultValue.isNotEmpty && 
-                             !['sesuai', 'rapi', 'kencang', 'ada', 'lengkap', 'ya', 'ok', 'diterima', 'sesuai standar'].contains(widget.resultValue.toLowerCase()));
-    
+    final bool isBooleanOrChoice =
+        widget.inputType == QCInputType.booleanCheck ||
+        widget.inputType == QCInputType.choice;
+    final bool isNonIdeal =
+        widget.resultValue == 'Tidak' ||
+        widget.resultValue == 'Tidak Sesuai' ||
+        (widget.inputType == QCInputType.choice &&
+            widget.resultValue.isNotEmpty &&
+            ![
+              'sesuai',
+              'rapi',
+              'kencang',
+              'ada',
+              'lengkap',
+              'ya',
+              'ok',
+              'diterima',
+              'sesuai standar',
+            ].contains(widget.resultValue.toLowerCase()));
+
     final showIssueField = isBooleanOrChoice && isNonIdeal;
 
     return Padding(
@@ -139,7 +154,7 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
 
             // 1. Render Input Field by inputType
             _buildInputField(),
-            
+
             // Render Warning Message if fail (only show formatting/filling errors to staff, not standard failures)
             if (widget.warningMessage != null &&
                 widget.warningMessage!.isNotEmpty &&
@@ -178,7 +193,10 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
                   cursorColor: const Color(0xFF006B5A),
                   decoration: const InputDecoration(
                     hintText: 'Jelaskan detail ketidaksesuaian material...',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
                     hintStyle: TextStyle(
                       color: Color(0xFF9CA3AF),
                       fontSize: 12,
@@ -206,6 +224,7 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
                 Expanded(
                   child: PhotoGrid(
                     photos: widget.photos,
+                    localPhotos: widget.localPhotos,
                     onDelete: widget.onDeletePhoto,
                   ),
                 ),
@@ -218,7 +237,8 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
   }
 
   Widget _buildInputField() {
-    if (widget.inputType == QCInputType.number || widget.inputType == QCInputType.text) {
+    if (widget.inputType == QCInputType.number ||
+        widget.inputType == QCInputType.text) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -239,11 +259,18 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
                   child: TextField(
                     controller: _resultController,
                     onChanged: widget.onResultValueChanged,
-                    keyboardType: widget.inputType == QCInputType.number 
-                        ? const TextInputType.numberWithOptions(signed: true, decimal: true) 
+                    keyboardType: widget.inputType == QCInputType.number
+                        ? const TextInputType.numberWithOptions(
+                            signed: true,
+                            decimal: true,
+                          )
                         : TextInputType.text,
                     inputFormatters: widget.inputType == QCInputType.number
-                        ? [FilteringTextInputFormatter.allow(RegExp(r'^-?\d*[,.]?\d*$'))]
+                        ? [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'^-?\d*[,.]?\d*$'),
+                            ),
+                          ]
                         : null,
                     style: const TextStyle(
                       fontSize: 13,
@@ -252,8 +279,13 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
                     ),
                     cursorColor: const Color(0xFF006B5A),
                     decoration: InputDecoration(
-                      hintText: widget.inputType == QCInputType.number ? 'Masukkan angka' : 'Masukkan teks',
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      hintText: widget.inputType == QCInputType.number
+                          ? 'Masukkan angka'
+                          : 'Masukkan teks',
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       hintStyle: const TextStyle(
                         color: Color(0xFF9CA3AF),
                         fontSize: 13,
@@ -265,7 +297,10 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
               if (widget.unit != null) ...[
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.backgroundSoft,
                     borderRadius: BorderRadius.circular(8),
@@ -299,7 +334,10 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
       );
     } else if (widget.inputType == QCInputType.booleanCheck) {
       // Sesuai / Tidak Sesuai or Ya / Tidak toggle button style
-      final bool isSesuai = widget.resultValue == 'Sesuai' || widget.resultValue == 'Ya' || widget.resultValue == 'OK';
+      final bool isSesuai =
+          widget.resultValue == 'Sesuai' ||
+          widget.resultValue == 'Ya' ||
+          widget.resultValue == 'OK';
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -335,7 +373,8 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
           const SizedBox(height: 12),
         ],
       );
-    } else if (widget.inputType == QCInputType.choice && widget.choices != null) {
+    } else if (widget.inputType == QCInputType.choice &&
+        widget.choices != null) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

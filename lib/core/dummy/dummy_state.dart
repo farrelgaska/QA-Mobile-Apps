@@ -15,7 +15,7 @@ class DummyState {
   UserModel currentUser = dummyUsers[0];
   SiteModel currentSite = dummySites[0];
   String? profilePictureUrl;
-  
+
   List<QCReportModel> reports = List.from(dummyReports);
 
   /// In-memory cache of QCMaterialTemplate objects keyed by template id.
@@ -28,8 +28,8 @@ class DummyState {
     final serverReports = await ApiService().fetchReports();
     if (serverReports != null) {
       // Create a map of server reports for O(1) lookup
-      final serverMap = { for (var r in serverReports) r.id : r };
-      
+      final serverMap = {for (var r in serverReports) r.id: r};
+
       // Update existing or add new from server
       for (final id in serverMap.keys) {
         final serverReport = serverMap[id]!;
@@ -46,24 +46,32 @@ class DummyState {
   }
 
   void addReport(QCReportModel report) {
+    addReportLocally(report);
+    // Async push to backend server
+    ApiService().postReport(report);
+  }
+
+  void addReportLocally(QCReportModel report) {
     final idx = reports.indexWhere((r) => r.id == report.id);
     if (idx != -1) {
       reports[idx] = report;
     } else {
       reports.insert(0, report);
     }
-    // Async push to backend server
-    ApiService().postReport(report);
   }
 
   void updateReport(QCReportModel report) {
+    updateReportLocally(report);
+    // Async push to backend server
+    ApiService().patchReport(report);
+  }
+
+  void updateReportLocally(QCReportModel report) {
     final index = reports.indexWhere((r) => r.id == report.id);
     if (index != -1) {
       reports[index] = report;
     } else {
       reports.insert(0, report);
     }
-    // Async push to backend server
-    ApiService().patchReport(report);
   }
 }
