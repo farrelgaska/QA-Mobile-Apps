@@ -175,6 +175,8 @@ class QCPekerjaanFormScreen extends StatelessWidget {
                 issueDescription: p.itemIssues[index],
                 photos: p.itemPhotos[index],
                 localPhotos: p.pendingItemPhotos[index],
+                localPhotoBytes: p.pendingItemPhotoBytes[index],
+                uploadedPhotoPreviewBytes: p.uploadedPhotoPreviewBytes,
                 warningMessage: p.itemWarnings[index],
                 isLocked: false,
                 onStatusChanged: (status) => p.updateStatus(index, status),
@@ -316,78 +318,89 @@ class QCPekerjaanFormScreen extends StatelessWidget {
   }
 
   Widget _buildActionButtons(BuildContext context, QCPekerjaanFormProvider p) {
-    return Row(
-      children: [
-        if (!p.isRevisionMode) ...[
-          Expanded(
-            flex: 4,
-            child: AppButton(
-              text: 'Simpan Draft',
-              variant: AppButtonVariant.secondary,
-              isLoading: p.isPersisting,
-              onPressed: p.isPersisting
-                  ? null
-                  : () async {
-                      if (!p.hasAnyDraftContent) {
-                        AppSnackbar.warning(
-                          context,
-                          'Isi minimal satu data pemeriksaan sebelum menyimpan draft.',
-                        );
-                        return;
-                      }
-                      await _persistAndExit(
-                        context,
-                        p,
-                        QCReportStatus.DRAFT,
-                        'Draft berhasil disimpan',
-                      );
-                    },
-            ),
-          ),
-          const SizedBox(width: 12),
-        ],
-        Expanded(
-          flex: 6,
-          child: AppButton(
-            text: p.isRevisionMode ? 'Kirim Ulang' : 'Submit Laporan',
-            variant: AppButtonVariant.primary,
-            isLoading: p.isPersisting,
-            onPressed: p.isPersisting
-                ? null
-                : () {
-                    final err = p.validateForm();
-                    if (err != null) {
-                      AppSnackbar.error(context, err);
-                      return;
-                    }
-                    showDialog(
-                      context: context,
-                      builder: (c) => ConfirmationModal(
-                        title: p.isRevisionMode
-                            ? 'Kirim Ulang Laporan'
-                            : 'Submit Laporan QC',
-                        message: p.isRevisionMode
-                            ? 'Apakah perbaikan data inspeksi sudah lengkap dan siap dikirim ulang?'
-                            : 'Apakah seluruh data inspeksi pekerjaan konstruksi sudah lengkap dan siap dikirim?',
-                        confirmText: p.isRevisionMode ? 'Kirim Ulang' : 'Kirim',
-                        onConfirm: () async {
-                          if (p.isPersisting) return;
-                          Navigator.pop(c);
-                          await _persistAndExit(
-                            context,
-                            p,
-                            QCReportStatus.SUBMITTED,
-                            p.isRevisionMode
-                                ? 'Laporan berhasil dikirim ulang'
-                                : 'Laporan berhasil dikirim',
-                          );
-                        },
-                      ),
+    final draftButton = AppButton(
+      text: 'Simpan Draft',
+      variant: AppButtonVariant.secondary,
+      isLoading: p.isPersisting,
+      onPressed: p.isPersisting
+          ? null
+          : () async {
+              if (!p.hasAnyDraftContent) {
+                AppSnackbar.warning(
+                  context,
+                  'Isi minimal satu data pemeriksaan sebelum menyimpan draft.',
+                );
+                return;
+              }
+              await _persistAndExit(
+                context,
+                p,
+                QCReportStatus.DRAFT,
+                'Draft berhasil disimpan',
+              );
+            },
+    );
+    final submitButton = AppButton(
+      text: p.isRevisionMode ? 'Kirim Ulang' : 'Submit Laporan',
+      variant: AppButtonVariant.primary,
+      isLoading: p.isPersisting,
+      onPressed: p.isPersisting
+          ? null
+          : () {
+              final err = p.validateForm();
+              if (err != null) {
+                AppSnackbar.error(context, err);
+                return;
+              }
+              showDialog(
+                context: context,
+                builder: (c) => ConfirmationModal(
+                  title: p.isRevisionMode
+                      ? 'Kirim Ulang Laporan'
+                      : 'Submit Laporan QC',
+                  message: p.isRevisionMode
+                      ? 'Apakah perbaikan data inspeksi sudah lengkap dan siap dikirim ulang?'
+                      : 'Apakah seluruh data inspeksi pekerjaan konstruksi sudah lengkap dan siap dikirim?',
+                  confirmText: p.isRevisionMode ? 'Kirim Ulang' : 'Kirim',
+                  onConfirm: () async {
+                    if (p.isPersisting) return;
+                    Navigator.pop(c);
+                    await _persistAndExit(
+                      context,
+                      p,
+                      QCReportStatus.SUBMITTED,
+                      p.isRevisionMode
+                          ? 'Laporan berhasil dikirim ulang'
+                          : 'Laporan berhasil dikirim',
                     );
                   },
-          ),
-        ),
-      ],
+                ),
+              );
+            },
+    );
+
+    if (p.isRevisionMode) return submitButton;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 380) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              draftButton,
+              const SizedBox(height: 12),
+              submitButton,
+            ],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(flex: 4, child: draftButton),
+            const SizedBox(width: 12),
+            Expanded(flex: 6, child: submitButton),
+          ],
+        );
+      },
     );
   }
 

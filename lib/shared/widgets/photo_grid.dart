@@ -8,12 +8,16 @@ import '../../core/services/api_service.dart';
 class PhotoGrid extends StatefulWidget {
   final List<String> photos;
   final List<XFile> localPhotos;
+  final List<Uint8List> localPhotoBytes;
+  final Map<String, Uint8List> uploadedPhotoPreviewBytes;
   final Function(int)? onDelete;
 
   const PhotoGrid({
     super.key,
     required this.photos,
     this.localPhotos = const [],
+    this.localPhotoBytes = const [],
+    this.uploadedPhotoPreviewBytes = const {},
     this.onDelete,
   });
 
@@ -63,6 +67,10 @@ class _PhotoGridState extends State<PhotoGrid> {
   ).hasMatch(value);
 
   Widget _buildStoredImage(String reference) {
+    final previewBytes = widget.uploadedPhotoPreviewBytes[reference];
+    if (previewBytes != null) {
+      return Image.memory(previewBytes, fit: BoxFit.cover);
+    }
     if (reference.startsWith('assets/')) {
       return Image.asset(reference, fit: BoxFit.cover);
     }
@@ -79,29 +87,18 @@ class _PhotoGridState extends State<PhotoGrid> {
     return Image.asset('assets/images/placeholder.png', fit: BoxFit.cover);
   }
 
-  Widget _buildLocalImage(XFile photo) {
-    return FutureBuilder<Uint8List>(
-      future: photo.readAsBytes(),
-      builder: (context, snapshot) {
-        if (snapshot.hasData) {
-          return Image.memory(snapshot.data!, fit: BoxFit.cover);
-        }
-        if (snapshot.hasError) {
-          return Image.asset(
-            'assets/images/placeholder.png',
-            fit: BoxFit.cover,
-          );
-        }
-        return const Center(child: CircularProgressIndicator(strokeWidth: 2));
-      },
-    );
+  Widget _buildLocalImage(int localIndex) {
+    if (localIndex < widget.localPhotoBytes.length) {
+      return Image.memory(widget.localPhotoBytes[localIndex], fit: BoxFit.cover);
+    }
+    return Image.asset('assets/images/placeholder.png', fit: BoxFit.cover);
   }
 
   Widget _buildImage(int index) {
     if (index < widget.photos.length) {
       return _buildStoredImage(widget.photos[index]);
     }
-    return _buildLocalImage(widget.localPhotos[index - widget.photos.length]);
+    return _buildLocalImage(index - widget.photos.length);
   }
 
   @override
@@ -115,7 +112,14 @@ class _PhotoGridState extends State<PhotoGrid> {
         scrollDirection: Axis.horizontal,
         itemCount: photoCount,
         itemBuilder: (context, index) {
+          final Key photoKey;
+          if (index < widget.photos.length) {
+            photoKey = ValueKey<String>('stored:${widget.photos[index]}');
+          } else {
+            photoKey = ObjectKey(widget.localPhotos[index - widget.photos.length]);
+          }
           return Padding(
+            key: photoKey,
             padding: const EdgeInsets.only(right: 8.0),
             child: Stack(
               children: [

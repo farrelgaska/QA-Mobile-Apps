@@ -1,3 +1,6 @@
+import 'dart:math';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/dummy/dummy_pekerjaan.dart';
@@ -26,6 +29,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   bool _isInit = false;
   bool _submitAttempted = false;
   bool _isPersisting = false;
+  bool _isDisposed = false;
   late String _reportId;
   dynamic _pekerjaan; // dummy model
 
@@ -53,6 +57,8 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   final List<String> itemIssues = [];
   final List<List<String>> itemPhotos = [];
   final List<List<XFile>> pendingItemPhotos = [];
+  final List<List<Uint8List>> pendingItemPhotoBytes = [];
+  final Map<String, Uint8List> uploadedPhotoPreviewBytes = {};
   final List<String?> itemWarnings = [];
   final List<String?> itemAdminNotes = [];
   final Map<XFile, String> _uploadedObjectPaths = {};
@@ -72,14 +78,14 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
       (p) => p.id == pekerjaanId,
       orElse: () => dummyPekerjaan[0],
     );
-    _reportId =
-        editReportId ?? 'QC-WRK-${DateTime.now().microsecondsSinceEpoch}';
+    _reportId = editReportId ?? _newReportId();
 
     if (editReportId != null) {
-      final report = _state.reports.firstWhere(
-        (r) => r.id == editReportId,
-        orElse: () => _state.reports[0],
-      );
+      final reportIndex = _state.reports.indexWhere((r) => r.id == editReportId);
+      if (reportIndex == -1) {
+        throw StateError('Laporan $editReportId tidak ditemukan.');
+      }
+      final report = _state.reports[reportIndex];
       _originalReport = report;
       this.editReportId = editReportId;
       isRevisionMode = isRevision;
@@ -112,6 +118,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
               .toList(),
         );
         pendingItemPhotos.add([]);
+        pendingItemPhotoBytes.add([]);
         itemStatuses.add(ChecklistStatus.belumDiisi);
         itemWarnings.add(null);
         itemAdminNotes.add(matchingAnswer.adminNote);
@@ -129,6 +136,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         itemIssues.add('');
         itemPhotos.add([]);
         pendingItemPhotos.add([]);
+        pendingItemPhotoBytes.add([]);
         itemWarnings.add(null);
         itemAdminNotes.add(null);
       }
@@ -136,6 +144,15 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
 
     _isInit = true;
     notifyListeners();
+  }
+
+  String _newReportId() {
+    final random = Random.secure();
+    final randomPart = List.generate(
+      16,
+      (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
+    return 'QC-WRK-${DateTime.now().microsecondsSinceEpoch}-$randomPart';
   }
 
   void updateResult(int index, String value) {
@@ -231,7 +248,10 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
       return PhotoAddResult.limitReached;
     }
 
+    final previewBytes = await selectedPhoto.readAsBytes();
+    if (_isDisposed) return PhotoAddResult.cancelled;
     pendingItemPhotos[index].add(selectedPhoto);
+    pendingItemPhotoBytes[index].add(previewBytes);
     _recalculateStatus(index);
     notifyListeners();
     return PhotoAddResult.added;
@@ -239,10 +259,12 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
 
   void removePhoto(int index, int photoIdx) {
     if (photoIdx < itemPhotos[index].length) {
-      itemPhotos[index].removeAt(photoIdx);
+      final removed = itemPhotos[index].removeAt(photoIdx);
+      uploadedPhotoPreviewBytes.remove(removed);
     } else {
       final pendingIndex = photoIdx - itemPhotos[index].length;
       final removed = pendingItemPhotos[index].removeAt(pendingIndex);
+      pendingItemPhotoBytes[index].removeAt(pendingIndex);
       _uploadedObjectPaths.remove(removed);
     }
     _recalculateStatus(index);
@@ -396,7 +418,10 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
               _originalReport!.revisionNumber + (isRevisionMode ? 1 : 0),
           revisionHistory: updatedHistory,
         );
-        final saved = await _apiService.patchReport(updatedReport);
+        final saved = await _apiService.patchReport(
+          updatedReport,
+          throwOnError: true,
+        );
         if (!saved) {
           throw const ReportPersistenceException(
             'Laporan gagal disimpan. Periksa koneksi lalu coba lagi.',
@@ -428,7 +453,10 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
           revisionNumber: 1,
           revisionHistory: [],
         );
-        final saved = await _apiService.postReport(newReport);
+        final saved = await _apiService.postReport(
+          newReport,
+          throwOnError: true,
+        );
         if (!saved) {
           throw const ReportPersistenceException(
             'Laporan gagal disimpan. Periksa koneksi lalu coba lagi.',
@@ -447,7 +475,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
       );
     } finally {
       _isPersisting = false;
-      notifyListeners();
+      if (!_isDisposed) notifyListeners();
     }
   }
 
@@ -466,7 +494,9 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
 
     for (int itemIndex = 0; itemIndex < pendingItemPhotos.length; itemIndex++) {
       final itemId = _pekerjaan.checklistItems[itemIndex].id as String;
-      for (final photo in pendingItemPhotos[itemIndex]) {
+      while (pendingItemPhotos[itemIndex].isNotEmpty) {
+        final photo = pendingItemPhotos[itemIndex].first;
+        final previewBytes = pendingItemPhotoBytes[itemIndex].first;
         var objectPath = _uploadedObjectPaths[photo];
         if (objectPath == null) {
           final uploaded = await _apiService.uploadQCEvidence(
@@ -482,7 +512,12 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
           }
           _uploadedObjectPaths[photo] = objectPath;
         }
+        itemPhotos[itemIndex].add(objectPath);
+        uploadedPhotoPreviewBytes[objectPath] = previewBytes;
+        pendingItemPhotos[itemIndex].removeAt(0);
+        pendingItemPhotoBytes[itemIndex].removeAt(0);
         persistedPhotos[itemIndex].add(objectPath);
+        if (!_isDisposed) notifyListeners();
       }
     }
     return persistedPhotos;
@@ -494,6 +529,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         ..clear()
         ..addAll(persistedPhotos[i]);
       pendingItemPhotos[i].clear();
+      pendingItemPhotoBytes[i].clear();
     }
   }
 
@@ -514,6 +550,8 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
+    _isPersisting = false;
     areaController.dispose();
     locationDetailController.dispose();
     mitraController.dispose();
