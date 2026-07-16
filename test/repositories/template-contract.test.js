@@ -1,0 +1,123 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const templateModule = require('../../src/repositories/json-template.repository');
+const { canonicalTemplateInput, mapTemplateAggregate } = require('../../src/repositories/postgres/mappers');
+
+const baseTemplate = item => ({
+  id: 'MAT-CONTRACT',
+  type: 'MATERIAL',
+  name: 'Contract',
+  checklist_items: [item]
+});
+
+const textItem = {
+  id: 'TEXT-1',
+  parameter_name: 'Description',
+  input_type: 'text',
+  standard_text: 'Describe the result',
+  is_required: true,
+  required_photo: false
+};
+
+test('PostgreSQL rows emit the snake_case checklist contract', () => {
+  const result = mapTemplateAggregate({
+    id: 'MAT-1', type: 'MATERIAL', name: 'Material', description: '', form_code: '',
+    category: '', segment: 'construction', standard_code: '', is_active: true,
+    workflow_status: null, version: 1, created_at: new Date(), updated_at: new Date()
+  }, [{
+    id: 'N-1', parameter_name: 'Length', input_type: 'number', standard_text: '4.2',
+    min_value: '4', max_value: '5', unit: 'm', choice_options: [], choices: [],
+    is_required: true, required_photo: false, is_active: true, is_critical: false,
+    position: 0, category: '', validation_type: null, validation_min_value: null,
+    validation_max_value: null, validation_exact_value: null
+  }]);
+
+  assert.deepEqual(Object.keys(result.checklist_items[0]).slice(0, 12), [
+    'id', 'parameter_name', 'input_type', 'standard_text', 'min_value', 'max_value',
+    'unit', 'is_required', 'required_photo', 'is_active', 'is_critical', 'position'
+  ]);
+  assert.equal(result.checklist_items[0].min_value, 4);
+  assert.deepEqual(result.checklist_items[0].choice_options, []);
+});
+
+test('camelCase writes normalize to snake_case and keep required flags separate', () => {
+  const result = canonicalTemplateInput({
+    id: 'MAT-ALIAS', type: 'MATERIAL', name: 'Alias', isActive: false,
+    checklistItems: [{
+      id: 'N-1', parameterName: 'Length', inputType: 'number', standardText: 4.2,
+      minValue: 4, maxValue: 5, unit: 'm', required: false, requiredPhoto: true
+    }]
+  });
+  assert.equal(result.is_active, false);
+  assert.equal(result.checklist_items[0].standard_text, '4.2');
+  assert.equal(result.checklist_items[0].is_required, false);
+  assert.equal(result.checklist_items[0].required_photo, true);
+  assert.equal('checklistItems' in result, false);
+});
+
+test('number bounds accept nullable values and reject reversed ranges', () => {
+  assert.doesNotThrow(() => canonicalTemplateInput(baseTemplate({
+    ...textItem, id: 'N-1', input_type: 'number', min_value: null, max_value: 4.2
+  })));
+  assert.throws(() => canonicalTemplateInput(baseTemplate({
+    ...textItem, id: 'N-1', input_type: 'number', min_value: 5, max_value: 4
+  })), /min_value must be less than or equal/);
+});
+
+test('structured choices require complete ordered PASS and FAIL options', () => {
+  const valid = baseTemplate({
+    ...textItem,
+    id: 'C-1',
+    input_type: 'choice',
+    choice_options: [
+      { id: 'yes', label: 'Sesuai', value: 'yes', outcome: 'PASS', position: 0 },
+      { id: 'no', label: 'Tidak sesuai', value: 'no', outcome: 'FAIL', position: 1 }
+    ]
+  });
+  assert.deepEqual(canonicalTemplateInput(valid).checklist_items[0].choice_options, valid.checklist_items[0].choice_options);
+  assert.throws(() => canonicalTemplateInput(baseTemplate({
+    ...valid.checklist_items[0],
+    choice_options: [{ id: 'yes', label: '', value: 'yes', outcome: 'PASS', position: 0 }]
+  })), /Too small|empty|FAIL option/);
+});
+
+test('JSON metadata PATCH preserves checklist items and emits snake_case', t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'template-contract-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const file = path.join(directory, 'templates.json');
+  fs.writeFileSync(file, '[]');
+  const repository = new templateModule.JsonTemplateRepository(file);
+  repository.create(baseTemplate(textItem));
+
+  const updated = repository.update('MAT-CONTRACT', { name: 'Renamed', isActive: false });
+  assert.equal(updated.name, 'Renamed');
+  assert.equal(updated.is_active, false);
+  assert.equal(updated.checklist_items.length, 1);
+  assert.equal(updated.checklist_items[0].parameter_name, 'Description');
+});
+
+test('JSON metadata PATCH preserves legacy choices that predate structured options', t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'template-legacy-contract-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const file = path.join(directory, 'templates.json');
+  fs.writeFileSync(file, JSON.stringify([{
+    id: 'MAT-LEGACY', type: 'MATERIAL', name: 'Legacy', checklistItems: [{
+      id: 'C-1', parameterName: 'Condition', inputType: 'choice', standardText: '',
+      required: true, requiredPhoto: false, choices: []
+    }]
+  }]));
+  const repository = new templateModule.JsonTemplateRepository(file);
+
+  const updated = repository.update('MAT-LEGACY', { is_active: false });
+  assert.equal(updated.is_active, false);
+  assert.equal(updated.checklist_items.length, 1);
+  assert.deepEqual(updated.checklist_items[0].choice_options, []);
+});
+
+test('text items reject bounds and choices consistently', () => {
+  assert.throws(() => canonicalTemplateInput(baseTemplate({ ...textItem, min_value: 1 })), /text items cannot define numeric bounds/);
+  assert.throws(() => canonicalTemplateInput(baseTemplate({ ...textItem, choices: ['x'] })), /text items cannot define choices/);
+});

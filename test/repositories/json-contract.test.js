@@ -17,14 +17,19 @@ test('JSON repositories satisfy the existing repository contract in OS temp', t 
   const templates = new templateModule.JsonTemplateRepository(templatesPath);
   const reports = new reportModule.JsonReportRepository(reportsPath);
   const template = {
-    id: 'MAT-JSON', type: 'MATERIAL', name: 'JSON', checklistItems: [{ id: 'I-1' }]
+    id: 'MAT-JSON', type: 'MATERIAL', name: 'JSON', checklistItems: [{
+      id: 'I-1', parameterName: 'Note', inputType: 'text', standardText: '',
+      required: true, requiredPhoto: false
+    }]
   };
   const report = { id: 'QC-JSON', type: 'MATERIAL', title: 'JSON', status: 'DRAFT' };
 
-  assert.deepEqual(templates.create(template), template);
+  const createdTemplate = templates.create(template);
+  assert.equal(createdTemplate.checklist_items[0].parameter_name, 'Note');
+  assert.equal('checklistItems' in createdTemplate, false);
   assert.equal(templates.findById('MAT-JSON').name, 'JSON');
   assert.equal(templates.update('MAT-JSON', { name: 'Updated' }).id, 'MAT-JSON');
-  assert.deepEqual(templates.deleteChecklistItem('MAT-JSON', 'I-1').checklistItems, []);
+  assert.deepEqual(templates.deleteChecklistItem('MAT-JSON', 'I-1').checklist_items, []);
   templates.delete('MAT-JSON');
   assert.equal(templates.findById('MAT-JSON'), undefined);
   assert.throws(() => templates.delete('MAT-MISSING'), error => error.statusCode === 404);

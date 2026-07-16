@@ -60,18 +60,19 @@ class PostgresTemplateRepository {
       const rule = item.validation_rule || {};
       await client.query(
         `insert into public.qc_template_items (
-          template_id, id, parameter_name, input_type, standard_text, unit,
+          template_id, id, parameter_name, input_type, standard_text, min_value, max_value, unit,
           is_required, required_photo, is_active, is_critical, position, choices,
-          category, validation_type, validation_min_value, validation_max_value,
+          choice_options, category, validation_type, validation_min_value, validation_max_value,
           validation_exact_value, migration_metadata
         ) values (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-          $13, $14, $15, $16, $17, $18
+          $13, $14, $15, $16, $17, $18, $19, $20, $21
         )`,
         [
           templateId, item.id, item.parameter_name, item.input_type, item.standard_text,
-          item.unit, item.is_required, item.required_photo, item.is_active,
-          item.is_critical, item.position, item.choices, item.category,
+          item.min_value, item.max_value, item.unit, item.is_required, item.required_photo,
+          item.is_active, item.is_critical, item.position, item.choices, item.choice_options,
+          item.category,
           rule.type ?? null, rule.min_value ?? null, rule.max_value ?? null,
           rule.exact_value ?? null, item.migration_metadata
         ]
@@ -118,7 +119,9 @@ class PostgresTemplateRepository {
       for (const [legacy, canonical] of aliases) {
         if (patch[legacy] !== undefined && patch[canonical] === undefined) merged[canonical] = patch[legacy];
       }
-      const template = canonicalTemplateInput(merged);
+      const replacesItems = patch.checklist_items !== undefined || patch.checklistItems !== undefined;
+      const template = canonicalTemplateInput(replacesItems ? merged : { ...merged, checklist_items: [] });
+      if (!replacesItems) template.checklist_items = current.checklist_items;
       template.created_at = current.created_at;
       template.updated_at = new Date().toISOString();
 
@@ -134,8 +137,10 @@ class PostgresTemplateRepository {
           template.migration_metadata, template.updated_at
         ]
       );
-      await client.query('delete from public.qc_template_items where template_id = $1', [id]);
-      await this._insertItems(client, id, template.checklist_items);
+      if (replacesItems) {
+        await client.query('delete from public.qc_template_items where template_id = $1', [id]);
+        await this._insertItems(client, id, template.checklist_items);
+      }
       return this._findById(client, id);
     });
   }

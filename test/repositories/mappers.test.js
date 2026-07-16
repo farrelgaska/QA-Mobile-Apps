@@ -14,12 +14,14 @@ test('template rows map to the canonical nested contract', () => {
   }, [{
     template_id: 'MAT-1', id: 'I-1', parameter_name: 'Length', input_type: 'number',
     standard_text: '10', unit: 'm', is_required: true, required_photo: true,
+    min_value: '9.5', max_value: '10.5', choice_options: [],
     is_active: true, is_critical: true, position: 0, choices: [], category: 'Dimension',
     validation_type: 'range', validation_min_value: '9.5', validation_max_value: '10.5',
     validation_exact_value: null, migration_metadata: null
   }]);
 
   assert.equal(template.checklist_items[0].validation_rule.min_value, 9.5);
+  assert.equal(template.checklist_items[0].min_value, 9.5);
   assert.equal(template.created_at, '2026-01-01T00:00:00.000Z');
   assert.doesNotThrow(() => templateSchema.parse(template));
 });

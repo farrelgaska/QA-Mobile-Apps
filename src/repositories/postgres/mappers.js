@@ -1,22 +1,28 @@
+const { templateSchema } = require('../../contracts/template.contract');
+
 const toIso = value => value instanceof Date ? value.toISOString() : value;
 const valueOf = (object, canonical, legacy, fallback) => {
   if (object?.[canonical] !== undefined) return object[canonical];
   if (legacy && object?.[legacy] !== undefined) return object[legacy];
   return fallback;
 };
+const nullableNumber = value => value === undefined || value === null || value === '' ? null : Number(value);
 
 const mapTemplateItemRow = row => ({
   id: row.id,
   parameter_name: row.parameter_name,
   input_type: row.input_type,
-  standard_text: row.standard_text,
-  unit: row.unit,
+  standard_text: row.standard_text ?? '',
+  min_value: nullableNumber(row.min_value),
+  max_value: nullableNumber(row.max_value),
+  unit: row.unit || null,
   is_required: row.is_required,
   required_photo: row.required_photo,
   is_active: row.is_active,
   is_critical: row.is_critical,
   position: row.position,
   choices: row.choices || [],
+  choice_options: row.choice_options || [],
   category: row.category,
   validation_rule: row.validation_type === null
     && row.validation_min_value === null
@@ -105,7 +111,7 @@ const mapReportAggregate = (row, itemRows = [], reviewRow = null, attachmentRows
   };
 };
 
-const canonicalTemplateInput = template => ({
+const canonicalTemplateShape = template => ({
   id: template.id,
   type: template.type || 'MATERIAL',
   name: template.name || '',
@@ -125,14 +131,17 @@ const canonicalTemplateInput = template => ({
       id: item.id,
       parameter_name: valueOf(item, 'parameter_name', 'parameterName', item.name || ''),
       input_type: valueOf(item, 'input_type', 'inputType', 'text'),
-      standard_text: valueOf(item, 'standard_text', 'standardText', item.standardLabel || ''),
-      unit: item.unit || '',
+      standard_text: String(valueOf(item, 'standard_text', 'standardText', item.standardLabel || '') ?? ''),
+      min_value: nullableNumber(valueOf(item, 'min_value', 'minValue', item.minVal)),
+      max_value: nullableNumber(valueOf(item, 'max_value', 'maxValue', item.maxVal)),
+      unit: item.unit === undefined || item.unit === '' ? null : item.unit,
       is_required: valueOf(item, 'is_required', 'required', false),
       required_photo: valueOf(item, 'required_photo', 'requiredPhoto', false),
       is_active: valueOf(item, 'is_active', 'isActive', true),
       is_critical: valueOf(item, 'is_critical', 'isCritical', false),
       position: item.position ?? index,
       choices: item.choices || [],
+      choice_options: valueOf(item, 'choice_options', 'choiceOptions', []),
       category: item.category || '',
       validation_rule: rule,
       migration_metadata: item.migration_metadata || null
@@ -140,6 +149,14 @@ const canonicalTemplateInput = template => ({
   }),
   migration_metadata: template.migration_metadata || null
 });
+
+const canonicalTemplateInput = template => {
+  const result = templateSchema.safeParse(canonicalTemplateShape(template));
+  if (result.success) return result.data;
+  const error = new Error(result.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join('; '));
+  error.statusCode = 400;
+  throw error;
+};
 
 const canonicalReportInput = report => ({
   id: report.id,
@@ -176,6 +193,7 @@ module.exports = {
   mapTemplateAggregate,
   mapReportItemRow,
   mapReportAggregate,
+  canonicalTemplateShape,
   canonicalTemplateInput,
   canonicalReportInput
 };

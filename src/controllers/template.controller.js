@@ -36,7 +36,7 @@ const getTemplateById = async (req, res, next) => {
 
 const createTemplate = async (req, res, next) => {
   try {
-    const templateData = req.body;
+    const templateData = { ...req.body };
     
     // Auto-generate template id if missing
     if (!templateData.id) {
@@ -50,13 +50,13 @@ const createTemplate = async (req, res, next) => {
       id: templateData.id,
       type: templateData.type || 'MATERIAL',
       name: templateData.name || '',
-      formCode: templateData.formCode ?? templateData.form_code ?? '',
+      form_code: templateData.form_code ?? templateData.formCode ?? '',
       category: templateData.category || '',
-      standardCode: templateData.standardCode ?? templateData.standard_code ?? '',
-      checklistItems: templateData.checklistItems ?? templateData.checklist_items ?? [],
-      isActive: templateData.isActive ?? templateData.is_active ?? true,
-      createdAt: templateData.createdAt ?? templateData.created_at ?? nowIso,
-      updatedAt: nowIso
+      standard_code: templateData.standard_code ?? templateData.standardCode ?? '',
+      checklist_items: templateData.checklist_items ?? templateData.checklistItems ?? [],
+      is_active: templateData.is_active ?? templateData.isActive ?? true,
+      created_at: templateData.created_at ?? templateData.createdAt ?? nowIso,
+      updated_at: nowIso
     };
 
     const created = await templateRepository.create(template);
