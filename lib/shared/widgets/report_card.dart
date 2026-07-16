@@ -14,7 +14,7 @@ class ReportCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const ReportCard({
-    Key? key,
+    super.key,
     required this.reportId,
     required this.title,
     required this.date,
@@ -22,7 +22,7 @@ class ReportCard extends StatelessWidget {
     required this.status,
     required this.type,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   String _formatDate(DateTime dt) {
     final months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];

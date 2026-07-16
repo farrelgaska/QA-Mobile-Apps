@@ -7,11 +7,11 @@ class SearchBarField extends StatelessWidget {
   final VoidCallback? onFilterTap;
 
   const SearchBarField({
-    Key? key,
+    super.key,
     required this.placeholder,
     this.onChanged,
     this.onFilterTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

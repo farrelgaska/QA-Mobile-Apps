@@ -11,14 +11,14 @@ class AppCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   const AppCard({
-    Key? key,
+    super.key,
     required this.child,
     this.padding,
     this.borderRadius,
     this.color,
     this.border,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -26,10 +26,10 @@ class AppCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: color ?? AppColors.surface,
         borderRadius: BorderRadius.circular(borderRadius ?? AppRadius.card),
-        border: border ?? Border.all(color: AppColors.border.withOpacity(0.5), width: 0.5),
+        border: border ?? Border.all(color: AppColors.border.withValues(alpha: 0.5), width: 0.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

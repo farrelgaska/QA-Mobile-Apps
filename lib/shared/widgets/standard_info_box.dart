@@ -7,11 +7,11 @@ class StandardInfoBox extends StatelessWidget {
   final String? unit;
 
   const StandardInfoBox({
-    Key? key,
+    super.key,
     required this.standardText,
     this.validRangeText,
     this.unit,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

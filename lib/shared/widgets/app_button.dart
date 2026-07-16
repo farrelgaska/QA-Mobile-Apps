@@ -12,14 +12,14 @@ class AppButton extends StatelessWidget {
   final double? width;
 
   const AppButton({
-    Key? key,
+    super.key,
     required this.text,
     this.onPressed,
     this.variant = AppButtonVariant.primary,
     this.isLoading = false,
     this.icon,
     this.width,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

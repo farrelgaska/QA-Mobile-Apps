@@ -5,7 +5,7 @@ import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/screen_header.dart';
 
 class QCPekerjaanSegmentScreen extends StatelessWidget {
-  const QCPekerjaanSegmentScreen({Key? key}) : super(key: key);
+  const QCPekerjaanSegmentScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

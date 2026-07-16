@@ -11,7 +11,7 @@ import '../../../shared/widgets/qc_module_card.dart';
 import '../../../shared/widgets/report_card.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -82,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: ListView.separated(
                           padding: EdgeInsets.fromLTRB(24, 0, 24, MediaQuery.of(context).viewInsets.bottom + 32),
                           itemCount: dummySites.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          separatorBuilder: (_, _) => const SizedBox(height: 8),
                           itemBuilder: (context, index) {
                             final site = dummySites[index];
                             final isSelected = site.name == _selectedLocation;
@@ -374,7 +374,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       type: report.type,
                       onTap: () => context.push('/reports/${report.id}'),
                     );
-                  }).toList(),
+                  }),
               ],
             ),
           ),

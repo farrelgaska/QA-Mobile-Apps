@@ -8,7 +8,7 @@ import '../../../shared/widgets/app_input.dart';
 import '../../../shared/widgets/app_card.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -198,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.waitingBg,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.waitingText.withOpacity(0.3)),
+                          border: Border.all(color: AppColors.waitingText.withValues(alpha: 0.3)),
                         ),
                         child: const Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

@@ -41,9 +41,9 @@ class ReportDetailScreen extends StatefulWidget {
   final String reportId;
 
   const ReportDetailScreen({
-    Key? key,
+    super.key,
     required this.reportId,
-  }) : super(key: key);
+  });
 
   @override
   State<ReportDetailScreen> createState() => _ReportDetailScreenState();
@@ -169,7 +169,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       for (var ans in report.checklistItems) {
         // Mobile-side: always show neutral status (no pass/fail displayed).
         dynamic evalStatus = QCResultStatus.notFilled;
-        String? warning = null;
+        String? warning;
 
         renderItems.add(
           RenderItem(
@@ -190,7 +190,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       for (var res in report.checklistResults) {
         // Mobile-side: always show neutral status (no pass/fail displayed).
         dynamic evalStatus = QCResultStatus.notFilled;
-        String? warning = null;
+        String? warning;
 
         renderItems.add(
           RenderItem(

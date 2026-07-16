@@ -8,7 +8,7 @@ import '../../../shared/widgets/screen_header.dart';
 import '../../../shared/widgets/confirmation_modal.dart';
 
 class AccountSettingPage extends StatefulWidget {
-  const AccountSettingPage({Key? key}) : super(key: key);
+  const AccountSettingPage({super.key});
 
   @override
   State<AccountSettingPage> createState() => _AccountSettingPageState();
@@ -526,7 +526,7 @@ class _AccountSettingPageState extends State<AccountSettingPage> {
 
 class _SectionHeader extends StatelessWidget {
   final String title;
-  const _SectionHeader({Key? key, required this.title}) : super(key: key);
+  const _SectionHeader({required this.title});
 
   @override
   Widget build(BuildContext context) {

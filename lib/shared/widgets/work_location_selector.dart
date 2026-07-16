@@ -16,7 +16,7 @@ class WorkLocationSelector extends StatefulWidget {
   final Function(bool) onModeChanged;
 
   const WorkLocationSelector({
-    Key? key,
+    super.key,
     required this.selectedSite,
     required this.isCustom,
     required this.nameController,
@@ -25,7 +25,7 @@ class WorkLocationSelector extends StatefulWidget {
     required this.noteController,
     required this.onSiteChanged,
     required this.onModeChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<WorkLocationSelector> createState() => _WorkLocationSelectorState();

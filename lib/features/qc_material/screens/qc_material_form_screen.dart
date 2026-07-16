@@ -24,12 +24,12 @@ class QCMaterialFormScreen extends StatelessWidget {
   final QCMaterialTemplate? template;
 
   const QCMaterialFormScreen({
-    Key? key,
+    super.key,
     required this.materialId,
     this.editReportId,
     this.isRevision = false,
     this.template,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

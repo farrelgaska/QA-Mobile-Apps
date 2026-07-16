@@ -15,7 +15,7 @@ class AppInput extends StatelessWidget {
   final int maxLines;
 
   const AppInput({
-    Key? key,
+    super.key,
     required this.label,
     this.hintText,
     this.helperText,
@@ -27,7 +27,7 @@ class AppInput extends StatelessWidget {
     this.suffixIcon,
     this.onChanged,
     this.maxLines = 1,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
