@@ -1,4 +1,4 @@
-const { templateSchema } = require('../../contracts/template.contract');
+const { checklistItemSchema, templateSchema } = require('../../contracts/template.contract');
 
 const toIso = value => value instanceof Date ? value.toISOString() : value;
 const valueOf = (object, canonical, legacy, fallback) => {
@@ -7,6 +7,73 @@ const valueOf = (object, canonical, legacy, fallback) => {
   return fallback;
 };
 const nullableNumber = value => value === undefined || value === null || value === '' ? null : Number(value);
+
+const canonicalTemplateItemShape = (item, index = 0) => {
+  const rule = valueOf(item, 'validation_rule', 'validationRule', null);
+  return {
+    id: item.id,
+    parameter_name: valueOf(item, 'parameter_name', 'parameterName', item.name || ''),
+    input_type: valueOf(item, 'input_type', 'inputType', 'text'),
+    standard_text: String(valueOf(item, 'standard_text', 'standardText', item.standardLabel || '') ?? ''),
+    min_value: nullableNumber(valueOf(item, 'min_value', 'minValue', item.minVal)),
+    max_value: nullableNumber(valueOf(item, 'max_value', 'maxValue', item.maxVal)),
+    unit: item.unit === undefined || item.unit === '' ? null : item.unit,
+    is_required: valueOf(item, 'is_required', 'isRequired', valueOf(item, 'required', null, false)),
+    required_photo: valueOf(item, 'required_photo', 'requiredPhoto', false),
+    is_active: valueOf(item, 'is_active', 'isActive', true),
+    is_critical: valueOf(item, 'is_critical', 'isCritical', false),
+    position: item.position ?? index,
+    choices: item.choices || [],
+    choice_options: valueOf(item, 'choice_options', 'choiceOptions', []),
+    category: item.category || '',
+    validation_rule: rule,
+    migration_metadata: item.migration_metadata || null
+  };
+};
+
+const canonicalTemplateItemInput = (item, index = 0) => {
+  const result = checklistItemSchema.safeParse(canonicalTemplateItemShape(item, index));
+  if (result.success) return result.data;
+  const error = new Error(result.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join('; '));
+  error.statusCode = 400;
+  throw error;
+};
+
+const mergeTemplateItemPatch = (current, patch) => {
+  const merged = { ...current, ...patch, id: current.id };
+  const aliases = [
+    ['parameterName', 'parameter_name'], ['inputType', 'input_type'],
+    ['standardText', 'standard_text'], ['standardLabel', 'standard_text'],
+    ['minValue', 'min_value'], ['minVal', 'min_value'],
+    ['maxValue', 'max_value'], ['maxVal', 'max_value'],
+    ['choiceOptions', 'choice_options'], ['isRequired', 'is_required'],
+    ['required', 'is_required'], ['requiredPhoto', 'required_photo'],
+    ['isActive', 'is_active'], ['isCritical', 'is_critical'],
+    ['validationRule', 'validation_rule']
+  ];
+  for (const [legacy, canonical] of aliases) {
+    if (patch[legacy] !== undefined && patch[canonical] === undefined) merged[canonical] = patch[legacy];
+  }
+
+  if (merged.input_type !== current.input_type) {
+    if (merged.input_type === 'number') {
+      merged.choices = [];
+      merged.choice_options = [];
+    } else if (merged.input_type === 'text') {
+      merged.min_value = null;
+      merged.max_value = null;
+      merged.unit = null;
+      merged.choices = [];
+      merged.choice_options = [];
+    } else if (merged.input_type === 'choice') {
+      merged.min_value = null;
+      merged.max_value = null;
+      merged.unit = null;
+    }
+  }
+
+  return canonicalTemplateItemInput(merged, current.position);
+};
 
 const mapTemplateItemRow = row => ({
   id: row.id,
@@ -125,28 +192,7 @@ const canonicalTemplateShape = template => ({
   version: template.version ?? 1,
   created_at: valueOf(template, 'created_at', 'createdAt', new Date().toISOString()),
   updated_at: valueOf(template, 'updated_at', 'updatedAt', new Date().toISOString()),
-  checklist_items: valueOf(template, 'checklist_items', 'checklistItems', []).map((item, index) => {
-    const rule = valueOf(item, 'validation_rule', 'validationRule', null);
-    return {
-      id: item.id,
-      parameter_name: valueOf(item, 'parameter_name', 'parameterName', item.name || ''),
-      input_type: valueOf(item, 'input_type', 'inputType', 'text'),
-      standard_text: String(valueOf(item, 'standard_text', 'standardText', item.standardLabel || '') ?? ''),
-      min_value: nullableNumber(valueOf(item, 'min_value', 'minValue', item.minVal)),
-      max_value: nullableNumber(valueOf(item, 'max_value', 'maxValue', item.maxVal)),
-      unit: item.unit === undefined || item.unit === '' ? null : item.unit,
-      is_required: valueOf(item, 'is_required', 'required', false),
-      required_photo: valueOf(item, 'required_photo', 'requiredPhoto', false),
-      is_active: valueOf(item, 'is_active', 'isActive', true),
-      is_critical: valueOf(item, 'is_critical', 'isCritical', false),
-      position: item.position ?? index,
-      choices: item.choices || [],
-      choice_options: valueOf(item, 'choice_options', 'choiceOptions', []),
-      category: item.category || '',
-      validation_rule: rule,
-      migration_metadata: item.migration_metadata || null
-    };
-  }),
+  checklist_items: valueOf(template, 'checklist_items', 'checklistItems', []).map(canonicalTemplateItemShape),
   migration_metadata: template.migration_metadata || null
 });
 
@@ -191,6 +237,9 @@ const canonicalReportInput = report => ({
 module.exports = {
   mapTemplateItemRow,
   mapTemplateAggregate,
+  canonicalTemplateItemShape,
+  canonicalTemplateItemInput,
+  mergeTemplateItemPatch,
   mapReportItemRow,
   mapReportAggregate,
   canonicalTemplateShape,

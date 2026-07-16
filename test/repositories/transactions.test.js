@@ -121,4 +121,6 @@ test('PostgreSQL implementations expose the shared repository methods', () => {
     assert.equal(typeof reports[method], 'function');
   }
   assert.equal(typeof templates.deleteChecklistItem, 'function');
+  assert.equal(typeof templates.createChecklistItem, 'function');
+  assert.equal(typeof templates.updateChecklistItem, 'function');
 });

@@ -75,6 +75,25 @@ const patchTemplate = async (req, res, next) => {
   }
 };
 
+const createTemplateItem = async (req, res, next) => {
+  try {
+    const created = await templateRepository.createChecklistItem(req.params.templateId, req.body);
+    res.status(201).json(created);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const patchTemplateItem = async (req, res, next) => {
+  try {
+    const { templateId, itemId } = req.params;
+    const updated = await templateRepository.updateChecklistItem(templateId, itemId, req.body);
+    res.json(updated);
+  } catch (err) {
+    next(err);
+  }
+};
+
 const deleteTemplate = async (req, res, next) => {
   try {
     await templateRepository.delete(req.params.id);
@@ -99,6 +118,8 @@ module.exports = {
   getTemplateById,
   createTemplate,
   patchTemplate,
+  createTemplateItem,
+  patchTemplateItem,
   deleteTemplate,
   deleteTemplateItem
 };

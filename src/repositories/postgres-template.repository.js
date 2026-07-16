@@ -1,6 +1,12 @@
 const { getPool } = require('../database/postgres');
-const { canonicalTemplateInput, mapTemplateAggregate } = require('./postgres/mappers');
-const { notFound, translatePostgresError } = require('./repository-errors');
+const {
+  canonicalTemplateInput,
+  canonicalTemplateItemInput,
+  mapTemplateAggregate,
+  mapTemplateItemRow,
+  mergeTemplateItemPatch
+} = require('./postgres/mappers');
+const { conflict, notFound, translatePostgresError } = require('./repository-errors');
 
 const ROOT_COLUMNS = `id, type, name, description, form_code, category, segment,
   standard_code, is_active, workflow_status, version, migration_metadata, created_at, updated_at`;
@@ -53,6 +59,21 @@ class PostgresTemplateRepository {
 
   findById(id) {
     return this._findById(this.pool, id);
+  }
+
+  async _findItem(executor, templateId, itemId) {
+    const result = await executor.query(
+      'select * from public.qc_template_items where template_id = $1 and id = $2',
+      [templateId, itemId]
+    );
+    return result.rows[0] ? mapTemplateItemRow(result.rows[0]) : undefined;
+  }
+
+  _nextItemId(templateId, items) {
+    const existing = new Set(items.map(item => item.id));
+    let sequence = 1;
+    while (existing.has(`${templateId}-C${String(sequence).padStart(2, '0')}`)) sequence += 1;
+    return `${templateId}-C${String(sequence).padStart(2, '0')}`;
   }
 
   async _insertItems(client, templateId, items) {
@@ -142,6 +163,66 @@ class PostgresTemplateRepository {
         await this._insertItems(client, id, template.checklist_items);
       }
       return this._findById(client, id);
+    });
+  }
+
+  async createChecklistItem(templateId, input) {
+    try {
+      return await this._transaction(async client => {
+        const template = await this._findById(client, templateId, true);
+        if (!template) throw notFound(`Template with ID ${templateId} not found`);
+        const id = input.id || this._nextItemId(templateId, template.checklist_items);
+        if (template.checklist_items.some(item => item.id === id)) {
+          throw conflict(`Checklist parameter with ID ${id} already exists in template ${templateId}`);
+        }
+        const nextPosition = template.checklist_items.reduce(
+          (maximum, item) => Math.max(maximum, item.position),
+          -1
+        ) + 1;
+        const item = canonicalTemplateItemInput({ ...input, id, position: input.position ?? nextPosition }, nextPosition);
+        await this._insertItems(client, templateId, [item]);
+        await client.query('update public.qc_templates set updated_at = now() where id = $1', [templateId]);
+        return this._findItem(client, templateId, id);
+      });
+    } catch (error) {
+      if (error?.code === '23505') {
+        throw conflict(`Checklist parameter or position already exists in template ${templateId}`);
+      }
+      throw error;
+    }
+  }
+
+  async updateChecklistItem(templateId, itemId, patch) {
+    return this._transaction(async client => {
+      const template = await this._findById(client, templateId, true);
+      if (!template) throw notFound(`Template with ID ${templateId} not found`);
+      const current = template.checklist_items.find(item => item.id === itemId);
+      if (!current) throw notFound(`Checklist parameter with ID ${itemId} not found in template ${templateId}`);
+      const item = mergeTemplateItemPatch(current, patch);
+      const rule = item.validation_rule || {};
+      try {
+        await client.query(
+          `update public.qc_template_items set
+            parameter_name=$3, input_type=$4, standard_text=$5, min_value=$6, max_value=$7,
+            unit=$8, is_required=$9, required_photo=$10, is_active=$11, is_critical=$12,
+            position=$13, choices=$14, choice_options=$15, category=$16,
+            validation_type=$17, validation_min_value=$18, validation_max_value=$19,
+            validation_exact_value=$20, migration_metadata=$21
+           where template_id=$1 and id=$2`,
+          [
+            templateId, itemId, item.parameter_name, item.input_type, item.standard_text,
+            item.min_value, item.max_value, item.unit, item.is_required, item.required_photo,
+            item.is_active, item.is_critical, item.position, item.choices, item.choice_options,
+            item.category, rule.type ?? null, rule.min_value ?? null, rule.max_value ?? null,
+            rule.exact_value ?? null, item.migration_metadata
+          ]
+        );
+      } catch (error) {
+        if (error?.code === '23505') throw conflict(`Checklist position already exists in template ${templateId}`);
+        throw error;
+      }
+      await client.query('update public.qc_templates set updated_at = now() where id = $1', [templateId]);
+      return this._findItem(client, templateId, itemId);
     });
   }
 

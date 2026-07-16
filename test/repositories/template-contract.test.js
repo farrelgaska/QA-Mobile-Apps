@@ -121,3 +121,53 @@ test('text items reject bounds and choices consistently', () => {
   assert.throws(() => canonicalTemplateInput(baseTemplate({ ...textItem, min_value: 1 })), /text items cannot define numeric bounds/);
   assert.throws(() => canonicalTemplateInput(baseTemplate({ ...textItem, choices: ['x'] })), /text items cannot define choices/);
 });
+
+test('JSON item create generates stable IDs and next positions without replacing siblings', t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'template-item-create-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const file = path.join(directory, 'templates.json');
+  fs.writeFileSync(file, '[]');
+  const repository = new templateModule.JsonTemplateRepository(file);
+  repository.create(baseTemplate(textItem));
+
+  const created = repository.createChecklistItem('MAT-CONTRACT', {
+    parameterName: 'Length', inputType: 'number', standardText: '4.2',
+    minValue: 4, maxValue: 5, unit: 'mm', isRequired: true, requiredPhoto: true
+  });
+  assert.equal(created.id, 'MAT-CONTRACT-C01');
+  assert.equal(created.position, 1);
+  assert.equal(created.parameter_name, 'Length');
+  assert.equal(created.min_value, 4);
+  assert.equal(repository.findById('MAT-CONTRACT').checklist_items.length, 2);
+  assert.throws(
+    () => repository.createChecklistItem('MAT-CONTRACT', { ...created, position: 2 }),
+    error => error.statusCode === 409
+  );
+});
+
+test('JSON item PATCH merges fields, keeps IDs immutable, and clears fields on type changes', t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'template-item-update-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const file = path.join(directory, 'templates.json');
+  fs.writeFileSync(file, '[]');
+  const repository = new templateModule.JsonTemplateRepository(file);
+  repository.create(baseTemplate({
+    ...textItem, id: 'N-1', input_type: 'number', min_value: 4, max_value: 5, unit: 'mm'
+  }));
+
+  const updated = repository.updateChecklistItem('MAT-CONTRACT', 'N-1', {
+    id: 'CHANGED', inputType: 'text', standardText: 'Visual description', requiredPhoto: true
+  });
+  assert.equal(updated.id, 'N-1');
+  assert.equal(updated.input_type, 'text');
+  assert.equal(updated.standard_text, 'Visual description');
+  assert.equal(updated.min_value, null);
+  assert.equal(updated.max_value, null);
+  assert.equal(updated.unit, null);
+  assert.deepEqual(updated.choice_options, []);
+  assert.equal(updated.required_photo, true);
+  assert.throws(
+    () => repository.updateChecklistItem('MAT-CONTRACT', 'MISSING', { standard_text: 'x' }),
+    error => error.statusCode === 404
+  );
+});
