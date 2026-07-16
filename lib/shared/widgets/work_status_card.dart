@@ -9,11 +9,11 @@ class WorkStatusCard extends StatelessWidget {
   final String status;
 
   const WorkStatusCard({
-    Key? key,
+    super.key,
     required this.workName,
     required this.locationName,
     required this.status,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

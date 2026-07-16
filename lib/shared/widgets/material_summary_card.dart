@@ -9,11 +9,11 @@ class MaterialSummaryCard extends StatelessWidget {
   final String sampleCount;
 
   const MaterialSummaryCard({
-    Key? key,
+    super.key,
     required this.materialName,
     required this.status,
     required this.sampleCount,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

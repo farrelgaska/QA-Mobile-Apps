@@ -6,9 +6,9 @@ class QCConclusionBox extends StatelessWidget {
   final String conclusionState; // 'Belum Lengkap' | 'Diterima' | 'Ditolak'
 
   const QCConclusionBox({
-    Key? key,
+    super.key,
     required this.conclusionState,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +58,7 @@ class QCConclusionBox extends StatelessWidget {
                 Text(
                   text,
                   style: TextStyle(
-                    color: textColor.withOpacity(0.85),
+                    color: textColor.withValues(alpha: 0.85),
                     fontSize: 11,
                   ),
                 ),

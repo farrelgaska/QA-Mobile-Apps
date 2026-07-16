@@ -12,9 +12,9 @@ class ReportsScreen extends StatefulWidget {
   final String? initialStatus;
 
   const ReportsScreen({
-    Key? key,
+    super.key,
     this.initialStatus,
-  }) : super(key: key);
+  });
 
   @override
   State<ReportsScreen> createState() => _ReportsScreenState();

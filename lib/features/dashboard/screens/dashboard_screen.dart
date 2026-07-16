@@ -10,7 +10,7 @@ import '../../../shared/widgets/material_summary_card.dart';
 import '../../../shared/widgets/work_status_card.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({Key? key}) : super(key: key);
+  const DashboardScreen({super.key});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -172,7 +172,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.primarySoft,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -379,7 +379,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             status: statusText,
             sampleCount: '1 batch',
           );
-        }).toList(),
+        }),
         const SizedBox(height: 16),
 
         // 2. Laporan Perlu Perbaikan
@@ -540,7 +540,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             locationName: report.area,
             status: statusText,
           );
-        }).toList(),
+        }),
         const SizedBox(height: 16),
 
         // 2. Laporan Perlu Perbaikan
@@ -573,7 +573,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   )
@@ -621,7 +621,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 class MaterialNeedsRepairCard extends StatelessWidget {
   final List<dynamic> reports; // List of QCReportModel
 
-  const MaterialNeedsRepairCard({Key? key, required this.reports}) : super(key: key);
+  const MaterialNeedsRepairCard({super.key, required this.reports});
 
   @override
   Widget build(BuildContext context) {
@@ -631,7 +631,7 @@ class MaterialNeedsRepairCard extends StatelessWidget {
         color: const Color(0xFFFDECEC), // soft red
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFFEF4444).withOpacity(0.2),
+          color: const Color(0xFFEF4444).withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -651,7 +651,7 @@ class MaterialNeedsRepairCard extends StatelessWidget {
                       color: Color(0xFFEF4444),
                       size: 18,
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Text(
                       'Laporan Perlu Perbaikan',
                       style: TextStyle(
@@ -787,7 +787,7 @@ class MaterialNeedsRepairCard extends StatelessWidget {
 class PekerjaanNeedsRepairCard extends StatelessWidget {
   final List<dynamic> reports; // List of QCReportModel
 
-  const PekerjaanNeedsRepairCard({Key? key, required this.reports}) : super(key: key);
+  const PekerjaanNeedsRepairCard({super.key, required this.reports});
 
   @override
   Widget build(BuildContext context) {
@@ -797,7 +797,7 @@ class PekerjaanNeedsRepairCard extends StatelessWidget {
         color: const Color(0xFFFDECEC), // soft red
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFFEF4444).withOpacity(0.2),
+          color: const Color(0xFFEF4444).withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -817,7 +817,7 @@ class PekerjaanNeedsRepairCard extends StatelessWidget {
                       color: Color(0xFFEF4444),
                       size: 18,
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Text(
                       'Laporan Perlu Perbaikan',
                       style: TextStyle(
@@ -955,10 +955,10 @@ class ActivityTimelineCard extends StatelessWidget {
   final List<Map<String, dynamic>> activities;
 
   const ActivityTimelineCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.activities,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1034,7 +1034,7 @@ class ActivityTimelineCard extends StatelessWidget {
 class MaterialRepairDetailSheet extends StatelessWidget {
   final Map<String, dynamic> item;
 
-  const MaterialRepairDetailSheet({Key? key, required this.item}) : super(key: key);
+  const MaterialRepairDetailSheet({super.key, required this.item});
 
   @override
   Widget build(BuildContext context) {
@@ -1085,7 +1085,7 @@ class MaterialRepairDetailSheet extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: const Color(0xFFFDE2E2),
                         borderRadius: BorderRadius.circular(100),
-                        border: Border.all(color: const Color(0xFFDC2626).withOpacity(0.2)),
+                        border: Border.all(color: const Color(0xFFDC2626).withValues(alpha: 0.2)),
                       ),
                       child: const Text(
                         'Perlu Perbaikan',

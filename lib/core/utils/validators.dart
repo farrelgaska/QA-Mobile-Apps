@@ -1,4 +1,3 @@
-import '../../shared/models/enums.dart';
 
 class QCValidators {
   static bool isValidNumber(String value) {

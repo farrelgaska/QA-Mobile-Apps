@@ -6,9 +6,9 @@ class MainShell extends StatelessWidget {
   final Widget child;
 
   const MainShell({
-    Key? key,
+    super.key,
     required this.child,
-  }) : super(key: key);
+  });
 
   int _getSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;

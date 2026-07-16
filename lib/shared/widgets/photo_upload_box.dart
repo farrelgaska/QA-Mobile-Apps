@@ -6,10 +6,10 @@ class PhotoUploadBox extends StatelessWidget {
   final double size;
 
   const PhotoUploadBox({
-    Key? key,
+    super.key,
     required this.onTap,
     this.size = 72,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +22,7 @@ class PhotoUploadBox extends StatelessWidget {
           color: AppColors.backgroundSoft,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: AppColors.textSoft.withOpacity(0.5),
+            color: AppColors.textSoft.withValues(alpha: 0.5),
             width: 1.2,
           ),
         ),

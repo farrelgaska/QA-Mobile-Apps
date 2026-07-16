@@ -7,11 +7,11 @@ class FilterTabs extends StatelessWidget {
   final ValueChanged<String> onSelected;
 
   const FilterTabs({
-    Key? key,
+    super.key,
     required this.items,
     required this.selectedItem,
     required this.onSelected,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

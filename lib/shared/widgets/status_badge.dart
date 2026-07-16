@@ -7,9 +7,9 @@ class StatusBadge extends StatelessWidget {
   final dynamic status; // ReportStatus, ChecklistStatus, QCReportStatus, QCResultStatus or String
 
   const StatusBadge({
-    Key? key,
+    super.key,
     required this.status,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
