@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -22,6 +23,8 @@ class ChecklistItemCard extends StatefulWidget {
   final String issueDescription;
   final List<String> photos;
   final List<XFile> localPhotos;
+  final List<Uint8List> localPhotoBytes;
+  final Map<String, Uint8List> uploadedPhotoPreviewBytes;
   final String? warningMessage;
   final bool isLocked; // locked if auto-validation fails/succeeds on numerics
 
@@ -44,6 +47,8 @@ class ChecklistItemCard extends StatefulWidget {
     required this.issueDescription,
     required this.photos,
     this.localPhotos = const [],
+    this.localPhotoBytes = const [],
+    this.uploadedPhotoPreviewBytes = const {},
     this.warningMessage,
     required this.isLocked,
     required this.onStatusChanged,
@@ -225,6 +230,9 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
                   child: PhotoGrid(
                     photos: widget.photos,
                     localPhotos: widget.localPhotos,
+                    localPhotoBytes: widget.localPhotoBytes,
+                    uploadedPhotoPreviewBytes:
+                        widget.uploadedPhotoPreviewBytes,
                     onDelete: widget.onDeletePhoto,
                   ),
                 ),

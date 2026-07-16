@@ -83,7 +83,10 @@ class ApiService {
   }
 
   /// Sync/post a report to the mock API backend.
-  Future<bool> postReport(QCReportModel report) async {
+  Future<bool> postReport(
+    QCReportModel report, {
+    bool throwOnError = false,
+  }) async {
     try {
       final response = await http
           .post(
@@ -92,15 +95,36 @@ class ApiService {
             body: jsonEncode(report.toJson()),
           )
           .timeout(const Duration(seconds: 4));
-      return response.statusCode == 200 || response.statusCode == 201;
-    } catch (e) {
-      print('[Mock API Offline - Prototype Fallback] postReport failed: $e');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      }
+      if (response.statusCode == 409) {
+        throw ApiRequestException(
+          'Laporan dengan ID ${report.id} sudah tersimpan. Muat ulang daftar laporan sebelum mencoba lagi.',
+        );
+      }
+      throw ApiRequestException(
+        'Laporan gagal disimpan (HTTP ${response.statusCode}). Silakan coba lagi.',
+      );
+    } on ApiRequestException catch (error) {
+      if (throwOnError) rethrow;
+      print('[Mock API Offline - Prototype Fallback] postReport failed: $error');
+      return false;
+    } catch (error) {
+      final exception = ApiRequestException(
+        'Tidak dapat terhubung ke server saat menyimpan laporan: $error',
+      );
+      if (throwOnError) throw exception;
+      print('[Mock API Offline - Prototype Fallback] postReport failed: $error');
       return false;
     }
   }
 
   /// Sync/patch a report to the mock API backend.
-  Future<bool> patchReport(QCReportModel report) async {
+  Future<bool> patchReport(
+    QCReportModel report, {
+    bool throwOnError = false,
+  }) async {
     try {
       final response = await http
           .patch(
@@ -109,9 +133,25 @@ class ApiService {
             body: jsonEncode(report.toJson()),
           )
           .timeout(const Duration(seconds: 4));
-      return response.statusCode == 200;
-    } catch (e) {
-      print('[Mock API Offline - Prototype Fallback] patchReport failed: $e');
+      if (response.statusCode == 200) return true;
+      if (response.statusCode == 409) {
+        throw ApiRequestException(
+          'Perubahan laporan ${report.id} konflik dengan data yang sudah tersimpan. Muat ulang laporan sebelum mencoba lagi.',
+        );
+      }
+      throw ApiRequestException(
+        'Laporan gagal diperbarui (HTTP ${response.statusCode}). Silakan coba lagi.',
+      );
+    } on ApiRequestException catch (error) {
+      if (throwOnError) rethrow;
+      print('[Mock API Offline - Prototype Fallback] patchReport failed: $error');
+      return false;
+    } catch (error) {
+      final exception = ApiRequestException(
+        'Tidak dapat terhubung ke server saat memperbarui laporan: $error',
+      );
+      if (throwOnError) throw exception;
+      print('[Mock API Offline - Prototype Fallback] patchReport failed: $error');
       return false;
     }
   }
