@@ -21,30 +21,33 @@ class QCMaterialFormScreen extends StatelessWidget {
   final String materialId;
   final String? editReportId;
   final bool isRevision;
-  final QCMaterialTemplate? template;
+  final QCMaterialTemplate template;
 
   const QCMaterialFormScreen({
     super.key,
     required this.materialId,
     this.editReportId,
     this.isRevision = false,
-    this.template,
+    required this.template,
   });
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => QCMaterialFormProvider()..init(
-        materialId,
-        editReportId: editReportId,
-        isRevision: isRevision,
-        template: template,
-      ),
+      create: (_) => QCMaterialFormProvider()
+        ..init(
+          materialId,
+          editReportId: editReportId,
+          isRevision: isRevision,
+          template: template,
+        ),
       child: Consumer<QCMaterialFormProvider>(
         builder: (context, provider, _) {
           if (!provider.isReady) {
             return const Scaffold(
-              body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+              body: Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              ),
             );
           }
           final tpl = provider.template;
@@ -53,7 +56,10 @@ class QCMaterialFormScreen extends StatelessWidget {
             body: SafeArea(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20.0,
+                  vertical: 16.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -86,55 +92,127 @@ class QCMaterialFormScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Informasi Umum Pengadaan',
-              style: TextStyle(color: AppColors.textMain, fontWeight: FontWeight.bold, fontSize: 15)),
+          const Text(
+            'Informasi Umum Pengadaan',
+            style: TextStyle(
+              color: AppColors.textMain,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+          ),
           const SizedBox(height: 12),
-          AppInput(label: 'Nomor PO', hintText: 'Masukkan nomor Purchase Order',
-              controller: p.poNumberController, prefixIcon: Icons.receipt_outlined),
+          AppInput(
+            label: 'Nomor PO',
+            hintText: 'Masukkan nomor Purchase Order',
+            controller: p.poNumberController,
+            prefixIcon: Icons.receipt_outlined,
+          ),
           const SizedBox(height: 12),
-          AppInput(label: 'Tanggal PO', hintText: 'YYYY-MM-DD',
-              controller: p.poDateController, prefixIcon: Icons.calendar_today_outlined),
+          AppInput(
+            label: 'Tanggal PO',
+            hintText: 'YYYY-MM-DD',
+            controller: p.poDateController,
+            prefixIcon: Icons.calendar_today_outlined,
+          ),
           const SizedBox(height: 12),
-          AppInput(label: 'Nomor DO / Surat Jalan', hintText: 'Masukkan nomor Delivery Order',
-              controller: p.doNumberController, prefixIcon: Icons.local_shipping_outlined),
+          AppInput(
+            label: 'Nomor DO / Surat Jalan',
+            hintText: 'Masukkan nomor Delivery Order',
+            controller: p.doNumberController,
+            prefixIcon: Icons.local_shipping_outlined,
+          ),
           const SizedBox(height: 12),
-          AppInput(label: 'Nama Mitra Pabrikasi / Vendor', hintText: 'Masukkan nama vendor logam/tiang',
-              controller: p.vendorNameController, prefixIcon: Icons.business_center_outlined),
+          AppInput(
+            label: 'Nama Mitra Pabrikasi / Vendor',
+            hintText: 'Masukkan nama vendor logam/tiang',
+            controller: p.vendorNameController,
+            prefixIcon: Icons.business_center_outlined,
+          ),
           const SizedBox(height: 12),
-          AppInput(label: 'ID Material', hintText: 'Masukkan kode ID material',
-              controller: p.materialIdController, prefixIcon: Icons.qr_code_scanner_outlined),
+          AppInput(
+            label: 'ID Material',
+            hintText: 'Masukkan kode ID material',
+            controller: p.materialIdController,
+            prefixIcon: Icons.qr_code_scanner_outlined,
+          ),
           const SizedBox(height: 12),
-          Row(children: [
-            Expanded(child: AppInput(label: 'Volume Datang', hintText: 'Contoh: 100',
-                controller: p.arrivalVolumeController, keyboardType: TextInputType.number)),
-            const SizedBox(width: 12),
-            Expanded(child: AppInput(label: 'Volume Sampling', hintText: 'Contoh: 5',
-                controller: p.samplingVolumeController, keyboardType: TextInputType.number)),
-          ]),
+          Row(
+            children: [
+              Expanded(
+                child: AppInput(
+                  label: 'Volume Datang',
+                  hintText: 'Contoh: 100',
+                  controller: p.arrivalVolumeController,
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: AppInput(
+                  label: 'Volume Sampling',
+                  hintText: 'Contoh: 5',
+                  controller: p.samplingVolumeController,
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
-          AppInput(label: 'Merk Material', hintText: 'Masukkan nama merk tiang',
-              controller: p.brandNameController, prefixIcon: Icons.copyright_outlined),
+          AppInput(
+            label: 'Merk Material',
+            hintText: 'Masukkan nama merk tiang',
+            controller: p.brandNameController,
+            prefixIcon: Icons.copyright_outlined,
+          ),
           const SizedBox(height: 12),
-          AppInput(label: 'Lokasi Warehouse Penerima', hintText: 'Contoh: Gudang Cikarang A',
-              controller: p.warehouseLocationController, prefixIcon: Icons.store_outlined),
+          AppInput(
+            label: 'Lokasi Warehouse Penerima',
+            hintText: 'Contoh: Gudang Cikarang A',
+            controller: p.warehouseLocationController,
+            prefixIcon: Icons.store_outlined,
+          ),
           const SizedBox(height: 12),
-          AppInput(label: 'Nomor QA/STEL/Versi',
-              controller: p.stelVersionController, prefixIcon: Icons.verified_user_outlined),
+          AppInput(
+            label: 'Nomor QA/STEL/Versi',
+            controller: p.stelVersionController,
+            prefixIcon: Icons.verified_user_outlined,
+          ),
           const SizedBox(height: 12),
-          AppInput(label: 'Masa Berlaku QA', hintText: 'YYYY-MM-DD',
-              controller: p.qaExpiryDateController, prefixIcon: Icons.date_range_outlined),
+          AppInput(
+            label: 'Masa Berlaku QA',
+            hintText: 'YYYY-MM-DD',
+            controller: p.qaExpiryDateController,
+            prefixIcon: Icons.date_range_outlined,
+          ),
           const SizedBox(height: 12),
-          AppInput(label: 'Nomor Sertifikat TKDN',
-              controller: p.tkdnNumberController, prefixIcon: Icons.shield_outlined),
+          AppInput(
+            label: 'Nomor Sertifikat TKDN',
+            controller: p.tkdnNumberController,
+            prefixIcon: Icons.shield_outlined,
+          ),
           const SizedBox(height: 12),
-          Row(children: [
-            Expanded(child: AppInput(label: 'Tgl Sertifikat TKDN',
-                controller: p.tkdnCertDateController, hintText: 'YYYY-MM-DD')),
-            const SizedBox(width: 12),
-            Expanded(child: AppInput(label: 'Nilai TKDN (%)',
-                controller: p.tkdnValueController, hintText: 'Contoh: 42.5',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true))),
-          ]),
+          Row(
+            children: [
+              Expanded(
+                child: AppInput(
+                  label: 'Tgl Sertifikat TKDN',
+                  controller: p.tkdnCertDateController,
+                  hintText: 'YYYY-MM-DD',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: AppInput(
+                  label: 'Nilai TKDN (%)',
+                  controller: p.tkdnValueController,
+                  hintText: 'Contoh: 42.5',
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -158,15 +236,25 @@ class QCMaterialFormScreen extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
-          Text('Parameter Checklist Mutu',
-              style: TextStyle(color: AppColors.textMain, fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(
+            'Parameter Checklist Mutu',
+            style: TextStyle(
+              color: AppColors.textMain,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
           SizedBox(height: 12),
           Center(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Column(
                 children: [
-                  Icon(Icons.checklist_outlined, size: 48, color: AppColors.textSoft),
+                  Icon(
+                    Icons.checklist_outlined,
+                    size: 48,
+                    color: AppColors.textSoft,
+                  ),
                   SizedBox(height: 12),
                   Text(
                     'Template ini belum memiliki item checklist.',
@@ -183,13 +271,20 @@ class QCMaterialFormScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Parameter Checklist Mutu',
-            style: TextStyle(color: AppColors.textMain, fontWeight: FontWeight.bold, fontSize: 16)),
+        const Text(
+          'Parameter Checklist Mutu',
+          style: TextStyle(
+            color: AppColors.textMain,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
         const SizedBox(height: 12),
         ...List.generate(tpl.checklistItems.length, (index) {
           final item = tpl.checklistItems[index];
           final answer = p.answers[index];
-          final hasValidationError = answer.warningMessage != null &&
+          final hasValidationError =
+              answer.warningMessage != null &&
               answer.warningMessage!.isNotEmpty &&
               answer.warningMessage != 'Wajib diisi';
           return Column(
@@ -201,7 +296,7 @@ class QCMaterialFormScreen extends StatelessWidget {
                 standardText: item.standardText,
                 inputType: item.inputType,
                 unit: item.unit,
-                choices: item.choices,
+                choiceOptions: item.choiceOptions,
                 currentStatus: answer.status,
                 resultValue: answer.value,
                 issueDescription: answer.issueNote ?? '',
@@ -210,11 +305,14 @@ class QCMaterialFormScreen extends StatelessWidget {
                 isLocked: hasValidationError,
                 onStatusChanged: (status) => p.answers[index].status = status,
                 onResultValueChanged: (val) => p.updateAnswer(index, val),
-                onIssueDescriptionChanged: (val) => p.updateIssueNote(index, val),
+                onIssueDescriptionChanged: (val) =>
+                    p.updateIssueNote(index, val),
                 onAddPhoto: () => p.addPhoto(index),
                 onDeletePhoto: (pIdx) => p.removePhoto(index, pIdx),
               ),
-              if (p.isRevisionMode && answer.adminNote != null && answer.adminNote!.isNotEmpty) ...[
+              if (p.isRevisionMode &&
+                  answer.adminNote != null &&
+                  answer.adminNote!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Container(
                   width: double.infinity,
@@ -223,14 +321,21 @@ class QCMaterialFormScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.rejectedBg,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.rejectedText, width: 0.5),
+                    border: Border.all(
+                      color: AppColors.rejectedText,
+                      width: 0.5,
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.info_outline, color: AppColors.rejectedText, size: 14),
+                          const Icon(
+                            Icons.info_outline,
+                            color: AppColors.rejectedText,
+                            size: 14,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             'Catatan Perbaikan Admin (Item ${index + 1}):',
@@ -268,7 +373,8 @@ class QCMaterialFormScreen extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       child: AppInput(
         label: 'Catatan QA Staff (Opsional)',
-        hintText: 'Tuliskan catatan tambahan mengenai hasil pengujian material...',
+        hintText:
+            'Tuliskan catatan tambahan mengenai hasil pengujian material...',
         controller: p.staffNoteController,
         maxLines: 3,
       ),
@@ -276,60 +382,67 @@ class QCMaterialFormScreen extends StatelessWidget {
   }
 
   Widget _buildActionButtons(BuildContext context, QCMaterialFormProvider p) {
-    return Row(children: [
-      if (!p.isRevisionMode) ...[
+    return Row(
+      children: [
+        if (!p.isRevisionMode) ...[
+          Expanded(
+            flex: 4,
+            child: AppButton(
+              text: 'Simpan Form',
+              variant: AppButtonVariant.secondary,
+              onPressed: () {
+                if (!p.hasAnyDraftContent) {
+                  AppSnackbar.warning(
+                    context,
+                    'Isi minimal satu data pemeriksaan sebelum menyimpan draft.',
+                  );
+                  return;
+                }
+                p.persistReport(QCReportStatus.DRAFT);
+                AppSnackbar.success(context, 'Draft berhasil disimpan');
+                context.pop();
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+        ],
         Expanded(
-          flex: 4,
+          flex: 6,
           child: AppButton(
-            text: 'Simpan Form',
-            variant: AppButtonVariant.secondary,
+            text: p.isRevisionMode ? 'Kirim Ulang' : 'Kirim Laporan',
+            variant: AppButtonVariant.primary,
             onPressed: () {
-              if (!p.hasAnyDraftContent) {
-                AppSnackbar.warning(context, 'Isi minimal satu data pemeriksaan sebelum menyimpan draft.');
+              final locError = p.validateLocation();
+              if (locError != null) {
+                AppSnackbar.error(context, locError);
                 return;
               }
-              p.persistReport(QCReportStatus.DRAFT);
-              AppSnackbar.success(context, 'Draft berhasil disimpan');
-              context.pop();
+              final error = p.validateForm();
+              if (error != null) {
+                AppSnackbar.error(context, error);
+                return;
+              }
+              showDialog(
+                context: context,
+                builder: (c) => ConfirmationModal(
+                  title: p.isRevisionMode
+                      ? 'Kirim Ulang Laporan'
+                      : 'Kirim Laporan QC',
+                  message: p.isRevisionMode
+                      ? 'Apakah perbaikan data pengujian sudah benar dan siap dikirim ulang?'
+                      : 'Apakah seluruh data pengujian sudah benar dan siap dikirim?',
+                  confirmText: p.isRevisionMode ? 'Kirim Ulang' : 'Kirim',
+                  onConfirm: () {
+                    p.persistReport(QCReportStatus.SUBMITTED);
+                    Navigator.pop(c);
+                    context.pop();
+                  },
+                ),
+              );
             },
           ),
         ),
-        const SizedBox(width: 12),
       ],
-      Expanded(
-        flex: 6,
-        child: AppButton(
-          text: p.isRevisionMode ? 'Kirim Ulang' : 'Kirim Laporan',
-          variant: AppButtonVariant.primary,
-          onPressed: () {
-            final locError = p.validateLocation();
-            if (locError != null) {
-              AppSnackbar.error(context, locError);
-              return;
-            }
-            final error = p.validateForm();
-            if (error != null) {
-              AppSnackbar.error(context, error);
-              return;
-            }
-            showDialog(
-              context: context,
-              builder: (c) => ConfirmationModal(
-                title: p.isRevisionMode ? 'Kirim Ulang Laporan' : 'Kirim Laporan QC',
-                message: p.isRevisionMode
-                    ? 'Apakah perbaikan data pengujian sudah benar dan siap dikirim ulang?'
-                    : 'Apakah seluruh data pengujian sudah benar dan siap dikirim?',
-                confirmText: p.isRevisionMode ? 'Kirim Ulang' : 'Kirim',
-                onConfirm: () {
-                  p.persistReport(QCReportStatus.SUBMITTED);
-                  Navigator.pop(c);
-                  context.pop();
-                },
-              ),
-            );
-          },
-        ),
-      ),
-    ]);
+    );
   }
 }

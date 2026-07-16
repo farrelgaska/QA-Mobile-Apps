@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../core/dummy/dummy_pekerjaan.dart';
 import '../../core/dummy/dummy_state.dart';
 import '../../core/services/api_service.dart';
 import '../../shared/models/enums.dart';
@@ -11,6 +10,8 @@ import '../../shared/models/qc_report_model.dart'; // QCReportModel, AdminReview
 import '../../shared/models/qc_checklist_answer_model.dart';
 import '../../shared/models/work_location_model.dart';
 import '../../core/utils/validators.dart';
+import '../../shared/models/pekerjaan_model.dart';
+import '../../shared/models/template_choice_option.dart';
 
 enum PhotoAddResult { added, cancelled, limitReached }
 
@@ -31,7 +32,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   bool _isPersisting = false;
   bool _isDisposed = false;
   late String _reportId;
-  dynamic _pekerjaan; // dummy model
+  late PekerjaanModel _pekerjaan;
 
   QCPekerjaanFormProvider({ImagePicker? imagePicker, ApiService? apiService})
     : _imagePicker = imagePicker ?? ImagePicker(),
@@ -41,7 +42,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   bool get isReady => _isInit;
   bool get submitAttempted => _submitAttempted;
   bool get isPersisting => _isPersisting;
-  dynamic get pekerjaan => _pekerjaan;
+  PekerjaanModel get pekerjaan => _pekerjaan;
   DummyState get state => _state;
 
   // General controllers
@@ -69,19 +70,19 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   QCReportModel? _originalReport;
 
   void init(
-    String pekerjaanId, {
+    PekerjaanModel pekerjaan, {
     String? editReportId,
     bool isRevision = false,
   }) {
     if (_isInit) return;
-    _pekerjaan = dummyPekerjaan.firstWhere(
-      (p) => p.id == pekerjaanId,
-      orElse: () => dummyPekerjaan[0],
-    );
+    _pekerjaan = pekerjaan;
+    _state.workTemplateCache[pekerjaan.id] = pekerjaan;
     _reportId = editReportId ?? _newReportId();
 
     if (editReportId != null) {
-      final reportIndex = _state.reports.indexWhere((r) => r.id == editReportId);
+      final reportIndex = _state.reports.indexWhere(
+        (r) => r.id == editReportId,
+      );
       if (reportIndex == -1) {
         throw StateError('Laporan $editReportId tidak ditemukan.');
       }
@@ -156,6 +157,12 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   }
 
   void updateResult(int index, String value) {
+    final item = _pekerjaan.checklistItems[index];
+    final selectedOption = choiceOptionForValue(item.choiceOptions, value);
+    if (item.inputType == InputType.choice &&
+        selectedOption?.outcome == 'PASS') {
+      itemIssues[index] = '';
+    }
     itemResults[index] = value;
     _recalculateStatus(index);
     notifyListeners();
@@ -187,9 +194,10 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         itemWarnings[index] = 'Input harus berupa angka';
         return;
       }
-      if (parsed < 0) {
+      if ((item.minValue != null && parsed < item.minValue!) ||
+          (item.maxValue != null && parsed > item.maxValue!)) {
         itemStatuses[index] = ChecklistStatus.inputTidakValid;
-        itemWarnings[index] = 'Nilai tidak boleh negatif';
+        itemWarnings[index] = 'Nilai di luar batas yang diizinkan';
         return;
       }
     }
@@ -202,20 +210,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
     final bool isChoice = item.inputType == InputType.choice;
     final bool isNonIdeal =
         isChoice &&
-        ![
-          'sesuai',
-          'rapi',
-          'kencang',
-          'ada',
-          'lengkap',
-          'ya',
-          'ok',
-          'diterima',
-          'sesuai standar',
-          'bersih',
-          'ada & jelas',
-          'tegak lurus',
-        ].contains(value.toLowerCase());
+        choiceOptionForValue(item.choiceOptions, value)?.outcome == 'FAIL';
     final bool noteMissing = isNonIdeal && issue.isEmpty;
 
     if (photoMissing) {
@@ -298,7 +293,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
       final hasPhotos =
           itemPhotos[i].isNotEmpty || pendingItemPhotos[i].isNotEmpty;
 
-      if (valStr.isEmpty) {
+      if (item.required && valStr.isEmpty) {
         if (item.inputType == InputType.number) {
           return 'Form ${i + 1} - ${item.title}: isi nilai aktual terlebih dahulu';
         } else if (item.inputType == InputType.choice) {
@@ -313,8 +308,10 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
           return 'Form ${i + 1} - ${item.title}: masukkan angka yang valid';
         }
         final valNum = double.tryParse(valStr.replaceAll(',', '.'));
-        if (valNum != null && valNum < 0) {
-          return 'Form ${i + 1} - ${item.title}: nilai tidak boleh negatif';
+        if (valNum != null &&
+            ((item.minValue != null && valNum < item.minValue!) ||
+                (item.maxValue != null && valNum > item.maxValue!))) {
+          return 'Form ${i + 1} - ${item.title}: nilai di luar batas yang diizinkan';
         }
       }
 
@@ -322,23 +319,8 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         return 'Form ${i + 1} - ${item.title}: tambahkan dokumentasi foto terlebih dahulu';
       }
 
-      final isChoice = item.inputType == InputType.choice;
       final isNonIdeal =
-          isChoice &&
-          ![
-            'sesuai',
-            'rapi',
-            'kencang',
-            'ada',
-            'lengkap',
-            'ya',
-            'ok',
-            'diterima',
-            'sesuai standar',
-            'bersih',
-            'ada & jelas',
-            'tegak lurus',
-          ].contains(valStr.toLowerCase());
+          choiceOptionForValue(item.choiceOptions, valStr)?.outcome == 'FAIL';
       if (isNonIdeal && issue.isEmpty) {
         return 'Form ${i + 1} - ${item.title}: isi keterangan masalah terlebih dahulu';
       }
@@ -493,7 +475,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
     }
 
     for (int itemIndex = 0; itemIndex < pendingItemPhotos.length; itemIndex++) {
-      final itemId = _pekerjaan.checklistItems[itemIndex].id as String;
+      final itemId = _pekerjaan.checklistItems[itemIndex].id;
       while (pendingItemPhotos[itemIndex].isNotEmpty) {
         final photo = pendingItemPhotos[itemIndex].first;
         final previewBytes = pendingItemPhotoBytes[itemIndex].first;

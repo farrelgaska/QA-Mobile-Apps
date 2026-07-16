@@ -1,4 +1,5 @@
 import 'enums.dart';
+import 'template_choice_option.dart';
 
 class QCMaterialTemplate {
   final String id;
@@ -6,6 +7,7 @@ class QCMaterialTemplate {
   final String code;
   final String description;
   final List<QCChecklistItem> checklistItems;
+  final bool isActive;
 
   QCMaterialTemplate({
     required this.id,
@@ -13,6 +15,7 @@ class QCMaterialTemplate {
     required this.code,
     required this.description,
     required this.checklistItems,
+    this.isActive = true,
   });
 }
 
@@ -27,6 +30,11 @@ class QCChecklistItem {
   final bool required;
   final bool requiredPhoto;
   final List<String>? choices;
+  final List<TemplateChoiceOption> choiceOptions;
+  final double? minValue;
+  final double? maxValue;
+  final bool isActive;
+  final bool isCritical;
 
   QCChecklistItem({
     required this.id,
@@ -39,6 +47,11 @@ class QCChecklistItem {
     this.required = true,
     this.requiredPhoto = false,
     this.choices,
+    this.choiceOptions = const [],
+    this.minValue,
+    this.maxValue,
+    this.isActive = true,
+    this.isCritical = false,
   });
 }
 

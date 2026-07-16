@@ -62,7 +62,7 @@ class ApiService {
 
   /// Fetch all QC templates from the mock API backend.
   /// Returns a list of raw JSON maps, or null if the API is unavailable.
-  Future<List<Map<String, dynamic>>?> fetchTemplates([String? type]) async {
+  Future<List<Map<String, dynamic>>> fetchTemplates([String? type]) async {
     try {
       final url = type != null
           ? '$baseUrl/templates?type=$type'
@@ -79,7 +79,9 @@ class ApiService {
         '[Mock API Offline - Prototype Fallback] fetchTemplates failed: $e',
       );
     }
-    return null;
+    throw ApiRequestException(
+      'Template tidak dapat dimuat. Periksa koneksi lalu coba lagi.',
+    );
   }
 
   /// Sync/post a report to the mock API backend.
@@ -108,14 +110,18 @@ class ApiService {
       );
     } on ApiRequestException catch (error) {
       if (throwOnError) rethrow;
-      print('[Mock API Offline - Prototype Fallback] postReport failed: $error');
+      print(
+        '[Mock API Offline - Prototype Fallback] postReport failed: $error',
+      );
       return false;
     } catch (error) {
       final exception = ApiRequestException(
         'Tidak dapat terhubung ke server saat menyimpan laporan: $error',
       );
       if (throwOnError) throw exception;
-      print('[Mock API Offline - Prototype Fallback] postReport failed: $error');
+      print(
+        '[Mock API Offline - Prototype Fallback] postReport failed: $error',
+      );
       return false;
     }
   }
@@ -144,14 +150,18 @@ class ApiService {
       );
     } on ApiRequestException catch (error) {
       if (throwOnError) rethrow;
-      print('[Mock API Offline - Prototype Fallback] patchReport failed: $error');
+      print(
+        '[Mock API Offline - Prototype Fallback] patchReport failed: $error',
+      );
       return false;
     } catch (error) {
       final exception = ApiRequestException(
         'Tidak dapat terhubung ke server saat memperbarui laporan: $error',
       );
       if (throwOnError) throw exception;
-      print('[Mock API Offline - Prototype Fallback] patchReport failed: $error');
+      print(
+        '[Mock API Offline - Prototype Fallback] patchReport failed: $error',
+      );
       return false;
     }
   }
