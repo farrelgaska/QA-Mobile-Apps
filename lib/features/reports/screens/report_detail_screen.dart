@@ -40,10 +40,7 @@ class RenderItem {
 class ReportDetailScreen extends StatefulWidget {
   final String reportId;
 
-  const ReportDetailScreen({
-    super.key,
-    required this.reportId,
-  });
+  const ReportDetailScreen({super.key, required this.reportId});
 
   @override
   State<ReportDetailScreen> createState() => _ReportDetailScreenState();
@@ -86,14 +83,27 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   }
 
   String _formatDate(DateTime dt) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
     return "${dt.day} ${months[dt.month - 1]} ${dt.year}";
   }
 
   @override
   Widget build(BuildContext context) {
     final state = DummyState();
-    
+
     // Find the report index
     final reportIdx = state.reports.indexWhere((r) => r.id == widget.reportId);
 
@@ -121,7 +131,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   Text(
                     _errorMessage!,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 13,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
@@ -136,7 +149,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: const Text('Coba Lagi', style: TextStyle(fontSize: 13)),
+                      child: const Text(
+                        'Coba Lagi',
+                        style: TextStyle(fontSize: 13),
+                      ),
                     ),
                   ),
                 ],
@@ -148,20 +164,25 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     }
 
     // Find the report
-    final report = reportIdx != -1 
-        ? state.reports[reportIdx] 
+    final report = reportIdx != -1
+        ? state.reports[reportIdx]
         : (state.reports.isNotEmpty ? state.reports[0] : null);
 
     if (report == null) {
       return const Scaffold(
         backgroundColor: AppColors.background,
         body: Center(
-          child: Text('Laporan tidak ditemukan', style: TextStyle(color: AppColors.textMuted)),
+          child: Text(
+            'Laporan tidak ditemukan',
+            style: TextStyle(color: AppColors.textMuted),
+          ),
         ),
       );
     }
 
-    final isEditable = report.status == QCReportStatus.DRAFT || report.status == QCReportStatus.NEEDS_FOLLOW_UP;
+    final isEditable =
+        report.status == QCReportStatus.DRAFT ||
+        report.status == QCReportStatus.NEEDS_FOLLOW_UP;
 
     // Build unified render items list
     final List<RenderItem> renderItems = [];
@@ -221,13 +242,12 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               ScreenHeader(
                 title: 'Detail Laporan',
                 subtitle: report.id,
-                actions: [
-                  StatusBadge(status: report.status),
-                ],
+                actions: [StatusBadge(status: report.status)],
               ),
 
               // Banner Catatan Admin (Perlu Perbaikan)
-              if (report.status == QCReportStatus.NEEDS_FOLLOW_UP && report.adminNote != null) ...[
+              if (report.status == QCReportStatus.NEEDS_FOLLOW_UP &&
+                  report.adminNote != null) ...[
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -242,7 +262,11 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.warning_amber, color: AppColors.rejectedText, size: 20),
+                          Icon(
+                            Icons.warning_amber,
+                            color: AppColors.rejectedText,
+                            size: 20,
+                          ),
                           SizedBox(width: 8),
                           Text(
                             'Instruksi Perbaikan',
@@ -283,16 +307,25 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _buildInfoRow('Jenis QC', report.type == QCType.material ? 'QC Material' : 'QC Pekerjaan'),
+                    _buildInfoRow(
+                      'Jenis QC',
+                      report.type == QCType.material
+                          ? 'QC Material'
+                          : 'QC Pekerjaan',
+                    ),
                     _buildInfoRow('Nama Item', report.title),
                     if (report.formCode.isNotEmpty)
                       _buildInfoRow('Kode Form', report.formCode),
                     _buildInfoRow('Tanggal', _formatDate(report.date)),
-                    _buildInfoRow('Pemeriksa', '${report.checkedByName} (${report.checkedByNik})'),
+                    _buildInfoRow(
+                      'Pemeriksa',
+                      '${report.checkedByName} (${report.checkedByNik})',
+                    ),
                     _buildInfoRow('Site Lokasi', report.siteName),
                     _buildInfoRow('Area / Zona', report.area),
                     _buildInfoRow('Detail Titik', report.detailLocation),
-                    if (report.finalConclusion != null && state.currentUser.role == 'Admin')
+                    if (report.finalConclusion != null &&
+                        state.currentUser.role == 'Admin')
                       _buildInfoRow('Kesimpulan', report.finalConclusion!),
                   ],
                 ),
@@ -311,7 +344,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               const SizedBox(height: 12),
 
               ...renderItems.map((result) {
-                final hasIssue = result.status == ChecklistStatus.tidakSesuai || 
+                final hasIssue =
+                    result.status == ChecklistStatus.tidakSesuai ||
                     result.status == ChecklistStatus.perluTindakLanjut ||
                     result.status == QCResultStatus.fail ||
                     result.status == QCResultStatus.needFollowUp;
@@ -320,8 +354,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 //  a) The report is NEEDS_FOLLOW_UP AND
                 //  b) The admin left a note on this item (admin_evaluation == FAIL from the shared contract)
                 // Staff never sees PASS/FAIL labels — we only show the Admin's note.
-                final bool itemNeedsFollowUp = report.status == QCReportStatus.NEEDS_FOLLOW_UP &&
-                    (result.adminNote != null && result.adminNote!.trim().isNotEmpty);
+                final bool itemNeedsFollowUp =
+                    report.status == QCReportStatus.NEEDS_FOLLOW_UP &&
+                    (result.adminNote != null &&
+                        result.adminNote!.trim().isNotEmpty);
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
@@ -363,28 +399,43 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                           children: [
                             const Text(
                               'Hasil Input:',
-                              style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 13,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              result.value.isEmpty ? '-' : '${result.value} ${result.unit ?? ""}',
+                              result.value.isEmpty
+                                  ? '-'
+                                  : '${result.value} ${result.unit ?? ""}',
                               style: const TextStyle(
-                                  color: AppColors.textMain,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13),
+                                color: AppColors.textMain,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
                             ),
                           ],
                         ),
 
-                        if (result.warningMessage != null && result.warningMessage!.isNotEmpty) ...[
+                        if (result.warningMessage != null &&
+                            result.warningMessage!.isNotEmpty) ...[
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              const Icon(Icons.warning, color: AppColors.rejectedText, size: 12),
+                              const Icon(
+                                Icons.warning,
+                                color: AppColors.rejectedText,
+                                size: 12,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 result.warningMessage!,
-                                style: const TextStyle(color: AppColors.rejectedText, fontSize: 11, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  color: AppColors.rejectedText,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ],
                           ),
@@ -414,7 +465,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                                 const SizedBox(height: 2),
                                 Text(
                                   result.issueNote,
-                                  style: const TextStyle(color: AppColors.textMain, fontSize: 12),
+                                  style: const TextStyle(
+                                    color: AppColors.textMain,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ],
                             ),
@@ -426,14 +480,20 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                           const SizedBox(height: 12),
                           const Text(
                             'Foto Bukti Fisik:',
-                            style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           const SizedBox(height: 6),
                           PhotoGrid(photos: result.photos),
                         ],
 
                         // Admin Note specific to this item
-                        if (itemNeedsFollowUp && result.adminNote != null && result.adminNote!.isNotEmpty) ...[
+                        if (itemNeedsFollowUp &&
+                            result.adminNote != null &&
+                            result.adminNote!.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           Container(
                             width: double.infinity,
@@ -441,14 +501,21 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                             decoration: BoxDecoration(
                               color: AppColors.rejectedBg,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppColors.rejectedText, width: 0.5),
+                              border: Border.all(
+                                color: AppColors.rejectedText,
+                                width: 0.5,
+                              ),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Row(
                                   children: [
-                                    Icon(Icons.info_outline, color: AppColors.rejectedText, size: 14),
+                                    Icon(
+                                      Icons.info_outline,
+                                      color: AppColors.rejectedText,
+                                      size: 14,
+                                    ),
                                     SizedBox(width: 4),
                                     Text(
                                       'Catatan Evaluasi Admin:',
@@ -512,26 +579,39 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               // Edit Action Button (visible for draft/needFollowUp)
               if (isEditable) ...[
                 AppButton(
-                  text: report.status == QCReportStatus.NEEDS_FOLLOW_UP ? 'Perbaiki Laporan' : 'Edit Laporan',
+                  text: report.status == QCReportStatus.NEEDS_FOLLOW_UP
+                      ? 'Perbaiki Laporan'
+                      : 'Edit Laporan',
                   variant: AppButtonVariant.primary,
                   onPressed: () {
-                    final isRevision = report.status == QCReportStatus.NEEDS_FOLLOW_UP;
+                    final isRevision =
+                        report.status == QCReportStatus.NEEDS_FOLLOW_UP;
                     if (report.type == QCType.material) {
                       // Use report's own templateId/formCode — avoids fragile title matching
                       final tid = report.templateId.isNotEmpty
                           ? report.templateId
                           : 'tiang_besi_7m_3_segmen'; // fallback for legacy data
                       // Look up the cached template so the form can use its exact checklist structure.
-                      final QCMaterialTemplate? cachedTemplate = DummyState().templateCache[tid]
-                          ?? dummyQCMaterialTemplates.cast<QCMaterialTemplate?>().firstWhere(
-                               (t) => t?.id == tid, orElse: () => null);
-                      context.push('/qc-material/form/$tid?editReportId=${report.id}${isRevision ? "&isRevision=true" : ""}', extra: cachedTemplate);
+                      final QCMaterialTemplate? cachedTemplate =
+                          DummyState().templateCache[tid] ??
+                          dummyQCMaterialTemplates
+                              .cast<QCMaterialTemplate?>()
+                              .firstWhere(
+                                (t) => t?.id == tid,
+                                orElse: () => null,
+                              );
+                      context.push(
+                        '/qc-material/form/$tid?editReportId=${report.id}${isRevision ? "&isRevision=true" : ""}',
+                        extra: cachedTemplate,
+                      );
                     } else {
-                      // QC Pekerjaan: use templateId if available, fallback to 'pek-1'
-                      final tid = report.templateId.isNotEmpty
-                          ? report.templateId
-                          : 'pek-1';
-                      context.push('/qc-pekerjaan/form/$tid?editReportId=${report.id}${isRevision ? "&isRevision=true" : ""}');
+                      final tid = report.templateId;
+                      final cachedTemplate =
+                          DummyState().workTemplateCache[tid];
+                      context.push(
+                        '/qc-pekerjaan/form/$tid?editReportId=${report.id}${isRevision ? "&isRevision=true" : ""}',
+                        extra: cachedTemplate,
+                      );
                     }
                   },
                 ),

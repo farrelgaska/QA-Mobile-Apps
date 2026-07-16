@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/dummy/dummy_pekerjaan.dart';
 import '../../../core/services/api_service.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/pekerjaan_model.dart';
-import '../../../shared/models/checklist_item_model.dart';
+import '../../../shared/models/qc_template_contract.dart';
 import '../../../shared/widgets/screen_header.dart';
 import '../../../shared/widgets/search_bar_field.dart';
 import '../../../shared/widgets/status_badge.dart';
@@ -51,74 +50,6 @@ class _QCPekerjaanListScreenState extends State<QCPekerjaanListScreen> {
     }
   }
 
-  /// Maps an API WORK template JSON to a [PekerjaanModel] for display.
-  PekerjaanModel _mapApiTemplate(Map<String, dynamic> json) {
-    final categoryStr = (json['category'] as String? ?? '').toLowerCase();
-    final segmentStr = (json['segment'] as String? ?? '').toLowerCase();
-
-    WorkSegment segment = WorkSegment.construction;
-    if (segmentStr.isNotEmpty) {
-      segment = _parseSegment(segmentStr);
-    } else {
-      if (categoryStr.contains('provisioning')) {
-        segment = WorkSegment.provisioning;
-      } else if (categoryStr.contains('assurance')) {
-        segment = WorkSegment.assurance;
-      }
-    }
-
-    final checklistItems =
-        ((json['checklist_items'] ?? json['checklistItems'])
-                    as List<dynamic>? ??
-                [])
-            .map<ChecklistItemModel>((item) {
-              final inputTypeStr =
-                  ((item['input_type'] ?? item['inputType']) as String? ??
-                          'choice')
-                      .toLowerCase();
-              final InputType inputType;
-              if (inputTypeStr == 'number') {
-                inputType = InputType.number;
-              } else if (inputTypeStr == 'text') {
-                inputType = InputType.text;
-              } else {
-                inputType = InputType.choice;
-              }
-
-              final unit = (item['unit'] as String?)?.isNotEmpty == true
-                  ? item['unit'] as String
-                  : null;
-
-              return ChecklistItemModel(
-                id: item['id'] as String? ?? '',
-                title:
-                    (item['parameter_name'] ?? item['parameterName'])
-                        as String? ??
-                    '',
-                inputType: inputType,
-                unit: unit,
-                standard:
-                    (item['standard_text'] ?? item['standardText'])
-                        as String? ??
-                    '',
-                requiredPhoto:
-                    (item['required_photo'] ?? item['requiredPhoto'])
-                        as bool? ??
-                    false,
-              );
-            })
-            .toList();
-
-    return PekerjaanModel(
-      id: json['id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      segment: segment,
-      description: json['description'] as String? ?? '',
-      checklistItems: checklistItems,
-      status: 'Aktif',
-    );
-  }
-
   Future<void> _loadJobs() async {
     if (!mounted) return;
     setState(() {
@@ -129,36 +60,26 @@ class _QCPekerjaanListScreenState extends State<QCPekerjaanListScreen> {
     try {
       final rawTemplates = await ApiService().fetchTemplates('WORK');
 
-      if (rawTemplates != null) {
-        final workTemplates = rawTemplates
-            .where(
-              (t) =>
-                  t['type'] == 'WORK' &&
-                  ((t['is_active'] ?? t['isActive']) == true),
-            )
-            .map(_mapApiTemplate)
-            .toList();
+      final workTemplates = rawTemplates
+          .where(
+            (template) =>
+                template['type'] == 'WORK' &&
+                ((template['is_active'] ?? template['isActive']) == true),
+          )
+          .map(QCTemplateContract.work)
+          .toList();
 
-        if (mounted) {
-          setState(() {
-            _allJobs = workTemplates;
-            _isLoading = false;
-          });
-        }
-      } else {
-        // API unavailable — fall back to local dummy data
-        if (mounted) {
-          setState(() {
-            _allJobs = dummyPekerjaan;
-            _isLoading = false;
-          });
-        }
+      if (mounted) {
+        setState(() {
+          _allJobs = workTemplates;
+          _isLoading = false;
+        });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _allJobs = dummyPekerjaan;
-          _errorMessage = 'Koneksi API gagal. Menampilkan data lokal.';
+          _allJobs = [];
+          _errorMessage = 'Template gagal dimuat. Ketuk Coba lagi.';
           _isLoading = false;
         });
       }
@@ -379,10 +300,12 @@ class _QCPekerjaanListScreenState extends State<QCPekerjaanListScreen> {
                                         child: SizedBox(
                                           height: 42,
                                           child: ElevatedButton(
-                                            onPressed: () {
-                                              context.push(
+                                            onPressed: () async {
+                                              await context.push(
                                                 '/qc-pekerjaan/form/${job.id}',
+                                                extra: job,
                                               );
+                                              if (mounted) await _loadJobs();
                                             },
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor:

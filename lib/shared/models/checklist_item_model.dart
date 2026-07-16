@@ -1,4 +1,5 @@
 import 'enums.dart';
+import 'template_choice_option.dart';
 
 class ChecklistItemModel {
   final String id;
@@ -7,8 +8,13 @@ class ChecklistItemModel {
   final String? unit;
   final String standard;
   final bool requiredPhoto;
+  final bool required;
+  final bool isActive;
   final bool isCritical;
   final List<String>? choices;
+  final List<TemplateChoiceOption> choiceOptions;
+  final double? minValue;
+  final double? maxValue;
 
   ChecklistItemModel({
     required this.id,
@@ -17,7 +23,12 @@ class ChecklistItemModel {
     this.unit,
     required this.standard,
     required this.requiredPhoto,
+    this.required = true,
+    this.isActive = true,
     this.isCritical = false,
     this.choices,
+    this.choiceOptions = const [],
+    this.minValue,
+    this.maxValue,
   });
 }

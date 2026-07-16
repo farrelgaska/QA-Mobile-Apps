@@ -15,15 +15,16 @@ import '../../../shared/widgets/screen_header.dart';
 import '../../../shared/widgets/confirmation_modal.dart';
 import '../../../shared/providers/qc_pekerjaan_form_provider.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/models/pekerjaan_model.dart';
 
 class QCPekerjaanFormScreen extends StatelessWidget {
-  final String pekerjaanId;
+  final PekerjaanModel pekerjaan;
   final String? editReportId;
   final bool isRevision;
 
   const QCPekerjaanFormScreen({
     super.key,
-    required this.pekerjaanId,
+    required this.pekerjaan,
     this.editReportId,
     this.isRevision = false,
   });
@@ -32,7 +33,7 @@ class QCPekerjaanFormScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => QCPekerjaanFormProvider()
-        ..init(pekerjaanId, editReportId: editReportId, isRevision: isRevision),
+        ..init(pekerjaan, editReportId: editReportId, isRevision: isRevision),
       child: Consumer<QCPekerjaanFormProvider>(
         builder: (context, provider, _) {
           if (!provider.isReady) {
@@ -56,7 +57,7 @@ class QCPekerjaanFormScreen extends StatelessWidget {
                   children: [
                     ScreenHeader(
                       title: 'Inspeksi Pekerjaan',
-                      subtitle: provider.pekerjaan.name as String,
+                      subtitle: provider.pekerjaan.name,
                     ),
                     _buildDetailCard(provider),
                     const SizedBox(height: 24),
@@ -115,7 +116,7 @@ class QCPekerjaanFormScreen extends StatelessWidget {
     BuildContext context,
     QCPekerjaanFormProvider p,
   ) {
-    final items = p.pekerjaan.checklistItems as List;
+    final items = p.pekerjaan.checklistItems;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -169,7 +170,7 @@ class QCPekerjaanFormScreen extends StatelessWidget {
                 standardText: item.standard,
                 inputType: qcInputType,
                 unit: item.unit,
-                choices: item.choices,
+                choiceOptions: item.choiceOptions,
                 currentStatus: qcStatus,
                 resultValue: p.itemResults[index],
                 issueDescription: p.itemIssues[index],
@@ -386,11 +387,7 @@ class QCPekerjaanFormScreen extends StatelessWidget {
         if (constraints.maxWidth < 380) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              draftButton,
-              const SizedBox(height: 12),
-              submitButton,
-            ],
+            children: [draftButton, const SizedBox(height: 12), submitButton],
           );
         }
         return Row(

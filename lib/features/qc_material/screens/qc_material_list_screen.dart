@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/dummy/dummy_qc_material_templates.dart';
 import '../../../core/services/api_service.dart';
 import '../../../shared/models/qc_material_template_model.dart';
-import '../../../shared/models/enums.dart';
+import '../../../shared/models/qc_template_contract.dart';
 import '../../../shared/widgets/screen_header.dart';
 import '../../../shared/widgets/search_bar_field.dart';
 import '../../../shared/widgets/status_badge.dart';
@@ -28,124 +27,6 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
     _loadTemplates();
   }
 
-  /// Converts a raw API template JSON map to a [QCMaterialTemplate].
-  /// Returns null if the required fields are missing.
-  QCMaterialTemplate _mapApiTemplate(Map<String, dynamic> json) {
-    final checklistItems =
-        ((json['checklist_items'] ?? json['checklistItems'])
-                    as List<dynamic>? ??
-                [])
-            .map<QCChecklistItem>((item) {
-              final inputTypeStr =
-                  ((item['input_type'] ?? item['inputType']) as String? ??
-                          'choice')
-                      .toLowerCase();
-              final QCInputType inputType;
-              if (inputTypeStr == 'number') {
-                inputType = QCInputType.number;
-              } else if (inputTypeStr == 'text') {
-                inputType = QCInputType.text;
-              } else if (inputTypeStr == 'boolean' ||
-                  inputTypeStr == 'booleancheck') {
-                inputType = QCInputType.booleanCheck;
-              } else {
-                inputType = QCInputType.choice;
-              }
-
-              final standardText =
-                  (item['standard_text'] ?? item['standardText']) as String? ??
-                  '';
-              final unit = (item['unit'] as String?)?.isNotEmpty == true
-                  ? item['unit'] as String
-                  : null;
-              final rawValidationRule =
-                  (item['validation_rule'] ?? item['validationRule'])
-                      as Map<String, dynamic>?;
-
-              QCValidationRule? validationRule;
-              final validationType = _parseValidationType(
-                rawValidationRule?['type'],
-              );
-              if (validationType != null) {
-                validationRule = QCValidationRule(
-                  type: validationType,
-                  minValue: _parseNumericValue(
-                    rawValidationRule?['min_value'] ??
-                        rawValidationRule?['minValue'],
-                  ),
-                  maxValue: _parseNumericValue(
-                    rawValidationRule?['max_value'] ??
-                        rawValidationRule?['maxValue'],
-                  ),
-                  exactValue: _parseNumericValue(
-                    rawValidationRule?['exact_value'] ??
-                        rawValidationRule?['exactValue'],
-                  ),
-                );
-              }
-
-              final rawChoices = item['choices'];
-              final choices = rawChoices is List
-                  ? rawChoices.whereType<String>().toList()
-                  : <String>[];
-
-              return QCChecklistItem(
-                id: item['id'] as String? ?? '',
-                label:
-                    (item['parameter_name'] ?? item['parameterName'])
-                        as String? ??
-                    '',
-                category: item['category'] as String? ?? 'Parameter',
-                inputType: inputType,
-                unit: unit,
-                standardText: standardText,
-                validationRule: validationRule,
-                required:
-                    (item['is_required'] ?? item['required']) as bool? ?? true,
-                requiredPhoto:
-                    (item['required_photo'] ?? item['requiredPhoto'])
-                        as bool? ??
-                    false,
-                choices: choices,
-              );
-            })
-            .toList();
-
-    return QCMaterialTemplate(
-      id: json['id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      code: (json['form_code'] ?? json['formCode']) as String? ?? '',
-      description: json['description'] as String? ?? '',
-      checklistItems: checklistItems,
-    );
-  }
-
-  double? _parseNumericValue(dynamic value) {
-    if (value is num) return value.toDouble();
-    if (value is String) return double.tryParse(value.trim());
-    return null;
-  }
-
-  QCValidationType? _parseValidationType(dynamic value) {
-    if (value is! String) return null;
-
-    switch (value.toUpperCase()) {
-      case 'RANGE':
-        return QCValidationType.range;
-      case 'MIN':
-        return QCValidationType.min;
-      case 'MAX':
-        return QCValidationType.max;
-      case 'EXACT':
-        return QCValidationType.exact;
-      case 'BOOLEANREQUIRED':
-      case 'BOOLEAN_REQUIRED':
-        return QCValidationType.booleanRequired;
-      default:
-        return null;
-    }
-  }
-
   Future<void> _loadTemplates() async {
     if (!mounted) return;
     setState(() {
@@ -156,37 +37,26 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
     try {
       final rawTemplates = await ApiService().fetchTemplates('MATERIAL');
 
-      if (rawTemplates != null) {
-        // Filter only MATERIAL type and active templates
-        final materialTemplates = rawTemplates
-            .where(
-              (t) =>
-                  t['type'] == 'MATERIAL' &&
-                  ((t['is_active'] ?? t['isActive']) == true),
-            )
-            .map(_mapApiTemplate)
-            .toList();
+      final materialTemplates = rawTemplates
+          .where(
+            (template) =>
+                template['type'] == 'MATERIAL' &&
+                ((template['is_active'] ?? template['isActive']) == true),
+          )
+          .map(QCTemplateContract.material)
+          .toList();
 
-        if (mounted) {
-          setState(() {
-            _templates = materialTemplates;
-            _isLoading = false;
-          });
-        }
-      } else {
-        // API unavailable — fall back to local dummy data
-        if (mounted) {
-          setState(() {
-            _templates = dummyQCMaterialTemplates;
-            _isLoading = false;
-          });
-        }
+      if (mounted) {
+        setState(() {
+          _templates = materialTemplates;
+          _isLoading = false;
+        });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _templates = dummyQCMaterialTemplates;
-          _errorMessage = 'Koneksi API gagal. Menampilkan data lokal.';
+          _templates = [];
+          _errorMessage = 'Template gagal dimuat. Ketuk Coba lagi.';
           _isLoading = false;
         });
       }
@@ -396,11 +266,14 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
                                         child: SizedBox(
                                           height: 44,
                                           child: ElevatedButton(
-                                            onPressed: () {
-                                              context.push(
+                                            onPressed: () async {
+                                              await context.push(
                                                 '/qc-material/form/${template.id}',
                                                 extra: template,
                                               );
+                                              if (mounted) {
+                                                await _loadTemplates();
+                                              }
                                             },
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor:

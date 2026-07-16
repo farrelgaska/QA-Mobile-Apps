@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/dummy/dummy_qc_material_templates.dart';
 import '../../core/dummy/dummy_state.dart';
 import '../../core/dummy/dummy_sites.dart';
 import '../../shared/models/enums.dart';
@@ -10,6 +9,7 @@ import '../../shared/models/work_location_model.dart';
 import '../../shared/models/site_model.dart';
 import '../../core/utils/validators.dart';
 import '../../core/utils/qc_validation_helper.dart';
+import '../../shared/models/template_choice_option.dart';
 
 class QCMaterialFormProvider extends ChangeNotifier {
   // Dependencies
@@ -30,9 +30,11 @@ class QCMaterialFormProvider extends ChangeNotifier {
   final TextEditingController vendorNameController = TextEditingController();
   final TextEditingController materialIdController = TextEditingController();
   final TextEditingController arrivalVolumeController = TextEditingController();
-  final TextEditingController samplingVolumeController = TextEditingController();
+  final TextEditingController samplingVolumeController =
+      TextEditingController();
   final TextEditingController brandNameController = TextEditingController();
-  final TextEditingController warehouseLocationController = TextEditingController();
+  final TextEditingController warehouseLocationController =
+      TextEditingController();
   final TextEditingController stelVersionController = TextEditingController();
   final TextEditingController qaExpiryDateController = TextEditingController();
   final TextEditingController tkdnNumberController = TextEditingController();
@@ -45,7 +47,8 @@ class QCMaterialFormProvider extends ChangeNotifier {
   bool isCustomLocation = false;
   final TextEditingController customLocNameController = TextEditingController();
   final TextEditingController customLocAreaController = TextEditingController();
-  final TextEditingController customLocSegmentController = TextEditingController();
+  final TextEditingController customLocSegmentController =
+      TextEditingController();
   final TextEditingController customLocNoteController = TextEditingController();
 
   void setSelectedSite(SiteModel site) {
@@ -87,24 +90,24 @@ class QCMaterialFormProvider extends ChangeNotifier {
   String? editReportId;
   QCReportModel? _originalReport;
 
-  void init(String materialId, {String? editReportId, bool isRevision = false, QCMaterialTemplate? template}) {
+  void init(
+    String materialId, {
+    String? editReportId,
+    bool isRevision = false,
+    required QCMaterialTemplate template,
+  }) {
     if (_isInit) return;
     // Use provided template if available (e.g., from API-loaded list).
     // Fall back to dummy templates only if no template was passed.
-    if (template != null) {
-      _template = template;
-    } else {
-      _template = dummyQCMaterialTemplates.firstWhere(
-        (t) => t.id == materialId,
-        orElse: () => dummyQCMaterialTemplates[0],
-      );
-    }
+    _template = template;
     // Cache the resolved template so re-opening a draft can use the same template.
     _state.templateCache[_template.id] = _template;
 
     if (editReportId != null) {
-      final report = _state.reports.firstWhere((r) => r.id == editReportId,
-          orElse: () => _state.reports[0]);
+      final report = _state.reports.firstWhere(
+        (r) => r.id == editReportId,
+        orElse: () => _state.reports[0],
+      );
       _originalReport = report;
       this.editReportId = editReportId;
       isRevisionMode = isRevision;
@@ -114,11 +117,14 @@ class QCMaterialFormProvider extends ChangeNotifier {
       poDateController.text = report.generalInfo['poDate'] ?? '';
       doNumberController.text = report.generalInfo['doNumber'] ?? '';
       vendorNameController.text = report.generalInfo['vendorName'] ?? '';
-      materialIdController.text = report.generalInfo['materialId'] ?? report.templateId;
+      materialIdController.text =
+          report.generalInfo['materialId'] ?? report.templateId;
       arrivalVolumeController.text = report.generalInfo['arrivalVolume'] ?? '';
-      samplingVolumeController.text = report.generalInfo['samplingVolume'] ?? '';
+      samplingVolumeController.text =
+          report.generalInfo['samplingVolume'] ?? '';
       brandNameController.text = report.generalInfo['brandName'] ?? '';
-      warehouseLocationController.text = report.generalInfo['warehouseLocation'] ?? '';
+      warehouseLocationController.text =
+          report.generalInfo['warehouseLocation'] ?? '';
       stelVersionController.text = report.generalInfo['stelVersion'] ?? '';
       qaExpiryDateController.text = report.generalInfo['qaExpiryDate'] ?? '';
       tkdnNumberController.text = report.generalInfo['tkdnNumber'] ?? '';
@@ -133,7 +139,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
         customLocSegmentController.text = report.location.detailLocation;
       } else {
         if (report.location.siteId.isNotEmpty) {
-          final matchingSites = dummySites.where((s) => s.id == report.location.siteId);
+          final matchingSites = dummySites.where(
+            (s) => s.id == report.location.siteId,
+          );
           selectedSite = matchingSites.isNotEmpty ? matchingSites.first : null;
         } else {
           selectedSite = null;
@@ -153,16 +161,25 @@ class QCMaterialFormProvider extends ChangeNotifier {
             paramName: item.label,
             standardText: item.standardText,
             unit: item.unit,
-            inputType: item.inputType == QCInputType.number ? 'number' : item.inputType == QCInputType.choice ? 'choice' : 'text',
+            inputType: item.inputType == QCInputType.number
+                ? 'number'
+                : item.inputType == QCInputType.choice
+                ? 'choice'
+                : 'text',
           ),
         );
-        
+
         // Recalculate warning message / status locally
-        final valRes = QCValidationHelper.validateChecklistAnswer(item: item, value: matchingAnswer.value?.toString() ?? '');
-        answers.add(matchingAnswer.copyWith(
-          warningMessage: valRes.warningMessage,
-          status: valRes.status,
-        ));
+        final valRes = QCValidationHelper.validateChecklistAnswer(
+          item: item,
+          value: matchingAnswer.value?.toString() ?? '',
+        );
+        answers.add(
+          matchingAnswer.copyWith(
+            warningMessage: valRes.warningMessage,
+            status: valRes.status,
+          ),
+        );
       }
     } else {
       // Prepopulate default template fields
@@ -178,16 +195,22 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
       // Initialize answers list
       for (var item in _template.checklistItems) {
-        answers.add(QCChecklistAnswer(
-          itemId: item.id,
-          value: '',
-          status: QCResultStatus.notFilled,
-          photoPaths: [],
-          paramName: item.label,
-          standardText: item.standardText,
-          unit: item.unit,
-          inputType: item.inputType == QCInputType.number ? 'number' : item.inputType == QCInputType.choice ? 'choice' : 'text',
-        ));
+        answers.add(
+          QCChecklistAnswer(
+            itemId: item.id,
+            value: '',
+            status: QCResultStatus.notFilled,
+            photoPaths: [],
+            paramName: item.label,
+            standardText: item.standardText,
+            unit: item.unit,
+            inputType: item.inputType == QCInputType.number
+                ? 'number'
+                : item.inputType == QCInputType.choice
+                ? 'choice'
+                : 'text',
+          ),
+        );
       }
     }
 
@@ -197,8 +220,16 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
   void updateAnswer(int index, String value) {
     final item = _template.checklistItems[index];
+    final selectedOption = choiceOptionForValue(item.choiceOptions, value);
+    if (item.inputType == QCInputType.choice &&
+        selectedOption?.outcome == 'PASS') {
+      answers[index].issueNote = '';
+    }
     answers[index].value = value;
-    final valRes = QCValidationHelper.validateChecklistAnswer(item: item, value: value);
+    final valRes = QCValidationHelper.validateChecklistAnswer(
+      item: item,
+      value: value,
+    );
     answers[index].warningMessage = valRes.warningMessage;
     answers[index].status = valRes.status;
     notifyListeners();
@@ -226,11 +257,11 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
   bool get hasAnyDraftContent {
     return poNumberController.text.trim().isNotEmpty ||
-           doNumberController.text.trim().isNotEmpty ||
-           vendorNameController.text.trim().isNotEmpty ||
-           staffNoteController.text.trim().isNotEmpty ||
-           answers.any((a) => a.value.toString().trim().isNotEmpty) ||
-           answers.any((a) => a.photoPaths.isNotEmpty);
+        doNumberController.text.trim().isNotEmpty ||
+        vendorNameController.text.trim().isNotEmpty ||
+        staffNoteController.text.trim().isNotEmpty ||
+        answers.any((a) => a.value.toString().trim().isNotEmpty) ||
+        answers.any((a) => a.photoPaths.isNotEmpty);
   }
 
   String? validateForm() {
@@ -240,35 +271,35 @@ class QCMaterialFormProvider extends ChangeNotifier {
       final issue = answers[i].issueNote?.trim() ?? '';
       final photos = answers[i].photoPaths;
 
-      if (valStr.isEmpty) {
+      if (item.required && valStr.isEmpty) {
         if (item.inputType == QCInputType.number) {
-          return 'Form ${i+1} - ${item.label}: isi nilai pengujian terlebih dahulu';
+          return 'Form ${i + 1} - ${item.label}: isi nilai pengujian terlebih dahulu';
         } else if (item.inputType == QCInputType.choice) {
-          return 'Form ${i+1} - ${item.label}: pilih kesesuaian fisik terlebih dahulu';
+          return 'Form ${i + 1} - ${item.label}: pilih kesesuaian fisik terlebih dahulu';
         } else {
-          return 'Form ${i+1} - ${item.label}: isi hasil input terlebih dahulu';
+          return 'Form ${i + 1} - ${item.label}: isi hasil input terlebih dahulu';
         }
       }
 
       if (item.inputType == QCInputType.number) {
         if (!QCValidators.isValidNumber(valStr)) {
-          return 'Form ${i+1} - ${item.label}: masukkan angka yang valid';
+          return 'Form ${i + 1} - ${item.label}: masukkan angka yang valid';
         }
         final valNum = double.tryParse(valStr.replaceAll(',', '.'));
         if (valNum != null && valNum < 0) {
-          return 'Form ${i+1} - ${item.label}: nilai tidak boleh negatif';
+          return 'Form ${i + 1} - ${item.label}: nilai tidak boleh negatif';
         }
       }
 
       if (item.requiredPhoto && photos.isEmpty) {
-        return 'Form ${i+1} - ${item.label}: tambahkan dokumentasi foto terlebih dahulu';
+        return 'Form ${i + 1} - ${item.label}: tambahkan dokumentasi foto terlebih dahulu';
       }
 
-      final isChoice = item.inputType == QCInputType.choice;
-      final isNonIdeal = isChoice &&
-          !['sesuai', 'rapi', 'kencang', 'ada', 'lengkap', 'ya', 'ok', 'diterima', 'sesuai standar', 'bersih', 'ada & jelas', 'tegak lurus'].contains(valStr.toLowerCase());
+      final isNonIdeal =
+          item.inputType == QCInputType.choice &&
+          choiceOptionForValue(item.choiceOptions, valStr)?.outcome == 'FAIL';
       if (isNonIdeal && issue.isEmpty) {
-        return 'Form ${i+1} - ${item.label}: isi keterangan masalah terlebih dahulu';
+        return 'Form ${i + 1} - ${item.label}: isi keterangan masalah terlebih dahulu';
       }
     }
     return null;
@@ -276,9 +307,15 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
   void persistReport(QCReportStatus status) {
     final workLoc = WorkLocation(
-      siteName: isCustomLocation ? customLocNameController.text : (selectedSite?.name ?? ''),
-      area: isCustomLocation ? customLocAreaController.text : (selectedSite != null ? 'Area Site Utama' : ''),
-      segment: isCustomLocation ? customLocSegmentController.text : (selectedSite != null ? 'Segmen Default' : ''),
+      siteName: isCustomLocation
+          ? customLocNameController.text
+          : (selectedSite?.name ?? ''),
+      area: isCustomLocation
+          ? customLocAreaController.text
+          : (selectedSite != null ? 'Area Site Utama' : ''),
+      segment: isCustomLocation
+          ? customLocSegmentController.text
+          : (selectedSite != null ? 'Segmen Default' : ''),
       note: isCustomLocation ? customLocNoteController.text : '',
       isCustom: isCustomLocation,
     );
@@ -300,7 +337,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
     };
 
     if (isRevisionMode && _originalReport != null) {
-      final updatedHistory = List<QCReportModel>.from(_originalReport!.revisionHistory);
+      final updatedHistory = List<QCReportModel>.from(
+        _originalReport!.revisionHistory,
+      );
       updatedHistory.add(_originalReport!);
 
       final updatedReport = QCReportModel(
@@ -315,7 +354,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
         siteName: workLoc.siteName,
         area: workLoc.area ?? '',
         detailLocation: workLoc.segment ?? '',
-        checklistAnswers: answers.map((a) => a.copyWith(status: QCResultStatus.notFilled)).toList(),
+        checklistAnswers: answers
+            .map((a) => a.copyWith(status: QCResultStatus.notFilled))
+            .toList(),
         photos: [],
         staffNote: staffNoteController.text,
         adminNote: null, // clear Admin note — Admin will re-evaluate
@@ -340,14 +381,20 @@ class QCMaterialFormProvider extends ChangeNotifier {
         siteName: workLoc.siteName,
         area: workLoc.area ?? '',
         detailLocation: workLoc.segment ?? '',
-        checklistAnswers: answers.map((a) => a.copyWith(status: QCResultStatus.notFilled)).toList(),
+        checklistAnswers: answers
+            .map((a) => a.copyWith(status: QCResultStatus.notFilled))
+            .toList(),
         photos: [],
         staffNote: staffNoteController.text,
-        adminNote: status == QCReportStatus.DRAFT ? null : 'Menunggu review dari Admin.',
+        adminNote: status == QCReportStatus.DRAFT
+            ? null
+            : 'Menunggu review dari Admin.',
         formCode: _template.code,
         templateId: _template.id,
         generalInfo: genInfo,
-        finalConclusion: status == QCReportStatus.DRAFT ? 'Belum Lengkap' : 'Pending',
+        finalConclusion: status == QCReportStatus.DRAFT
+            ? 'Belum Lengkap'
+            : 'Pending',
         revisionNumber: 1,
         revisionHistory: [],
       );

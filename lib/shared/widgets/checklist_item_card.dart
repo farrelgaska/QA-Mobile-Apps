@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,6 +8,7 @@ import 'photo_upload_box.dart';
 import 'photo_grid.dart';
 import 'standard_info_box.dart';
 import 'validation_warning_box.dart';
+import '../models/template_choice_option.dart';
 
 class ChecklistItemCard extends StatefulWidget {
   final int itemNumber;
@@ -17,6 +17,7 @@ class ChecklistItemCard extends StatefulWidget {
   final QCInputType inputType;
   final String? unit;
   final List<String>? choices;
+  final List<TemplateChoiceOption> choiceOptions;
 
   final QCResultStatus currentStatus;
   final String resultValue;
@@ -42,6 +43,7 @@ class ChecklistItemCard extends StatefulWidget {
     required this.inputType,
     this.unit,
     this.choices,
+    this.choiceOptions = const [],
     required this.currentStatus,
     required this.resultValue,
     required this.issueDescription,
@@ -96,22 +98,13 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
     final bool isBooleanOrChoice =
         widget.inputType == QCInputType.booleanCheck ||
         widget.inputType == QCInputType.choice;
-    final bool isNonIdeal =
-        widget.resultValue == 'Tidak' ||
-        widget.resultValue == 'Tidak Sesuai' ||
-        (widget.inputType == QCInputType.choice &&
-            widget.resultValue.isNotEmpty &&
-            ![
-              'sesuai',
-              'rapi',
-              'kencang',
-              'ada',
-              'lengkap',
-              'ya',
-              'ok',
-              'diterima',
-              'sesuai standar',
-            ].contains(widget.resultValue.toLowerCase()));
+    final selectedChoice = choiceOptionForValue(
+      widget.choiceOptions,
+      widget.resultValue,
+    );
+    final bool isNonIdeal = widget.inputType == QCInputType.choice
+        ? selectedChoice?.outcome == 'FAIL'
+        : widget.resultValue == 'Tidak' || widget.resultValue == 'Tidak Sesuai';
 
     final showIssueField = isBooleanOrChoice && isNonIdeal;
 
@@ -231,8 +224,7 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
                     photos: widget.photos,
                     localPhotos: widget.localPhotos,
                     localPhotoBytes: widget.localPhotoBytes,
-                    uploadedPhotoPreviewBytes:
-                        widget.uploadedPhotoPreviewBytes,
+                    uploadedPhotoPreviewBytes: widget.uploadedPhotoPreviewBytes,
                     onDelete: widget.onDeletePhoto,
                   ),
                 ),
@@ -381,8 +373,16 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
           const SizedBox(height: 12),
         ],
       );
-    } else if (widget.inputType == QCInputType.choice &&
-        widget.choices != null) {
+    } else if (widget.inputType == QCInputType.choice) {
+      if (widget.choiceOptions.isEmpty) {
+        return const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: Text(
+            'Opsi belum dikonfigurasi. Hubungi admin template.',
+            style: TextStyle(color: AppColors.rejectedText, fontSize: 12),
+          ),
+        );
+      }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -398,12 +398,19 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: widget.choices!.map((ch) {
-              final isSel = widget.resultValue == ch;
+            children: widget.choiceOptions.map((option) {
+              final isSel = widget.resultValue == option.value;
               return _buildChoiceChip(
-                label: ch,
+                label: option.label,
                 selected: isSel,
-                onTap: () => widget.onResultValueChanged(ch),
+                onTap: () {
+                  if (option.outcome == 'PASS' &&
+                      widget.issueDescription.isNotEmpty) {
+                    _issueController.clear();
+                    widget.onIssueDescriptionChanged('');
+                  }
+                  widget.onResultValueChanged(option.value);
+                },
               );
             }).toList(),
           ),

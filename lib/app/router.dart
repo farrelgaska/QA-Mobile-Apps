@@ -14,6 +14,7 @@ import '../features/qc_pekerjaan/screens/qc_pekerjaan_list_screen.dart';
 import '../features/qc_pekerjaan/screens/qc_pekerjaan_form_screen.dart';
 import '../shared/layouts/main_shell.dart';
 import '../shared/models/qc_material_template_model.dart';
+import '../shared/models/pekerjaan_model.dart';
 
 CustomTransitionPage<void> _buildPageWithTransition({
   required BuildContext context,
@@ -49,10 +50,7 @@ final GoRouter appRouter = GoRouter(
   initialLocation: '/login',
   routes: [
     // Auth route (No Bottom Nav)
-    GoRoute(
-      path: '/login',
-      builder: (context, state) => const LoginScreen(),
-    ),
+    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
 
     // ShellRoute for Bottom Navigation Tabs
     ShellRoute(
@@ -126,6 +124,15 @@ final GoRouter appRouter = GoRouter(
         final template = state.extra is QCMaterialTemplate
             ? state.extra as QCMaterialTemplate
             : null;
+        if (template == null || template.id != id) {
+          return _buildPageWithTransition(
+            context: context,
+            state: state,
+            child: const Scaffold(
+              body: Center(child: Text('Template material tidak tersedia.')),
+            ),
+          );
+        }
         return _buildPageWithTransition(
           context: context,
           state: state,
@@ -165,11 +172,23 @@ final GoRouter appRouter = GoRouter(
         final id = state.pathParameters['id'] ?? '';
         final editReportId = state.uri.queryParameters['editReportId'];
         final isRevision = state.uri.queryParameters['isRevision'] == 'true';
+        final pekerjaan = state.extra is PekerjaanModel
+            ? state.extra as PekerjaanModel
+            : null;
+        if (pekerjaan == null || pekerjaan.id != id) {
+          return _buildPageWithTransition(
+            context: context,
+            state: state,
+            child: const Scaffold(
+              body: Center(child: Text('Template pekerjaan tidak tersedia.')),
+            ),
+          );
+        }
         return _buildPageWithTransition(
           context: context,
           state: state,
           child: QCPekerjaanFormScreen(
-            pekerjaanId: id,
+            pekerjaan: pekerjaan,
             editReportId: editReportId,
             isRevision: isRevision,
           ),
