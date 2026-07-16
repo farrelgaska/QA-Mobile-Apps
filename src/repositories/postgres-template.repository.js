@@ -11,6 +11,15 @@ const { conflict, notFound, translatePostgresError } = require('./repository-err
 const ROOT_COLUMNS = `id, type, name, description, form_code, category, segment,
   standard_code, is_active, workflow_status, version, migration_metadata, created_at, updated_at`;
 
+const serializeChoiceOptions = choiceOptions => {
+  if (!Array.isArray(choiceOptions)) {
+    const error = new Error('choice_options must be an array');
+    error.statusCode = 400;
+    throw error;
+  }
+  return JSON.stringify(choiceOptions);
+};
+
 class PostgresTemplateRepository {
   constructor(pool = getPool()) {
     this.pool = pool;
@@ -87,12 +96,13 @@ class PostgresTemplateRepository {
           validation_exact_value, migration_metadata
         ) values (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-          $13, $14, $15, $16, $17, $18, $19, $20, $21
+          $13, $14, $15::jsonb, $16, $17, $18, $19, $20, $21
         )`,
         [
           templateId, item.id, item.parameter_name, item.input_type, item.standard_text,
           item.min_value, item.max_value, item.unit, item.is_required, item.required_photo,
-          item.is_active, item.is_critical, item.position, item.choices, item.choice_options,
+          item.is_active, item.is_critical, item.position, item.choices,
+          serializeChoiceOptions(item.choice_options),
           item.category,
           rule.type ?? null, rule.min_value ?? null, rule.max_value ?? null,
           rule.exact_value ?? null, item.migration_metadata
@@ -205,14 +215,15 @@ class PostgresTemplateRepository {
           `update public.qc_template_items set
             parameter_name=$3, input_type=$4, standard_text=$5, min_value=$6, max_value=$7,
             unit=$8, is_required=$9, required_photo=$10, is_active=$11, is_critical=$12,
-            position=$13, choices=$14, choice_options=$15, category=$16,
+            position=$13, choices=$14, choice_options=$15::jsonb, category=$16,
             validation_type=$17, validation_min_value=$18, validation_max_value=$19,
             validation_exact_value=$20, migration_metadata=$21
            where template_id=$1 and id=$2`,
           [
             templateId, itemId, item.parameter_name, item.input_type, item.standard_text,
             item.min_value, item.max_value, item.unit, item.is_required, item.required_photo,
-            item.is_active, item.is_critical, item.position, item.choices, item.choice_options,
+            item.is_active, item.is_critical, item.position, item.choices,
+            serializeChoiceOptions(item.choice_options),
             item.category, rule.type ?? null, rule.min_value ?? null, rule.max_value ?? null,
             rule.exact_value ?? null, item.migration_metadata
           ]
