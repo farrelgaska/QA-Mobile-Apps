@@ -20,37 +20,19 @@ const mapApiToMaterial = (t: ApiTemplate): QCMaterial => ({
   updatedAt: t.updatedAt || new Date().toISOString(),
   checklistItems: (t.checklistItems || []).map((item) => ({
     id: item.id,
-    name: item.parameter_name || item.name || '',
-    standardLabel: item.standard_text || item.standardLabel || '',
+    name: item.parameterName,
+    standardLabel: item.standardText,
     unit: item.unit || '',
-    minVal: item.minVal,
-    maxVal: item.maxVal,
-    requiredPhoto: item.requiredPhoto !== undefined ? item.requiredPhoto : !!item.is_required
+    minVal: item.minValue ?? undefined,
+    maxVal: item.maxValue ?? undefined,
+    inputType: item.inputType,
+    choiceOptions: item.choiceOptions,
+    isRequired: item.isRequired,
+    requiredPhoto: item.requiredPhoto,
+    isActive: item.isActive,
+    isCritical: item.isCritical,
+    position: item.position
   }))
-});
-
-const mapMaterialToApi = (m: QCMaterial): ApiTemplate => ({
-  id: m.id,
-  type: 'MATERIAL',
-  name: m.name,
-  formCode: `FORM-${m.id}`,
-  category: m.category,
-  standardCode: m.standard,
-  checklistItems: m.checklistItems.map(item => ({
-    id: item.id,
-    parameter_name: item.name,
-    input_type: (item.minVal !== undefined || item.maxVal !== undefined) ? 'number' : 'choice',
-    standard_text: item.standardLabel,
-    unit: item.unit,
-    is_required: item.requiredPhoto,
-    name: item.name,
-    standardLabel: item.standardLabel,
-    minVal: item.minVal,
-    maxVal: item.maxVal,
-    requiredPhoto: item.requiredPhoto
-  })),
-  isActive: m.status === 'Aktif',
-  updatedAt: m.updatedAt || new Date().toISOString()
 });
 
 export const QCMaterialEditPage: React.FC = () => {
@@ -109,6 +91,10 @@ export const QCMaterialEditPage: React.FC = () => {
       setError('Kode standar tidak boleh kosong.');
       return;
     }
+    if (status === 'Aktif' && template.checklistItems.length === 0) {
+      setError('Tambahkan minimal satu parameter sebelum template diaktifkan.');
+      return;
+    }
 
     setIsSaving(true);
     setError(null);
@@ -122,8 +108,13 @@ export const QCMaterialEditPage: React.FC = () => {
         updatedAt: new Date().toISOString()
       };
 
-      const apiPayload = mapMaterialToApi(updatedTemplate);
-      await patchTemplate(id, apiPayload);
+      await patchTemplate(id, {
+        name: updatedTemplate.name,
+        category: updatedTemplate.category,
+        standardCode: updatedTemplate.standard,
+        isActive: updatedTemplate.status === 'Aktif',
+        updatedAt: updatedTemplate.updatedAt
+      });
 
       navigate(`/data/qc-material/${id}`, {
         state: { successMessage: `Template "${name}" berhasil diperbarui.` }

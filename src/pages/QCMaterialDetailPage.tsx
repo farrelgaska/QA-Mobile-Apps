@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import type { QCMaterial, MaterialChecklistTemplate } from '../types/material';
-import { fetchTemplates, patchTemplate, deleteTemplateChecklistItem } from '../services/reportApi';
-import type { ApiTemplate } from '../services/reportApi';
+import {
+  deleteTemplateChecklistItem,
+  fetchTemplate,
+  fetchTemplates,
+  patchTemplate,
+  patchTemplateChecklistItem,
+  postTemplateChecklistItem,
+} from '../services/reportApi';
+import type { ApiTemplate, ApiTemplateChecklistItem, ApiTemplateChecklistItemMutation } from '../services/reportApi';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { PageTransition } from '../components/layout/PageTransition';
 import { Table, TableHeader, TableBody, TableRow, TableCell } from '../components/ui/Table';
-import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
-import { Plus, Trash2, ShieldAlert } from 'lucide-react';
+import { TemplateParameterForm } from '../components/templates/TemplateParameterForm';
+import { Pencil, Plus, Trash2, ShieldAlert } from 'lucide-react';
 
 const mapApiToMaterial = (t: ApiTemplate): QCMaterial => ({
   id: t.id,
@@ -22,37 +29,36 @@ const mapApiToMaterial = (t: ApiTemplate): QCMaterial => ({
   updatedAt: t.updatedAt || new Date().toISOString(),
   checklistItems: (t.checklistItems || []).map((item) => ({
     id: item.id,
-    name: item.parameter_name || item.name || '',
-    standardLabel: item.standard_text || item.standardLabel || '',
+    name: item.parameterName,
+    standardLabel: item.standardText,
     unit: item.unit || '',
-    minVal: item.minVal,
-    maxVal: item.maxVal,
-    requiredPhoto: item.requiredPhoto !== undefined ? item.requiredPhoto : !!item.is_required
+    minVal: item.minValue ?? undefined,
+    maxVal: item.maxValue ?? undefined,
+    inputType: item.inputType ?? 'number',
+    choiceOptions: item.choiceOptions ?? [],
+    isRequired: item.isRequired ?? true,
+    requiredPhoto: item.requiredPhoto,
+    isActive: item.isActive ?? true,
+    isCritical: item.isCritical ?? false,
+    position: item.position
   }))
 });
 
-const mapMaterialToApi = (m: QCMaterial): ApiTemplate => ({
-  id: m.id,
-  type: 'MATERIAL',
-  name: m.name,
-  formCode: `FORM-${m.id}`,
-  category: m.category,
-  standardCode: m.standard,
-  checklistItems: m.checklistItems.map(item => ({
-    id: item.id,
-    parameter_name: item.name,
-    input_type: (item.minVal !== undefined || item.maxVal !== undefined) ? 'number' : 'choice',
-    standard_text: item.standardLabel,
-    unit: item.unit,
-    is_required: item.requiredPhoto,
-    name: item.name,
-    standardLabel: item.standardLabel,
-    minVal: item.minVal,
-    maxVal: item.maxVal,
-    requiredPhoto: item.requiredPhoto
-  })),
-  isActive: m.status === 'Aktif',
-  updatedAt: m.updatedAt || new Date().toISOString()
+const materialItemToApi = (item: MaterialChecklistTemplate): ApiTemplateChecklistItem => ({
+  id: item.id,
+  parameterName: item.name,
+  inputType: item.inputType ?? 'number',
+  standardText: item.standardLabel,
+  minValue: item.minVal ?? null,
+  maxValue: item.maxVal ?? null,
+  unit: item.unit || null,
+  choiceOptions: item.choiceOptions ?? [],
+  choices: [],
+  isRequired: item.isRequired ?? true,
+  requiredPhoto: item.requiredPhoto,
+  isActive: item.isActive ?? true,
+  isCritical: item.isCritical ?? false,
+  position: item.position ?? 0,
 });
 
 export const QCMaterialDetailPage: React.FC = () => {
@@ -67,16 +73,9 @@ export const QCMaterialDetailPage: React.FC = () => {
   const success = location.state?.successMessage || null;
 
   // Modal State
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isParameterModalOpen, setIsParameterModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<MaterialChecklistTemplate | null>(null);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-
-  // New Checklist Form fields
-  const [paramName, setParamName] = useState('');
-  const [standardLabel, setStandardLabel] = useState('');
-  const [unit, setUnit] = useState('mm');
-  const [minVal, setMinVal] = useState('');
-  const [maxVal, setMaxVal] = useState('');
-  const [requiredPhoto, setRequiredPhoto] = useState<boolean>(false);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -109,16 +108,23 @@ export const QCMaterialDetailPage: React.FC = () => {
     }
   }, [id]);
 
-  const updateMaterialTemplate = async (updatedTemplate: QCMaterial) => {
+  const refreshTemplate = async () => {
+    if (!id) return;
+    const refreshedTemplate = mapApiToMaterial(await fetchTemplate(id));
+    setMaterials(current => current.map(item => item.id === refreshedTemplate.id ? refreshedTemplate : item));
+    setTemplate(refreshedTemplate);
+  };
+
+  const saveParameter = async (item: ApiTemplateChecklistItemMutation) => {
+    if (!template) return;
     setIsLoading(true);
     setError(null);
     try {
-      const apiPayload = mapMaterialToApi(updatedTemplate);
-      await patchTemplate(updatedTemplate.id, apiPayload);
-
-      const updatedList = materials.map(m => m.id === updatedTemplate.id ? updatedTemplate : m);
-      setMaterials(updatedList);
-      setTemplate(updatedTemplate);
+      if (editingItem) await patchTemplateChecklistItem(template.id, editingItem.id, item);
+      else await postTemplateChecklistItem(template.id, item);
+      await refreshTemplate();
+      setEditingItem(null);
+      setIsParameterModalOpen(false);
     } catch (e: any) {
       console.error(e);
       setError(e.message || 'Gagal memperbarui template.');
@@ -137,8 +143,7 @@ export const QCMaterialDetailPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const updatedApiTemplate = await deleteTemplateChecklistItem(template.id, itemToDelete);
-      const updatedTemplate = mapApiToMaterial(updatedApiTemplate);
+      const updatedTemplate = mapApiToMaterial(await deleteTemplateChecklistItem(template.id, itemToDelete));
 
       const updatedList = materials.map(m => m.id === updatedTemplate.id ? updatedTemplate : m);
       setMaterials(updatedList);
@@ -152,38 +157,18 @@ export const QCMaterialDetailPage: React.FC = () => {
     }
   };
 
-  const handleAddParameter = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!template || !paramName || !standardLabel) return;
-
-    const newItem: MaterialChecklistTemplate = {
-      id: `${template.id}-C${(template.checklistItems.length + 1).toString().padStart(2, '0')}`,
-      name: paramName,
-      standardLabel,
-      unit,
-      minVal: minVal ? parseFloat(minVal) : undefined,
-      maxVal: maxVal ? parseFloat(maxVal) : undefined,
-      requiredPhoto
-    };
-
-    const updatedItems = [...template.checklistItems, newItem];
-    const updatedTemplate: QCMaterial = {
-      ...template,
-      checklistItems: updatedItems,
-      checklistCount: updatedItems.length,
-      updatedAt: new Date().toISOString()
-    };
-
-    updateMaterialTemplate(updatedTemplate);
-
-    // Reset Form
-    setParamName('');
-    setStandardLabel('');
-    setUnit('mm');
-    setMinVal('');
-    setMaxVal('');
-    setRequiredPhoto(false);
-    setIsAddModalOpen(false);
+  const changeTemplateStatus = async (isActive: boolean) => {
+    if (!template || (isActive && template.checklistItems.length === 0)) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      await patchTemplate(template.id, { isActive });
+      await refreshTemplate();
+    } catch (e: any) {
+      setError(e.message || 'Gagal mengubah status template.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!template) {
@@ -271,6 +256,18 @@ export const QCMaterialDetailPage: React.FC = () => {
                   </span>
                 )}
               </div>
+              <Button
+                size="sm"
+                variant={template.status === 'Aktif' ? 'outline' : 'primary'}
+                className="mt-3"
+                disabled={isLoading || (template.status === 'Nonaktif' && template.checklistItems.length === 0)}
+                onClick={() => changeTemplateStatus(template.status !== 'Aktif')}
+              >
+                {template.status === 'Aktif' ? 'Nonaktifkan Template' : 'Aktifkan / Publikasikan'}
+              </Button>
+              {template.status === 'Nonaktif' && template.checklistItems.length === 0 && (
+                <p className="mt-2 text-xs text-amber-600">Tambahkan minimal satu parameter sebelum template diaktifkan.</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -281,7 +278,7 @@ export const QCMaterialDetailPage: React.FC = () => {
             <div className="flex justify-between items-center px-6 py-3 border-b border-gray-100 bg-gray-50/50">
               <p className="text-xs text-gray-500">Kriteria verifikasi fisik material yang harus diisi oleh QA Staff di lapangan.</p>
               <Button
-                onClick={() => setIsAddModalOpen(true)}
+                onClick={() => { setEditingItem(null); setIsParameterModalOpen(true); }}
                 size="sm"
                 className="bg-[#006B5A] hover:bg-[#005244] text-white flex-shrink-0 ml-4"
               >
@@ -317,8 +314,8 @@ export const QCMaterialDetailPage: React.FC = () => {
                           <TableCell className="text-center text-gray-400 font-medium">{idx + 1}</TableCell>
                           <TableCell className="font-semibold text-gray-800">{item.name}</TableCell>
                           <TableCell className="text-center">
-                            <Badge color={item.unit ? 'blue' : 'gray'} className="text-[10px]">
-                              {item.unit ? 'Angka / Ukuran' : 'Pilihan Visual'}
+                            <Badge color={item.inputType === 'number' ? 'blue' : 'gray'} className="text-[10px]">
+                              {item.inputType === 'number' ? 'Nilai Angka' : item.inputType === 'text' ? 'Teks' : 'Pilihan Kriteria'}
                             </Badge>
                           </TableCell>
                           <TableCell className="font-medium text-gray-500">
@@ -353,6 +350,14 @@ export const QCMaterialDetailPage: React.FC = () => {
                           <TableCell className="text-center">
                             <button
                               type="button"
+                              onClick={() => { setEditingItem(item); setIsParameterModalOpen(true); }}
+                              className="text-[#006B5A] hover:text-[#005244] p-1.5 rounded-lg hover:bg-emerald-50 transition-colors"
+                              title="Edit Parameter"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => handleDeleteItem(item.id)}
                               className="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 transition-colors"
                               title="Hapus Parameter"
@@ -371,87 +376,18 @@ export const QCMaterialDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Parameter Modal */}
+      {/* Create/Edit Parameter Modal */}
       <Modal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title="Tambah Parameter Checklist QC"
+        isOpen={isParameterModalOpen}
+        onClose={() => { setIsParameterModalOpen(false); setEditingItem(null); }}
+        title={editingItem ? 'Edit Parameter Checklist QC' : 'Tambah Parameter Checklist QC'}
       >
-        <form onSubmit={handleAddParameter} className="space-y-4">
-          <Input
-            id="param-name"
-            label="Nama Parameter / Karakteristik Fisik"
-            placeholder="Contoh: Ketebalan Dinding Bawah"
-            value={paramName}
-            onChange={(e) => setParamName(e.target.value)}
-            required
-          />
-
-          <Input
-            id="standard-label"
-            label="Uraian Batas Acuan Standar"
-            placeholder="Contoh: min 4.2 mm atau 120 - 130 micron"
-            value={standardLabel}
-            onChange={(e) => setStandardLabel(e.target.value)}
-            required
-          />
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <Input
-                id="unit"
-                label="Satuan Ukur"
-                placeholder="mm, micron"
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-              />
-            </div>
-            <div>
-              <Input
-                id="min-val"
-                label="Toleransi Min"
-                type="number"
-                step="any"
-                placeholder="min"
-                value={minVal}
-                onChange={(e) => setMinVal(e.target.value)}
-              />
-            </div>
-            <div>
-              <Input
-                id="max-val"
-                label="Toleransi Max"
-                type="number"
-                step="any"
-                placeholder="max"
-                value={maxVal}
-                onChange={(e) => setMaxVal(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 py-2">
-            <input
-              id="req-photo"
-              type="checkbox"
-              checked={requiredPhoto}
-              onChange={(e) => setRequiredPhoto(e.target.checked)}
-              className="h-4 w-4 text-[#006B5A] border-gray-300 rounded focus:ring-[#006B5A]"
-            />
-            <label htmlFor="req-photo" className="text-xs font-semibold text-gray-700 select-none cursor-pointer">
-              Wajib Unggah Foto Bukti Lapangan
-            </label>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-            <Button variant="outline" type="button" onClick={() => setIsAddModalOpen(false)}>
-              Batal
-            </Button>
-            <Button variant="primary" type="submit" className="bg-[#006B5A] hover:bg-[#005244]" disabled={!paramName || !standardLabel}>
-              Simpan Parameter
-            </Button>
-          </div>
-        </form>
+        <TemplateParameterForm
+          initialItem={editingItem ? materialItemToApi(editingItem) : undefined}
+          isSaving={isLoading}
+          onCancel={() => { setIsParameterModalOpen(false); setEditingItem(null); }}
+          onSubmit={saveParameter}
+        />
       </Modal>
 
       {/* Delete Confirmation Modal */}

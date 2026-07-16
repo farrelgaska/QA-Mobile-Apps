@@ -13,6 +13,7 @@ import { QCMaterialDetailPage } from '../pages/QCMaterialDetailPage';
 import { QCMaterialEditPage } from '../pages/QCMaterialEditPage';
 import { QCPekerjaanListPage } from '../pages/QCPekerjaanListPage';
 import { QCPekerjaanDetailPage } from '../pages/QCPekerjaanDetailPage';
+import { QCPekerjaanEditPage } from '../pages/QCPekerjaanEditPage';
 
 export const router = createBrowserRouter([
   {
@@ -70,6 +71,10 @@ export const router = createBrowserRouter([
       {
         path: 'data/qc-pekerjaan/:id',
         element: <QCPekerjaanDetailPage />
+      },
+      {
+        path: 'data/qc-pekerjaan/:id/edit',
+        element: <QCPekerjaanEditPage />
       }
     ]
   },

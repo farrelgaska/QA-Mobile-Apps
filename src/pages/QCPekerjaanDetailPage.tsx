@@ -1,67 +1,83 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import type { QCPekerjaan, PekerjaanChecklistTemplate } from '../types/pekerjaan';
-import { fetchTemplates, patchTemplate, deleteTemplateChecklistItem } from '../services/reportApi';
-import type { ApiTemplate } from '../services/reportApi';
+import {
+  deleteTemplateChecklistItem,
+  fetchTemplate,
+  fetchTemplates,
+  patchTemplate,
+  patchTemplateChecklistItem,
+  postTemplateChecklistItem,
+} from '../services/reportApi';
+import type { ApiTemplate, ApiTemplateChecklistItem, ApiTemplateChecklistItemMutation } from '../services/reportApi';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { PageTransition } from '../components/layout/PageTransition';
 import { Badge } from '../components/ui/Badge';
-import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Table, TableHeader, TableBody, TableRow, TableCell } from '../components/ui/Table';
-import { Plus, Trash2, ShieldAlert, Info } from 'lucide-react';
+import { TemplateParameterForm } from '../components/templates/TemplateParameterForm';
+import { Pencil, Plus, Trash2, ShieldAlert } from 'lucide-react';
 
 const mapApiToPekerjaan = (t: ApiTemplate): QCPekerjaan => ({
   id: t.id,
+  formCode: t.formCode,
   name: t.name,
   category: t.category || '',
+  description: t.description || '',
   segment: t.segment || 'construction',
   checklistCount: t.checklistItems?.length || 0,
   isActive: t.isActive,
   updatedAt: t.updatedAt || new Date().toISOString(),
   checklistItems: (t.checklistItems || []).map((item) => ({
     id: item.id,
-    name: item.parameter_name || item.name || '',
-    isActive: item.isActive !== undefined ? item.isActive : true
+    name: item.parameterName,
+    inputType: item.inputType ?? 'choice',
+    standardText: item.standardText ?? '',
+    minValue: item.minValue ?? null,
+    maxValue: item.maxValue ?? null,
+    unit: item.unit ?? null,
+    choiceOptions: item.choiceOptions ?? [],
+    isRequired: item.isRequired ?? true,
+    requiredPhoto: item.requiredPhoto ?? false,
+    isActive: item.isActive,
+    isCritical: item.isCritical ?? false,
+    position: item.position
   }))
 });
 
-const mapPekerjaanToApi = (p: QCPekerjaan): ApiTemplate => ({
-  id: p.id,
-  type: 'WORK',
-  name: p.name,
-  formCode: `FORM-${p.id}`,
-  category: p.category,
-  standardCode: '',
-  checklistItems: p.checklistItems.map(item => ({
-    id: item.id,
-    parameter_name: item.name,
-    input_type: 'choice',
-    standard_text: '',
-    unit: '',
-    is_required: true,
-    name: item.name,
-    isActive: item.isActive
-  })),
-  isActive: p.isActive,
-  updatedAt: p.updatedAt || new Date().toISOString(),
-  segment: p.segment
+const pekerjaanItemToApi = (item: PekerjaanChecklistTemplate): ApiTemplateChecklistItem => ({
+  id: item.id,
+  parameterName: item.name,
+  inputType: item.inputType ?? 'choice',
+  standardText: item.standardText ?? '',
+  minValue: item.minValue ?? null,
+  maxValue: item.maxValue ?? null,
+  unit: item.unit ?? null,
+  choiceOptions: item.choiceOptions ?? [],
+  choices: [],
+  isRequired: item.isRequired ?? true,
+  requiredPhoto: item.requiredPhoto ?? false,
+  isActive: item.isActive,
+  isCritical: item.isCritical ?? false,
+  position: item.position ?? 0,
 });
 
 export const QCPekerjaanDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [pekerjaanList, setPekerjaanList] = useState<QCPekerjaan[]>([]);
   const [template, setTemplate] = useState<QCPekerjaan | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const success = location.state?.successMessage || null;
 
   // Modal State
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isParameterModalOpen, setIsParameterModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<PekerjaanChecklistTemplate | null>(null);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-  const [newItemName, setNewItemName] = useState('');
 
   const loadData = async () => {
     setIsLoading(true);
@@ -89,18 +105,26 @@ export const QCPekerjaanDetailPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
+    if (location.state?.successMessage) window.history.replaceState({}, document.title);
   }, [id]);
 
-  const updatePekerjaanTemplate = async (updatedTemplate: QCPekerjaan) => {
+  const refreshTemplate = async () => {
+    if (!id) return;
+    const refreshedTemplate = mapApiToPekerjaan(await fetchTemplate(id));
+    setPekerjaanList(current => current.map(item => item.id === refreshedTemplate.id ? refreshedTemplate : item));
+    setTemplate(refreshedTemplate);
+  };
+
+  const saveParameter = async (item: ApiTemplateChecklistItemMutation) => {
+    if (!template) return;
     setIsLoading(true);
     setError(null);
     try {
-      const apiPayload = mapPekerjaanToApi(updatedTemplate);
-      await patchTemplate(updatedTemplate.id, apiPayload);
-
-      const updatedList = pekerjaanList.map(w => w.id === updatedTemplate.id ? updatedTemplate : w);
-      setPekerjaanList(updatedList);
-      setTemplate(updatedTemplate);
+      if (editingItem) await patchTemplateChecklistItem(template.id, editingItem.id, item);
+      else await postTemplateChecklistItem(template.id, item);
+      await refreshTemplate();
+      setEditingItem(null);
+      setIsParameterModalOpen(false);
     } catch (e: any) {
       console.error(e);
       setError(e.message || 'Gagal memperbarui template.');
@@ -119,8 +143,7 @@ export const QCPekerjaanDetailPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const updatedApiTemplate = await deleteTemplateChecklistItem(template.id, itemToDelete);
-      const updatedTemplate = mapApiToPekerjaan(updatedApiTemplate);
+      const updatedTemplate = mapApiToPekerjaan(await deleteTemplateChecklistItem(template.id, itemToDelete));
 
       const updatedList = pekerjaanList.map(w => w.id === updatedTemplate.id ? updatedTemplate : w);
       setPekerjaanList(updatedList);
@@ -134,46 +157,34 @@ export const QCPekerjaanDetailPage: React.FC = () => {
     }
   };
 
-  const handleToggleItemActive = (itemId: string) => {
+  const handleToggleItemActive = async (itemId: string) => {
     if (!template) return;
-
-    const updatedItems = template.checklistItems.map(item => {
-      if (item.id === itemId) {
-        return { ...item, isActive: !item.isActive };
-      }
-      return item;
-    });
-
-    const updatedTemplate: QCPekerjaan = {
-      ...template,
-      checklistItems: updatedItems,
-      updatedAt: new Date().toISOString()
-    };
-
-    updatePekerjaanTemplate(updatedTemplate);
+    const item = template.checklistItems.find(candidate => candidate.id === itemId);
+    if (!item) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      await patchTemplateChecklistItem(template.id, itemId, { isActive: !item.isActive });
+      await refreshTemplate();
+    } catch (e: any) {
+      setError(e.message || 'Gagal mengubah status item.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleAddItem = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!template || !newItemName.trim()) return;
-
-    const newItem: PekerjaanChecklistTemplate = {
-      id: `${template.id}-C${(template.checklistItems.length + 1).toString().padStart(2, '0')}`,
-      name: newItemName.trim(),
-      isActive: true
-    };
-
-    const updatedItems = [...template.checklistItems, newItem];
-    const updatedTemplate: QCPekerjaan = {
-      ...template,
-      checklistItems: updatedItems,
-      checklistCount: updatedItems.length,
-      updatedAt: new Date().toISOString()
-    };
-
-    updatePekerjaanTemplate(updatedTemplate);
-    setNewItemName('');
-    setIsAddModalOpen(false);
+  const changeTemplateStatus = async (isActive: boolean) => {
+    if (!template || (isActive && template.checklistItems.length === 0)) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      await patchTemplate(template.id, { isActive });
+      await refreshTemplate();
+    } catch (e: any) {
+      setError(e.message || 'Gagal mengubah status template.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!template) {
@@ -199,6 +210,11 @@ export const QCPekerjaanDetailPage: React.FC = () => {
 
   return (
     <PageTransition className="space-y-6 max-w-7xl mx-auto px-1">
+      {success && (
+        <div className="p-4 text-sm text-emerald-700 bg-emerald-50 rounded-lg border border-emerald-200">
+          <strong>Sukses:</strong> {success}
+        </div>
+      )}
       {error && (
         <div className="p-4 text-sm text-red-700 bg-red-50 rounded-lg border border-red-200">
           <strong>Error:</strong> {error}
@@ -213,9 +229,19 @@ export const QCPekerjaanDetailPage: React.FC = () => {
 
       {/* Top Header Navigation */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Button variant="outline" onClick={() => navigate('/data/qc-pekerjaan')} className="hover:bg-gray-50" disabled={isLoading}>
-          ← Kembali ke Master Pekerjaan
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={() => navigate('/data/qc-pekerjaan')} className="hover:bg-gray-50" disabled={isLoading}>
+            ← Kembali ke Master Pekerjaan
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/data/qc-pekerjaan/${id}/edit`)}
+            className="text-xs text-gray-600 hover:text-gray-900"
+          >
+            Edit Template
+          </Button>
+        </div>
         <div className="flex items-center gap-2">
           <Badge color={getSegmentBadgeColor(template.segment)} className="text-xs uppercase tracking-wider font-semibold capitalize">
             {template.segment}
@@ -230,8 +256,9 @@ export const QCPekerjaanDetailPage: React.FC = () => {
         <Card title="Detail Spesifikasi Pekerjaan" className="md:col-span-1">
           <CardContent className="space-y-4 pt-2">
             <div>
-              <div className="text-xs text-gray-400 font-semibold">ID Pekerjaan</div>
-              <div className="text-sm font-bold text-gray-800">{template.id}</div>
+              <div className="text-xs text-gray-400 font-semibold">ID/Kode Pekerjaan</div>
+              <div className="text-sm font-bold text-gray-800">{template.formCode || '-'}</div>
+              <div className="text-[10px] text-gray-400 mt-1">ID teknis: {template.id}</div>
             </div>
             <div>
               <div className="text-xs text-gray-400 font-semibold">Nama Aktivitas</div>
@@ -241,6 +268,12 @@ export const QCPekerjaanDetailPage: React.FC = () => {
               <div className="text-xs text-gray-400 font-semibold">Kategori Bidang</div>
               <div className="text-sm font-bold text-gray-800">{template.category}</div>
             </div>
+            {template.description && (
+              <div>
+                <div className="text-xs text-gray-400 font-semibold">Deskripsi</div>
+                <div className="text-sm text-gray-700">{template.description}</div>
+              </div>
+            )}
             <div>
               <div className="text-xs text-gray-400 font-semibold">Status Kategori Master</div>
               <div className="mt-1">
@@ -254,6 +287,18 @@ export const QCPekerjaanDetailPage: React.FC = () => {
                   </span>
                 )}
               </div>
+              <Button
+                size="sm"
+                variant={template.isActive ? 'outline' : 'primary'}
+                className="mt-3"
+                disabled={isLoading || (!template.isActive && template.checklistItems.length === 0)}
+                onClick={() => changeTemplateStatus(!template.isActive)}
+              >
+                {template.isActive ? 'Nonaktifkan Template' : 'Aktifkan / Publikasikan'}
+              </Button>
+              {!template.isActive && template.checklistItems.length === 0 && (
+                <p className="mt-2 text-xs text-amber-600">Tambahkan minimal satu parameter sebelum template diaktifkan.</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -264,7 +309,7 @@ export const QCPekerjaanDetailPage: React.FC = () => {
             <div className="flex justify-between items-center px-6 py-3 border-b border-gray-100 bg-gray-50/50">
               <p className="text-xs text-gray-500">Langkah-langkah pemeriksaan fisik/teknis yang wajib divalidasi staf lapangan.</p>
               <Button
-                onClick={() => setIsAddModalOpen(true)}
+                onClick={() => { setEditingItem(null); setIsParameterModalOpen(true); }}
                 size="sm"
                 className="bg-[#006B5A] hover:bg-[#005244] text-white flex-shrink-0 ml-4"
               >
@@ -298,6 +343,14 @@ export const QCPekerjaanDetailPage: React.FC = () => {
                           <TableCell className="font-bold text-gray-500 text-xs">{item.id}</TableCell>
                           <TableCell className="font-semibold text-gray-800">{item.name}</TableCell>
                           <TableCell className="text-center">
+                            <button
+                              type="button"
+                              onClick={() => { setEditingItem(item); setIsParameterModalOpen(true); }}
+                              className="text-[#006B5A] hover:text-[#005244] p-1.5 rounded-lg hover:bg-emerald-50 transition-colors"
+                              title="Edit Item"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
                             <button
                               type="button"
                               onClick={() => handleToggleItemActive(item.id)}
@@ -336,36 +389,18 @@ export const QCPekerjaanDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Item Modal */}
+      {/* Create/Edit Item Modal */}
       <Modal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title="Tambah Item Checklist Pekerjaan"
+        isOpen={isParameterModalOpen}
+        onClose={() => { setIsParameterModalOpen(false); setEditingItem(null); }}
+        title={editingItem ? 'Edit Item Checklist Pekerjaan' : 'Tambah Item Checklist Pekerjaan'}
       >
-        <form onSubmit={handleAddItem} className="space-y-4">
-          <Input
-            id="item-name"
-            label="Deskripsi Instruksi / Pemeriksaan Lapangan"
-            placeholder="Contoh: Pemasangan grounding rod sedalam 1.5 meter"
-            value={newItemName}
-            onChange={(e) => setNewItemName(e.target.value)}
-            required
-          />
-
-          <div className="flex items-start gap-2 text-xs text-blue-700 bg-blue-50/50 p-3 rounded-lg border border-blue-200/50 leading-relaxed mt-2">
-            <Info className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
-            <span>Instruksi ini akan ditambahkan ke daftar checklist aktif yang wajib diverifikasi dan dijawab Ya/Tidak atau dilaporkan nilai aktualnya oleh staf.</span>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-            <Button variant="outline" type="button" onClick={() => setIsAddModalOpen(false)}>
-              Batal
-            </Button>
-            <Button variant="primary" type="submit" className="bg-[#006B5A] hover:bg-[#005244]" disabled={!newItemName.trim()}>
-              Simpan Item
-            </Button>
-          </div>
-        </form>
+        <TemplateParameterForm
+          initialItem={editingItem ? pekerjaanItemToApi(editingItem) : undefined}
+          isSaving={isLoading}
+          onCancel={() => { setIsParameterModalOpen(false); setEditingItem(null); }}
+          onSubmit={saveParameter}
+        />
       </Modal>
 
       {/* Delete Confirmation Modal */}

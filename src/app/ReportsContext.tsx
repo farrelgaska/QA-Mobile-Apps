@@ -5,6 +5,8 @@ import {
   fetchReports,
   approveReportApi,
   requestFollowUpApi,
+  resolveQCEvidenceSignedUrls,
+  type ApiReport,
   type ApiChecklistItem,
 } from '../services/reportApi';
 
@@ -59,12 +61,36 @@ function buildApiChecklistItems(report: QCReport): ApiChecklistItem[] {
   }));
 }
 
+function collectEvidencePaths(reports: ApiReport[]): string[] {
+  return reports.flatMap(report => [
+    ...(report.general_photos ?? []),
+    ...(report.checklist_items ?? []).flatMap(item => item.item_photos ?? []),
+  ]);
+}
+
+function applySignedUrls(
+  report: QCReport,
+  signedUrls: Readonly<Record<string, string>>
+): QCReport {
+  return {
+    ...report,
+    checklistItems: report.checklistItems.map(item => ({
+      ...item,
+      photoUrls: item.photoUrls.map(path => signedUrls[path] ?? path),
+    })),
+    photos: (report.general_photos ?? report.photos ?? []).map(
+      path => signedUrls[path] ?? path
+    ),
+  };
+}
+
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [reports, setReports] = useState<QCReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const signedUrlsRef = useRef<Record<string, string>>({});
 
   // Keep a stable ref to current reports for use inside callbacks
   const reportsRef = useRef<QCReport[]>(reports);
@@ -76,7 +102,17 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setError(null);
     try {
       const apiData = await fetchReports();
-      const mapped = apiData.map((r: any) => mapToSharedReport(r));
+      try {
+        signedUrlsRef.current = {
+          ...signedUrlsRef.current,
+          ...await resolveQCEvidenceSignedUrls(collectEvidencePaths(apiData)),
+        };
+      } catch (signedUrlError) {
+        console.warn('Failed to resolve private QC evidence URLs.', signedUrlError);
+      }
+      const mapped = apiData.map(r =>
+        applySignedUrls(mapToSharedReport(r), signedUrlsRef.current)
+      );
       setReports(mapped);
       saveToStorage(mapped);
     } catch (err) {
@@ -95,7 +131,10 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // ── Local optimistic update helper ────────────────────────────────────────
 
   const applyLocalUpdate = useCallback((updatedReport: QCReport) => {
-    const mapped = mapToSharedReport(updatedReport);
+    const mapped = applySignedUrls(
+      mapToSharedReport(updatedReport),
+      signedUrlsRef.current
+    );
     setReports(prev => {
       const next = prev.map(r => r.id === mapped.id ? mapped : r);
       saveToStorage(next);

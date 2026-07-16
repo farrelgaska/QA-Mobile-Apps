@@ -4,6 +4,7 @@ import { Table, TableHeader, TableRow, TableCell, TableBody } from '../ui/Table'
 import { StandardResultBadge } from './StandardResultBadge';
 import { Image as ImageIcon, MessageSquare, Check, X, AlertCircle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
+import { ImagePreviewModal } from './ImagePreviewModal';
 
 export interface ChecklistEvaluationTableProps {
   items: ChecklistItem[];
@@ -21,6 +22,10 @@ export const ChecklistEvaluationTable: React.FC<ChecklistEvaluationTableProps> =
     name: string;
     result: ChecklistResult;
     note: string;
+  } | null>(null);
+  const [previewImage, setPreviewImage] = useState<{
+    url: string;
+    alt: string;
   } | null>(null);
 
   const getShortPreview = (note?: string) => {
@@ -122,24 +127,29 @@ export const ChecklistEvaluationTable: React.FC<ChecklistEvaluationTableProps> =
                   <div className="flex flex-wrap gap-1.5">
                     {item.photoUrls && item.photoUrls.length > 0 ? (
                       item.photoUrls.map((url, i) => (
-                        <a
+                        <button
+                          type="button"
                           key={i}
-                          href={url}
-                          target="_blank"
-                          rel="noreferrer"
+                          onClick={() => setPreviewImage({
+                            url,
+                            alt: `${item.name} doc ${i + 1}`,
+                          })}
                           className="group relative h-9 w-9 rounded-lg border border-gray-200 overflow-hidden inline-flex items-center justify-center hover:border-[#006B5A] bg-gray-50 hover:shadow-sm transition-all duration-150"
-                          title="Lihat foto asli"
+                          aria-label={`Buka pratinjau foto ${i + 1} untuk ${item.name}`}
+                          title="Lihat foto"
                         >
+                          <ImageIcon className="h-4.5 w-4.5 text-gray-400 group-hover:text-[#006B5A]" />
                           {url.startsWith('http') || url.startsWith('/') || url.startsWith('data:') ? (
                             <img
                               src={url}
                               alt={`${item.name} doc ${i + 1}`}
-                              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
+                              className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
+                              onError={(event) => {
+                                event.currentTarget.style.display = 'none';
+                              }}
                             />
-                          ) : (
-                            <ImageIcon className="h-4.5 w-4.5 text-gray-400 group-hover:text-[#006B5A]" />
-                          )}
-                        </a>
+                          ) : null}
+                        </button>
                       ))
                     ) : (
                       <span className="text-xs text-gray-400 italic">Tidak ada foto</span>
@@ -225,6 +235,11 @@ export const ChecklistEvaluationTable: React.FC<ChecklistEvaluationTableProps> =
         />
       </div>
     </Modal>
+    <ImagePreviewModal
+      imageUrl={previewImage?.url ?? null}
+      alt={previewImage?.alt ?? 'Foto dokumentasi checklist'}
+      onClose={() => setPreviewImage(null)}
+    />
   </>
 );
 };

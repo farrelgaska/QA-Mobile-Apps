@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { QCPekerjaan } from '../types/pekerjaan';
 import { fetchTemplates, postTemplate, patchTemplate } from '../services/reportApi';
-import type { ApiTemplate } from '../services/reportApi';
+import type { ApiTemplate, ApiTemplateWrite } from '../services/reportApi';
 import { Card, CardContent } from '../components/ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableCell } from '../components/ui/Table';
 import { PageTransition } from '../components/layout/PageTransition';
@@ -16,20 +16,32 @@ import { Search, Plus, Info } from 'lucide-react';
 
 const mapApiToPekerjaan = (t: ApiTemplate): QCPekerjaan => ({
   id: t.id,
+  formCode: t.formCode,
   name: t.name,
   category: t.category || '',
+  description: t.description || '',
   segment: t.segment || 'construction',
   checklistCount: t.checklistItems?.length || 0,
   isActive: t.isActive,
   updatedAt: t.updatedAt || new Date().toISOString(),
   checklistItems: (t.checklistItems || []).map((item) => ({
     id: item.id,
-    name: item.parameter_name || item.name || '',
-    isActive: item.isActive !== undefined ? item.isActive : true
+    name: item.parameterName,
+    inputType: item.inputType ?? 'choice',
+    standardText: item.standardText ?? '',
+    minValue: item.minValue ?? null,
+    maxValue: item.maxValue ?? null,
+    unit: item.unit ?? null,
+    choiceOptions: item.choiceOptions ?? [],
+    isRequired: item.isRequired ?? true,
+    requiredPhoto: item.requiredPhoto ?? false,
+    isActive: item.isActive,
+    isCritical: item.isCritical ?? false,
+    position: item.position
   }))
 });
 
-const mapPekerjaanToApi = (p: QCPekerjaan): ApiTemplate => ({
+const mapPekerjaanToApi = (p: QCPekerjaan): ApiTemplateWrite => ({
   id: p.id,
   type: 'WORK',
   name: p.name,
@@ -38,13 +50,18 @@ const mapPekerjaanToApi = (p: QCPekerjaan): ApiTemplate => ({
   standardCode: '',
   checklistItems: p.checklistItems.map(item => ({
     id: item.id,
-    parameter_name: item.name,
-    input_type: 'choice',
-    standard_text: '',
-    unit: '',
-    is_required: true,
-    name: item.name,
-    isActive: item.isActive
+    parameterName: item.name,
+    inputType: item.inputType ?? 'choice',
+    standardText: item.standardText ?? '',
+    minValue: item.minValue ?? null,
+    maxValue: item.maxValue ?? null,
+    unit: item.unit ?? null,
+    choiceOptions: item.choiceOptions ?? [],
+    isRequired: item.isRequired ?? true,
+    requiredPhoto: item.requiredPhoto ?? false,
+    isActive: item.isActive,
+    isCritical: item.isCritical ?? false,
+    position: item.position
   })),
   isActive: p.isActive,
   updatedAt: p.updatedAt || new Date().toISOString(),
@@ -94,6 +111,10 @@ export const QCPekerjaanListPage: React.FC = () => {
     if (!target) return;
 
     const nextActive = !target.isActive;
+    if (nextActive && target.checklistItems.length === 0) {
+      setError('Tambahkan minimal satu parameter sebelum template diaktifkan.');
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -126,7 +147,7 @@ export const QCPekerjaanListPage: React.FC = () => {
       category: newCategory,
       segment: newSegment,
       checklistCount: 0,
-      isActive: true,
+      isActive: false,
       updatedAt: new Date().toISOString(),
       checklistItems: []
     };

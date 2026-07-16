@@ -19,6 +19,7 @@ export const AdminLayout: React.FC = () => {
     if (pathname === '/approval') return 'Approval Laporan';
     if (pathname.includes('/data/qc-material/')) return 'Detail Template QC Material';
     if (pathname === '/data/qc-material') return 'QC Material List';
+    if (pathname.includes('/data/qc-pekerjaan/')) return 'Detail Template QC Pekerjaan';
     if (pathname === '/data/qc-pekerjaan') return 'QC Pekerjaan List';
     if (pathname === '/data') return 'Data Management';
     return 'QA Digitalization Admin';

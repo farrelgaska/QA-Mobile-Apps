@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { QCMaterial, MaterialStatus } from '../types/material';
 import { fetchTemplates, postTemplate, patchTemplate } from '../services/reportApi';
-import type { ApiTemplate } from '../services/reportApi';
+import type { ApiTemplate, ApiTemplateWrite } from '../services/reportApi';
 import { Card, CardContent } from '../components/ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableCell } from '../components/ui/Table';
 import { PageTransition } from '../components/layout/PageTransition';
@@ -24,16 +24,22 @@ const mapApiToMaterial = (t: ApiTemplate): QCMaterial => ({
   updatedAt: t.updatedAt || new Date().toISOString(),
   checklistItems: (t.checklistItems || []).map((item) => ({
     id: item.id,
-    name: item.parameter_name || item.name || '',
-    standardLabel: item.standard_text || item.standardLabel || '',
+    name: item.parameterName,
+    standardLabel: item.standardText,
     unit: item.unit || '',
-    minVal: item.minVal,
-    maxVal: item.maxVal,
-    requiredPhoto: item.requiredPhoto !== undefined ? item.requiredPhoto : !!item.is_required
+    minVal: item.minValue ?? undefined,
+    maxVal: item.maxValue ?? undefined,
+    inputType: item.inputType ?? 'number',
+    choiceOptions: item.choiceOptions ?? [],
+    isRequired: item.isRequired ?? true,
+    requiredPhoto: item.requiredPhoto,
+    isActive: item.isActive ?? true,
+    isCritical: item.isCritical ?? false,
+    position: item.position
   }))
 });
 
-const mapMaterialToApi = (m: QCMaterial): ApiTemplate => ({
+const mapMaterialToApi = (m: QCMaterial): ApiTemplateWrite => ({
   id: m.id,
   type: 'MATERIAL',
   name: m.name,
@@ -42,16 +48,18 @@ const mapMaterialToApi = (m: QCMaterial): ApiTemplate => ({
   standardCode: m.standard,
   checklistItems: m.checklistItems.map(item => ({
     id: item.id,
-    parameter_name: item.name,
-    input_type: (item.minVal !== undefined || item.maxVal !== undefined) ? 'number' : 'choice',
-    standard_text: item.standardLabel,
+    parameterName: item.name,
+    inputType: item.inputType ?? 'number',
+    standardText: item.standardLabel,
     unit: item.unit,
-    is_required: item.requiredPhoto,
-    name: item.name,
-    standardLabel: item.standardLabel,
-    minVal: item.minVal,
-    maxVal: item.maxVal,
-    requiredPhoto: item.requiredPhoto
+    minValue: item.minVal ?? null,
+    maxValue: item.maxVal ?? null,
+    choiceOptions: item.choiceOptions ?? [],
+    isRequired: item.isRequired ?? true,
+    requiredPhoto: item.requiredPhoto,
+    isActive: item.isActive ?? true,
+    isCritical: item.isCritical ?? false,
+    position: item.position
   })),
   isActive: m.status === 'Aktif',
   updatedAt: m.updatedAt || new Date().toISOString()
@@ -101,6 +109,10 @@ export const QCMaterialListPage: React.FC = () => {
 
     const nextStatus: MaterialStatus = target.status === 'Aktif' ? 'Nonaktif' : 'Aktif';
     const nextIsActive = nextStatus === 'Aktif';
+    if (nextIsActive && target.checklistItems.length === 0) {
+      setError('Tambahkan minimal satu parameter sebelum template diaktifkan.');
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -133,7 +145,7 @@ export const QCMaterialListPage: React.FC = () => {
       category: newCategory,
       standard: newStandard,
       checklistCount: 0,
-      status: 'Aktif',
+      status: 'Nonaktif',
       updatedAt: new Date().toISOString(),
       checklistItems: []
     };
