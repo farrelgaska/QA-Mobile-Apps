@@ -10,6 +10,7 @@ class QCTemplateContract {
       id: _string(json, 'id'),
       name: _string(json, 'name'),
       code: _string(json, 'form_code', alias: 'formCode'),
+      category: _templateCategory(json),
       description: _string(json, 'description'),
       isActive: _boolean(json, 'is_active', alias: 'isActive'),
       checklistItems: _items(json).map(_materialItem).toList(),
@@ -44,11 +45,7 @@ class QCTemplateContract {
       minValue: _number(item, 'min_value', alias: 'minValue'),
       maxValue: _number(item, 'max_value', alias: 'maxValue'),
       required: _boolean(item, 'is_required', alias: 'isRequired'),
-      requiredPhoto: _boolean(
-        item,
-        'required_photo',
-        alias: 'requiredPhoto',
-      ),
+      requiredPhoto: _boolean(item, 'required_photo', alias: 'requiredPhoto'),
       isActive: _boolean(item, 'is_active', alias: 'isActive'),
       isCritical: _boolean(item, 'is_critical', alias: 'isCritical'),
       choiceOptions: _choiceOptions(item),
@@ -65,11 +62,7 @@ class QCTemplateContract {
         minValue: _number(item, 'min_value', alias: 'minValue'),
         maxValue: _number(item, 'max_value', alias: 'maxValue'),
         required: _boolean(item, 'is_required', alias: 'isRequired'),
-        requiredPhoto: _boolean(
-          item,
-          'required_photo',
-          alias: 'requiredPhoto',
-        ),
+        requiredPhoto: _boolean(item, 'required_photo', alias: 'requiredPhoto'),
         isActive: _boolean(item, 'is_active', alias: 'isActive'),
         isCritical: _boolean(item, 'is_critical', alias: 'isCritical'),
         choiceOptions: _choiceOptions(item),
@@ -78,7 +71,10 @@ class QCTemplateContract {
   static List<Map<String, dynamic>> _items(Map<String, dynamic> json) {
     final raw = json['checklist_items'] ?? json['checklistItems'];
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    return raw
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
   }
 
   static List<TemplateChoiceOption> _choiceOptions(Map<String, dynamic> item) {
@@ -94,18 +90,25 @@ class QCTemplateContract {
 
   static InputType _inputType(Map<String, dynamic> json) {
     switch (_string(json, 'input_type', alias: 'inputType').toLowerCase()) {
-      case 'number': return InputType.number;
-      case 'text': return InputType.text;
-      case 'choice': return InputType.choice;
-      default: throw FormatException('Unsupported input_type');
+      case 'number':
+        return InputType.number;
+      case 'text':
+        return InputType.text;
+      case 'choice':
+        return InputType.choice;
+      default:
+        throw FormatException('Unsupported input_type');
     }
   }
 
   static QCInputType _qcInputType(Map<String, dynamic> json) {
     switch (_inputType(json)) {
-      case InputType.number: return QCInputType.number;
-      case InputType.text: return QCInputType.text;
-      case InputType.choice: return QCInputType.choice;
+      case InputType.number:
+        return QCInputType.number;
+      case InputType.text:
+        return QCInputType.text;
+      case InputType.choice:
+        return QCInputType.choice;
     }
   }
 
@@ -116,7 +119,9 @@ class QCTemplateContract {
     return QCValidationRule(
       type: min != null && max != null
           ? QCValidationType.range
-          : min != null ? QCValidationType.min : QCValidationType.max,
+          : min != null
+          ? QCValidationType.min
+          : QCValidationType.max,
       minValue: min,
       maxValue: max,
     );
@@ -130,7 +135,12 @@ class QCTemplateContract {
   }
 }
 
-String _string(Map<String, dynamic> json, String key, {String? alias, String fallback = ''}) =>
+String _string(
+  Map<String, dynamic> json,
+  String key, {
+  String? alias,
+  String fallback = '',
+}) =>
     (json[key] ?? (alias == null ? null : json[alias]))?.toString() ?? fallback;
 bool _boolean(Map<String, dynamic> json, String key, {String? alias}) =>
     (json[key] ?? (alias == null ? null : json[alias])) == true;
@@ -138,4 +148,11 @@ double? _number(Map<String, dynamic> json, String key, {String? alias}) {
   final value = json[key] ?? (alias == null ? null : json[alias]);
   return value is num ? value.toDouble() : double.tryParse('$value');
 }
-String? _nullableString(dynamic value) => value == null || '$value'.isEmpty ? null : '$value';
+
+String? _nullableString(dynamic value) =>
+    value == null || '$value'.isEmpty ? null : '$value';
+
+String _templateCategory(Map<String, dynamic> json) {
+  final category = json['category']?.toString().trim();
+  return category == null || category.isEmpty ? 'QC Material' : category;
+}
