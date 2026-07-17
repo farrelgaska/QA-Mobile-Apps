@@ -5,6 +5,7 @@ class QCMaterialTemplate {
   final String id;
   final String name;
   final String code;
+  final String category;
   final String description;
   final List<QCChecklistItem> checklistItems;
   final bool isActive;
@@ -13,6 +14,7 @@ class QCMaterialTemplate {
     required this.id,
     required this.name,
     required this.code,
+    this.category = 'QC Material',
     required this.description,
     required this.checklistItems,
     this.isActive = true,

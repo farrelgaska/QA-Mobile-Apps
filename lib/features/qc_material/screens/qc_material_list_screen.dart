@@ -213,6 +213,17 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
                                                 fontWeight: FontWeight.bold,
                                               ),
                                             ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              template.category,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.primary,
+                                              ),
+                                            ),
                                             const SizedBox(height: 8),
                                             Text(
                                               'Kode Form: ${template.code}',
