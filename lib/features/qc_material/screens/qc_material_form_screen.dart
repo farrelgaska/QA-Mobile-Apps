@@ -301,6 +301,8 @@ class QCMaterialFormScreen extends StatelessWidget {
                 resultValue: answer.value,
                 issueDescription: answer.issueNote ?? '',
                 photos: answer.photoPaths,
+                localPhotos: p.localItemPhotos[index],
+                localPhotoBytes: p.localItemPhotoBytes[index],
                 warningMessage: answer.warningMessage,
                 isLocked: hasValidationError,
                 onStatusChanged: (status) => p.answers[index].status = status,
@@ -390,7 +392,8 @@ class QCMaterialFormScreen extends StatelessWidget {
             child: AppButton(
               text: 'Simpan Form',
               variant: AppButtonVariant.secondary,
-              onPressed: () {
+              isLoading: p.isPersisting,
+              onPressed: () async {
                 if (!p.hasAnyDraftContent) {
                   AppSnackbar.warning(
                     context,
@@ -398,9 +401,15 @@ class QCMaterialFormScreen extends StatelessWidget {
                   );
                   return;
                 }
-                p.persistReport(QCReportStatus.DRAFT);
-                AppSnackbar.success(context, 'Draft berhasil disimpan');
-                context.pop();
+                try {
+                  await p.persistReport(QCReportStatus.DRAFT);
+                  if (!context.mounted) return;
+                  AppSnackbar.success(context, 'Draft berhasil disimpan');
+                  context.pop();
+                } on QCMaterialPersistenceException catch (error) {
+                  if (!context.mounted) return;
+                  AppSnackbar.error(context, error.message);
+                }
               },
             ),
           ),
@@ -411,6 +420,7 @@ class QCMaterialFormScreen extends StatelessWidget {
           child: AppButton(
             text: p.isRevisionMode ? 'Kirim Ulang' : 'Kirim Laporan',
             variant: AppButtonVariant.primary,
+            isLoading: p.isPersisting,
             onPressed: () {
               final locError = p.validateLocation();
               if (locError != null) {
@@ -432,10 +442,16 @@ class QCMaterialFormScreen extends StatelessWidget {
                       ? 'Apakah perbaikan data pengujian sudah benar dan siap dikirim ulang?'
                       : 'Apakah seluruh data pengujian sudah benar dan siap dikirim?',
                   confirmText: p.isRevisionMode ? 'Kirim Ulang' : 'Kirim',
-                  onConfirm: () {
-                    p.persistReport(QCReportStatus.SUBMITTED);
+                  onConfirm: () async {
                     Navigator.pop(c);
-                    context.pop();
+                    try {
+                      await p.persistReport(QCReportStatus.SUBMITTED);
+                      if (!context.mounted) return;
+                      context.pop();
+                    } on QCMaterialPersistenceException catch (error) {
+                      if (!context.mounted) return;
+                      AppSnackbar.error(context, error.message);
+                    }
                   },
                 ),
               );
