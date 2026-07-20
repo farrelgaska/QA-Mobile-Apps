@@ -1,11 +1,11 @@
 /**
  * reportApi.ts
- * Thin typed wrapper around the prototype backend at http://localhost:3002.
+ * Thin typed wrapper around the configured backend API.
  * All functions throw on non-2xx responses so callers can handle errors.
  */
 
-// Prototype backend URL (configured to port 3002)
-const BASE_URL = 'http://localhost:3002';
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL?.trim() || 'http://localhost:3002')
+  .replace(/\/+$/, '');
 
 // ─── Raw API shape (shared report contract) ──────────────────────────────────
 
