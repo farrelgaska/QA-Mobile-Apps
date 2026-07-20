@@ -9,6 +9,7 @@ import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/stat_card.dart';
 import '../../../shared/widgets/qc_module_card.dart';
 import '../../../shared/widgets/report_card.dart';
+import '../../profile/profile_photo_controller.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,6 +20,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _state = DummyState();
+  late final ProfilePhotoController _photoController;
   late String _selectedLocation;
   bool _isLoading = false;
 
@@ -26,7 +28,22 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _selectedLocation = _state.currentSite.name;
+    _photoController = ProfilePhotoController(nik: _state.currentUser.nik)
+      ..addListener(_onPhotoChanged)
+      ..restore();
     _fetchData();
+  }
+
+  void _onPhotoChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _photoController
+      ..removeListener(_onPhotoChanged)
+      ..dispose();
+    super.dispose();
   }
 
   Future<void> _fetchData() async {
@@ -229,10 +246,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 24,
                       backgroundColor: AppColors.primarySoft,
-                      child: Icon(Icons.person, color: AppColors.primary, size: 24),
+                      backgroundImage: _photoController.bytes != null
+                          ? MemoryImage(_photoController.bytes!)
+                          : null,
+                      child: _photoController.bytes == null
+                          ? const Icon(
+                              Icons.person,
+                              color: AppColors.primary,
+                              size: 24,
+                            )
+                          : null,
                     ),
                   ],
                 ),
