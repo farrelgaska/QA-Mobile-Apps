@@ -21,7 +21,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _selectedPeriod = 'Minggu Ini';
   String _selectedKpiTab = 'QC Material';
 
-  final List<String> _periods = ['Hari Ini', 'Minggu Ini', 'Bulan Ini', 'Custom'];
+  final List<String> _periods = [
+    'Hari Ini',
+    'Minggu Ini',
+    'Bulan Ini',
+    'Custom',
+  ];
 
   // Custom date range dummy state
   DateTime _customStartDate = DateTime(2026, 7, 1);
@@ -35,7 +40,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "time": "09:22",
       "status": "Perlu Perbaikan",
       "qaNote": "Diameter lebih kecil dari standar minimal.",
-      "photos": []
+      "photos": [],
     },
     {
       "name": "KABEL FO 24 Core",
@@ -44,44 +49,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "time": "10:15",
       "status": "Perlu Perbaikan",
       "qaNote": "Foto dokumentasi buram, perlu pengambilan ulang.",
-      "photos": []
-    }
+      "photos": [],
+    },
   ];
 
   final List<Map<String, dynamic>> _dummyMatActivities = [
-    {
-      "title": "Yanuar menambahkan QC Tiang Besi 7M",
-      "time": "09:22"
-    },
-    {
-      "title": "QC Kabel FO 24 Core disimpan sebagai Pending",
-      "time": "10:15"
-    },
-    {
-      "title": "Admin menyetujui QC Tiang Beton 7 Meter",
-      "time": "11:40"
-    }
+    {"title": "Yanuar menambahkan QC Tiang Besi 7M", "time": "09:22"},
+    {"title": "QC Kabel FO 24 Core disimpan sebagai Pending", "time": "10:15"},
+    {"title": "Admin menyetujui QC Tiang Beton 7 Meter", "time": "11:40"},
   ];
 
   final List<Map<String, dynamic>> _dummyJobActivities = [
-    {
-      "title": "QC Instalasi ONT dimulai",
-      "time": "08:30"
-    },
-    {
-      "title": "Penarikan Kabel Dropcore selesai dicek",
-      "time": "09:45"
-    },
-    {
-      "title": "Pemasangan Tiang ditandai perlu perbaikan",
-      "time": "10:20"
-    }
+    {"title": "QC Instalasi ONT dimulai", "time": "08:30"},
+    {"title": "Penarikan Kabel Dropcore selesai dicek", "time": "09:45"},
+    {"title": "Pemasangan Tiang ditandai perlu perbaikan", "time": "10:20"},
   ];
 
   Future<void> _selectCustomDateRange(BuildContext context) async {
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
-      initialDateRange: DateTimeRange(start: _customStartDate, end: _customEndDate),
+      initialDateRange: DateTimeRange(
+        start: _customStartDate,
+        end: _customEndDate,
+      ),
       firstDate: DateTime(2026, 1, 1),
       lastDate: DateTime(2027, 12, 31),
       builder: (context, child) {
@@ -89,7 +79,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           data: ThemeData.light().copyWith(
             primaryColor: AppColors.primary,
             colorScheme: const ColorScheme.light(primary: AppColors.primary),
-            buttonTheme: const ButtonThemeData(textTheme: ButtonTextTheme.primary),
+            buttonTheme: const ButtonThemeData(
+              textTheme: ButtonTextTheme.primary,
+            ),
           ),
           child: child!,
         );
@@ -127,7 +119,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(12),
@@ -137,8 +132,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: DropdownButton<String>(
                         dropdownColor: Colors.white,
                         value: _selectedPeriod,
-                        icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.primary, size: 16),
-                        style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12),
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down,
+                          color: AppColors.primary,
+                          size: 16,
+                        ),
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
                         onChanged: (String? newValue) {
                           if (newValue != null) {
                             setState(() {
@@ -146,12 +149,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             });
                           }
                         },
-                        items: _periods.map<DropdownMenuItem<String>>((String value) {
+                        items: _periods.map<DropdownMenuItem<String>>((
+                          String value,
+                        ) {
                           return DropdownMenuItem<String>(
                             value: value,
                             child: Text(
                               value,
-                              style: const TextStyle(color: Color(0xFF111827), fontSize: 12),
+                              style: const TextStyle(
+                                color: Color(0xFF111827),
+                                fontSize: 12,
+                              ),
                             ),
                           );
                         }).toList(),
@@ -167,19 +175,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 GestureDetector(
                   onTap: () => _selectCustomDateRange(context),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
                       color: AppColors.primarySoft,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.date_range_outlined, color: AppColors.primary, size: 16),
+                            const Icon(
+                              Icons.date_range_outlined,
+                              color: AppColors.primary,
+                              size: 16,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               'Rentang: ${_customStartDate.day} Jul 2026 - ${_customEndDate.day} Jul 2026',
@@ -191,7 +208,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ],
                         ),
-                        const Icon(Icons.edit, color: AppColors.primary, size: 14),
+                        const Icon(
+                          Icons.edit,
+                          color: AppColors.primary,
+                          size: 14,
+                        ),
                       ],
                     ),
                   ),
@@ -207,13 +228,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 child: Row(
                   children: [
-                    Expanded(
-                      child: _buildKpiTab('QC Material'),
-                    ),
+                    Expanded(child: _buildKpiTab('QC Material')),
                     const SizedBox(width: 4),
-                    Expanded(
-                      child: _buildKpiTab('QC Pekerjaan'),
-                    ),
+                    Expanded(child: _buildKpiTab('QC Pekerjaan')),
                   ],
                 ),
               ),
@@ -233,13 +250,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildQcMaterialSections() {
     final materialReports = _state.reports
-        .where((r) => r.type == QCType.material && r.createdByNik == DummyAuth.current.nik)
+        .where(
+          (r) =>
+              r.type == QCType.material &&
+              r.createdByNik == DummyAuth.current.nik,
+        )
         .toList();
     final totalMat = materialReports.length;
-    final matApproved = materialReports.where((r) => r.status == QCReportStatus.APPROVED).length;
-    final matPending = materialReports.where((r) => r.status == QCReportStatus.SUBMITTED).length;
-    final matNeedsRepair = materialReports.where((r) => r.status == QCReportStatus.NEEDS_FOLLOW_UP).length;
-    final materialNeedsRepairReports = materialReports.where((r) => r.status == QCReportStatus.NEEDS_FOLLOW_UP).toList();
+    final matApproved = materialReports
+        .where((r) => r.status == QCReportStatus.APPROVED)
+        .length;
+    final matPending = materialReports
+        .where((r) => r.status == QCReportStatus.SUBMITTED)
+        .length;
+    final matNeedsRepair = materialReports
+        .where((r) => r.status == QCReportStatus.NEEDS_FOLLOW_UP)
+        .length;
+    final materialNeedsRepairReports = materialReports
+        .where((r) => r.status == QCReportStatus.NEEDS_FOLLOW_UP)
+        .toList();
+    final materialPassRate = totalMat == 0
+        ? 0.0
+        : (matApproved / totalMat).clamp(0.0, 1.0).toDouble();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -304,7 +336,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   Text(
-                    '${(totalMat > 0 ? (matApproved / totalMat * 100) : 0.0).toStringAsFixed(0)}%',
+                    '${(materialPassRate * 100).toStringAsFixed(0)}%',
                     style: const TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,
@@ -316,26 +348,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(100),
-                child: Container(
+                child: SizedBox(
+                  width: double.infinity,
                   height: 8,
-                  color: AppColors.backgroundSoft,
-                  child: Row(
+                  child: Stack(
+                    fit: StackFit.expand,
                     children: [
-                      if (matApproved > 0)
-                        Expanded(
-                          flex: matApproved,
-                          child: Container(color: AppColors.approvedText),
+                      const DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppColors.infoBg,
+                          borderRadius: BorderRadius.all(Radius.circular(100)),
                         ),
-                      if (matPending > 0)
-                        Expanded(
-                          flex: matPending,
-                          child: Container(color: const Color(0xFFF59E0B)),
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: FractionallySizedBox(
+                          widthFactor: materialPassRate,
+                          child: const SizedBox(
+                            height: 8,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: AppColors.approvedText,
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(100),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                      if (matNeedsRepair > 0)
-                        Expanded(
-                          flex: matNeedsRepair,
-                          child: Container(color: AppColors.rejectedText),
-                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -397,13 +438,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildQcPekerjaanSections() {
     final pekerjaanReports = _state.reports
-        .where((r) => r.type == QCType.pekerjaan && r.createdByNik == DummyAuth.current.nik)
+        .where(
+          (r) =>
+              r.type == QCType.pekerjaan &&
+              r.createdByNik == DummyAuth.current.nik,
+        )
         .toList();
     final totalPek = pekerjaanReports.length;
-    final pekApproved = pekerjaanReports.where((r) => r.status == QCReportStatus.APPROVED).length;
-    final pekOnProgress = pekerjaanReports.where((r) => r.status == QCReportStatus.SUBMITTED).length;
-    final pekNeedsRepair = pekerjaanReports.where((r) => r.status == QCReportStatus.NEEDS_FOLLOW_UP).length;
-    final pekerjaanNeedsRepairReports = pekerjaanReports.where((r) => r.status == QCReportStatus.NEEDS_FOLLOW_UP).toList();
+    final pekApproved = pekerjaanReports
+        .where((r) => r.status == QCReportStatus.APPROVED)
+        .length;
+    final pekOnProgress = pekerjaanReports
+        .where((r) => r.status == QCReportStatus.SUBMITTED)
+        .length;
+    final pekNeedsRepair = pekerjaanReports
+        .where((r) => r.status == QCReportStatus.NEEDS_FOLLOW_UP)
+        .length;
+    final pekerjaanNeedsRepairReports = pekerjaanReports
+        .where((r) => r.status == QCReportStatus.NEEDS_FOLLOW_UP)
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,10 +522,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   Text(
                     '${(totalPek > 0 ? (pekApproved / totalPek * 100) : 0.0).toStringAsFixed(0)}%',
-                    style: TextStyle(
-                      color: (totalPek > 0 ? (pekApproved / totalPek * 100) : 0.0) < 90
-                          ? const Color(0xFFF59E0B)
-                          : AppColors.primary,
+                    style: const TextStyle(
+                      color: AppColors.approvedText,
                       fontWeight: FontWeight.bold,
                       fontSize: 20,
                     ),
@@ -485,8 +536,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: LinearProgressIndicator(
                   value: totalPek > 0 ? (pekApproved / totalPek) : 0.0,
                   minHeight: 8,
-                  backgroundColor: AppColors.backgroundSoft,
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  backgroundColor: AppColors.infoBg,
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    AppColors.approvedText,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -576,7 +629,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
-                  )
+                  ),
                 ]
               : null,
         ),
@@ -599,10 +652,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Container(
           width: 8,
           height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
         Text(
@@ -663,7 +713,10 @@ class MaterialNeedsRepairCard extends StatelessWidget {
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFEF4444),
                     borderRadius: BorderRadius.circular(100),
@@ -703,10 +756,13 @@ class MaterialNeedsRepairCard extends StatelessWidget {
               ),
               itemBuilder: (context, index) {
                 final report = reports[index];
-                final doNumber = report.generalInfo?['doNumber'] ?? 'Batch #TG-0041';
-                final reason = report.adminNote ?? 'Parameter tidak sesuai standar';
-                final timeStr = "${report.date.hour.toString().padLeft(2, '0')}:${report.date.minute.toString().padLeft(2, '0')}";
-                
+                final doNumber =
+                    report.generalInfo?['doNumber'] ?? 'Batch #TG-0041';
+                final reason =
+                    report.adminNote ?? 'Parameter tidak sesuai standar';
+                final timeStr =
+                    "${report.date.hour.toString().padLeft(2, '0')}:${report.date.minute.toString().padLeft(2, '0')}";
+
                 return Material(
                   color: Colors.transparent,
                   child: InkWell(
@@ -714,7 +770,10 @@ class MaterialNeedsRepairCard extends StatelessWidget {
                       context.push('/reports/${report.id}');
                     },
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       child: Row(
                         children: [
                           Expanded(
@@ -829,7 +888,10 @@ class PekerjaanNeedsRepairCard extends StatelessWidget {
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFEF4444),
                     borderRadius: BorderRadius.circular(100),
@@ -869,10 +931,13 @@ class PekerjaanNeedsRepairCard extends StatelessWidget {
               ),
               itemBuilder: (context, index) {
                 final report = reports[index];
-                final segment = report.generalInfo?['workSegment'] ?? 'Provisioning';
-                final reason = report.adminNote ?? 'Pekerjaan tidak sesuai standar';
-                final timeStr = "${report.date.hour.toString().padLeft(2, '0')}:${report.date.minute.toString().padLeft(2, '0')}";
-                
+                final segment =
+                    report.generalInfo?['workSegment'] ?? 'Provisioning';
+                final reason =
+                    report.adminNote ?? 'Pekerjaan tidak sesuai standar';
+                final timeStr =
+                    "${report.date.hour.toString().padLeft(2, '0')}:${report.date.minute.toString().padLeft(2, '0')}";
+
                 return Material(
                   color: Colors.transparent,
                   child: InkWell(
@@ -880,7 +945,10 @@ class PekerjaanNeedsRepairCard extends StatelessWidget {
                       context.push('/reports/${report.id}');
                     },
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       child: Row(
                         children: [
                           Expanded(
@@ -969,7 +1037,11 @@ class ActivityTimelineCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.history_outlined, color: AppColors.primary, size: 18),
+              const Icon(
+                Icons.history_outlined,
+                color: AppColors.primary,
+                size: 18,
+              ),
               const SizedBox(width: 8),
               Text(
                 title,
@@ -1081,11 +1153,16 @@ class MaterialRepairDetailSheet extends StatelessWidget {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFDE2E2),
                         borderRadius: BorderRadius.circular(100),
-                        border: Border.all(color: const Color(0xFFDC2626).withValues(alpha: 0.2)),
+                        border: Border.all(
+                          color: const Color(0xFFDC2626).withValues(alpha: 0.2),
+                        ),
                       ),
                       child: const Text(
                         'Perlu Perbaikan',
@@ -1109,9 +1186,17 @@ class MaterialRepairDetailSheet extends StatelessWidget {
                 const SizedBox(height: 12),
                 _buildInfoRow('Waktu Deteksi', 'Hari ini, ${item['time']} WIB'),
                 const SizedBox(height: 12),
-                _buildInfoRow('Alasan Perbaikan', item['reason'], isWarning: true),
+                _buildInfoRow(
+                  'Alasan Perbaikan',
+                  item['reason'],
+                  isWarning: true,
+                ),
                 const SizedBox(height: 12),
-                _buildInfoRow('Catatan QA Staff', item['qaNote'] ?? 'Segera lakukan tindak lanjut pengerjaan/coating ulang.'),
+                _buildInfoRow(
+                  'Catatan QA Staff',
+                  item['qaNote'] ??
+                      'Segera lakukan tindak lanjut pengerjaan/coating ulang.',
+                ),
                 const SizedBox(height: 24),
 
                 // Buttons
@@ -1121,7 +1206,9 @@ class MaterialRepairDetailSheet extends StatelessWidget {
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                           side: const BorderSide(color: AppColors.border),
                         ),
                         onPressed: () => Navigator.pop(context),
@@ -1141,7 +1228,9 @@ class MaterialRepairDetailSheet extends StatelessWidget {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                         onPressed: () {
                           Navigator.pop(context);
