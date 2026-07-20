@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
@@ -33,7 +33,12 @@ class ApiService {
   );
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
-  ApiService._internal();
+  ApiService._internal() : _client = null;
+
+  @visibleForTesting
+  ApiService.withClient(http.Client client) : _client = client;
+
+  final http.Client? _client;
 
   String get baseUrl {
     if (_configuredBaseUrl.isNotEmpty) {
@@ -105,13 +110,19 @@ class ApiService {
     bool throwOnError = false,
   }) async {
     try {
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/reports'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(report.toJson()),
-          )
-          .timeout(const Duration(seconds: 4));
+      final uri = Uri.parse('$baseUrl/reports');
+      final response =
+          await (_client?.post(
+                    uri,
+                    headers: {'Content-Type': 'application/json'},
+                    body: jsonEncode(report.toJson()),
+                  ) ??
+                  http.post(
+                    uri,
+                    headers: {'Content-Type': 'application/json'},
+                    body: jsonEncode(report.toJson()),
+                  ))
+              .timeout(const Duration(seconds: 30));
       if (response.statusCode == 200 || response.statusCode == 201) {
         return true;
       }
@@ -130,6 +141,7 @@ class ApiService {
       );
       return false;
     } catch (error) {
+      if (await _reportExists(report.id)) return true;
       final exception = ApiRequestException(
         'Tidak dapat terhubung ke server saat menyimpan laporan: $error',
       );
@@ -147,13 +159,19 @@ class ApiService {
     bool throwOnError = false,
   }) async {
     try {
-      final response = await http
-          .patch(
-            Uri.parse('$baseUrl/reports/${report.id}'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(report.toJson()),
-          )
-          .timeout(const Duration(seconds: 4));
+      final uri = Uri.parse('$baseUrl/reports/${report.id}');
+      final response =
+          await (_client?.patch(
+                    uri,
+                    headers: {'Content-Type': 'application/json'},
+                    body: jsonEncode(report.toJson()),
+                  ) ??
+                  http.patch(
+                    uri,
+                    headers: {'Content-Type': 'application/json'},
+                    body: jsonEncode(report.toJson()),
+                  ))
+              .timeout(const Duration(seconds: 30));
       if (response.statusCode == 200) return true;
       if (response.statusCode == 409) {
         throw ApiRequestException(
@@ -177,6 +195,18 @@ class ApiService {
       print(
         '[Mock API Offline - Prototype Fallback] patchReport failed: $error',
       );
+      return false;
+    }
+  }
+
+  Future<bool> _reportExists(String reportId) async {
+    try {
+      final uri = Uri.parse('$baseUrl/reports/$reportId');
+      final response = await (_client?.get(uri) ?? http.get(uri)).timeout(
+        const Duration(seconds: 4),
+      );
+      return response.statusCode == 200;
+    } catch (_) {
       return false;
     }
   }
