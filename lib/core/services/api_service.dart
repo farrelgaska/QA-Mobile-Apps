@@ -67,9 +67,18 @@ class ApiService {
       final url = type != null
           ? '$baseUrl/templates?type=$type'
           : '$baseUrl/templates';
-      final response = await http
+      var response = await http
           .get(Uri.parse(url))
           .timeout(const Duration(seconds: 4));
+      if (response.statusCode == 304) {
+        final retryUri = Uri.parse(url).replace(
+          queryParameters: {
+            ...Uri.parse(url).queryParameters,
+            '_cache_bust': DateTime.now().millisecondsSinceEpoch.toString(),
+          },
+        );
+        response = await http.get(retryUri).timeout(const Duration(seconds: 4));
+      }
       if (response.statusCode == 200) {
         final List<dynamic> list = jsonDecode(response.body);
         return list.cast<Map<String, dynamic>>();

@@ -33,6 +33,75 @@ void main() {
     expect(item.choiceOptions, isEmpty);
   });
 
+  test('parses canonical and legacy material boolean input types', () {
+    Map<String, dynamic> materialWithInputType(String inputType) => {
+      'id': 'MAT-BOOLEAN',
+      'name': 'Material boolean',
+      'form_code': 'MAT-BOOLEAN',
+      'is_active': true,
+      'checklist_items': [
+        {
+          'id': 'boolean-1',
+          'parameter_name': 'Kondisi fisik',
+          'input_type': inputType,
+          'standard_text': 'OK',
+          'category': '',
+          'min_value': null,
+          'max_value': null,
+          'validation_rule': {
+            'type': 'booleanRequired',
+            'min_value': null,
+            'max_value': null,
+          },
+          'is_required': true,
+          'required_photo': false,
+          'is_active': true,
+          'choice_options': [],
+        },
+      ],
+    };
+
+    expect(
+      QCTemplateContract.material(
+        materialWithInputType('boolean'),
+      ).checklistItems.single.inputType,
+      QCInputType.booleanCheck,
+    );
+    expect(
+      QCTemplateContract.material(
+        materialWithInputType('booleanCheck'),
+      ).checklistItems.single.inputType,
+      QCInputType.booleanCheck,
+    );
+  });
+
+  test('falls back to legacy choices when structured options are empty', () {
+    final template = QCTemplateContract.material({
+      'id': 'MAT-LEGACY-CHOICE',
+      'name': 'Material legacy choice',
+      'form_code': 'MAT-LEGACY-CHOICE',
+      'is_active': true,
+      'checklist_items': [
+        {
+          'id': 'paint-color',
+          'parameter_name': 'Warna cat sesuai standar pengecatan',
+          'input_type': 'choice',
+          'standard_text': 'Sesuai',
+          'choices': ['Sesuai', 'Tidak Sesuai'],
+          'choice_options': [],
+          'is_required': true,
+          'required_photo': false,
+          'is_active': true,
+        },
+      ],
+    });
+
+    final options = template.checklistItems.single.choiceOptions;
+    expect(options.map((option) => option.label), ['Sesuai', 'Tidak Sesuai']);
+    expect(options.map((option) => option.value), ['Sesuai', 'Tidak Sesuai']);
+    expect(options.map((option) => option.outcome), ['PASS', 'FAIL']);
+  });
+
   test('parses and orders structured custom choices', () {
     final template = QCTemplateContract.work({
       'id': 'WRK-1',
@@ -49,8 +118,20 @@ void main() {
           'required_photo': true,
           'is_active': true,
           'choice_options': [
-            {'id': 'fail', 'label': 'Perlu Perbaikan', 'value': 'FAIL', 'outcome': 'FAIL', 'position': 1},
-            {'id': 'pass', 'label': 'Sudah Rapi', 'value': 'PASS', 'outcome': 'PASS', 'position': 0},
+            {
+              'id': 'fail',
+              'label': 'Perlu Perbaikan',
+              'value': 'FAIL',
+              'outcome': 'FAIL',
+              'position': 1,
+            },
+            {
+              'id': 'pass',
+              'label': 'Sudah Rapi',
+              'value': 'PASS',
+              'outcome': 'PASS',
+              'position': 0,
+            },
           ],
         },
       ],
@@ -58,8 +139,10 @@ void main() {
 
     final item = template.checklistItems.single;
     expect(item.inputType, InputType.choice);
-    expect(item.choiceOptions.map((option) => option.label),
-        ['Sudah Rapi', 'Perlu Perbaikan']);
+    expect(item.choiceOptions.map((option) => option.label), [
+      'Sudah Rapi',
+      'Perlu Perbaikan',
+    ]);
     expect(item.required, isTrue);
     expect(item.requiredPhoto, isTrue);
   });
