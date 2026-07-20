@@ -1,4 +1,5 @@
 import '../../shared/models/qc_report_model.dart';
+import '../../shared/models/enums.dart';
 import '../../shared/models/qc_material_template_model.dart';
 import '../../shared/models/pekerjaan_model.dart';
 import 'dummy_reports.dart';
@@ -27,22 +28,27 @@ class DummyState {
   Future<void> fetchReportsFromApi() async {
     final serverReports = await ApiService().fetchReports();
     if (serverReports != null) {
-      // Create a map of server reports for O(1) lookup
-      final serverMap = {for (var r in serverReports) r.id: r};
-
-      // Update existing or add new from server
-      for (final id in serverMap.keys) {
-        final serverReport = serverMap[id]!;
-        final idx = reports.indexWhere((r) => r.id == id);
-        if (idx != -1) {
-          reports[idx] = serverReport;
-        } else {
-          reports.add(serverReport);
-        }
-      }
-      // Sort reports by submittedAt descending to match list order
-      reports.sort((a, b) => b.submittedAt.compareTo(a.submittedAt));
+      mergeReportsFromApi(serverReports);
     }
+  }
+
+  void mergeReportsFromApi(List<QCReportModel> serverReports) {
+    final serverMap = {for (var report in serverReports) report.id: report};
+    for (final id in serverMap.keys) {
+      final serverReport = serverMap[id]!;
+      final index = reports.indexWhere((report) => report.id == id);
+      if (index == -1) {
+        reports.add(serverReport);
+        continue;
+      }
+
+      final localReport = reports[index];
+      final keepNewerLocalDraft =
+          localReport.status == QCReportStatus.DRAFT &&
+          localReport.submittedAt.isAfter(serverReport.submittedAt);
+      if (!keepNewerLocalDraft) reports[index] = serverReport;
+    }
+    reports.sort((a, b) => b.submittedAt.compareTo(a.submittedAt));
   }
 
   void addReport(QCReportModel report) {

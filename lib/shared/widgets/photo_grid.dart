@@ -66,6 +66,19 @@ class _PhotoGridState extends State<PhotoGrid> {
     r'^reports/[A-Za-z0-9_-]{1,128}/(?:general/[0-9a-f-]{36}|checklist/[A-Za-z0-9_-]{1,128}/[0-9a-f-]{36})\.(?:jpg|png|webp|heic)$',
   ).hasMatch(value);
 
+  Widget _buildRemoteImage(String url) {
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => const ColoredBox(
+        color: AppColors.backgroundSoft,
+        child: Center(
+          child: Icon(Icons.broken_image_outlined, color: AppColors.textSoft),
+        ),
+      ),
+    );
+  }
+
   Widget _buildStoredImage(String reference) {
     final previewBytes = widget.uploadedPhotoPreviewBytes[reference];
     if (previewBytes != null) {
@@ -77,19 +90,22 @@ class _PhotoGridState extends State<PhotoGrid> {
 
     final uri = Uri.tryParse(reference);
     if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
-      return Image.network(reference, fit: BoxFit.cover);
+      return _buildRemoteImage(reference);
     }
 
     final signedUrl = _signedUrls[reference];
     if (signedUrl != null) {
-      return Image.network(signedUrl, fit: BoxFit.cover);
+      return _buildRemoteImage(signedUrl);
     }
     return Image.asset('assets/images/placeholder.png', fit: BoxFit.cover);
   }
 
   Widget _buildLocalImage(int localIndex) {
     if (localIndex < widget.localPhotoBytes.length) {
-      return Image.memory(widget.localPhotoBytes[localIndex], fit: BoxFit.cover);
+      return Image.memory(
+        widget.localPhotoBytes[localIndex],
+        fit: BoxFit.cover,
+      );
     }
     return Image.asset('assets/images/placeholder.png', fit: BoxFit.cover);
   }
@@ -116,7 +132,9 @@ class _PhotoGridState extends State<PhotoGrid> {
           if (index < widget.photos.length) {
             photoKey = ValueKey<String>('stored:${widget.photos[index]}');
           } else {
-            photoKey = ObjectKey(widget.localPhotos[index - widget.photos.length]);
+            photoKey = ObjectKey(
+              widget.localPhotos[index - widget.photos.length],
+            );
           }
           return Padding(
             key: photoKey,
