@@ -12,9 +12,9 @@ export const ReportTable: React.FC<ReportTableProps> = ({ reports, onDetail }) =
   return (
     <div className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="w-full overflow-x-auto">
-        <table className="w-full min-w-[1330px] table-fixed border-collapse">
+        <table className="w-full min-w-[1540px] table-fixed border-collapse">
           <colgroup>
-            <col className="w-[110px]" />
+            <col className="w-[220px]" />
             <col className="w-[110px]" />
             <col className="w-[320px]" />
             <col className="w-[160px]" />
@@ -72,7 +72,7 @@ export const ReportTable: React.FC<ReportTableProps> = ({ reports, onDetail }) =
                   className="cursor-pointer hover:bg-gray-50/50 transition-colors duration-150 group"
                 >
                   {/* ID */}
-                  <td className="px-6 py-5 align-middle text-sm text-slate-700 font-mono font-bold text-[#006B5A]">
+                  <td className="break-all whitespace-normal px-6 py-5 align-middle text-sm text-slate-700 font-mono font-bold text-[#006B5A]">
                     {report.id}
                   </td>
 
