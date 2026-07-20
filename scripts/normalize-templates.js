@@ -307,17 +307,17 @@ rawData.forEach((tpl, tplIdx) => {
       warnings.push(`[Template: ${tplId}, Item: ${itemId}] Using legacy property alias "validationRule"`);
     }
 
-    const min_value = typeof item.minVal === 'number' ? item.minVal : 
-                      (typeof legacyRule.minVal === 'number' ? legacyRule.minVal : 
-                      (typeof legacyRule.min_value === 'number' ? legacyRule.min_value : null));
+    let min_value = typeof item.minVal === 'number' ? item.minVal :
+                    (typeof legacyRule.minVal === 'number' ? legacyRule.minVal :
+                    (typeof legacyRule.min_value === 'number' ? legacyRule.min_value : null));
     if (item.minVal !== undefined || legacyRule.minVal !== undefined) {
       warningCount++;
       warnings.push(`[Template: ${tplId}, Item: ${itemId}] Using legacy property alias "minVal"`);
     }
 
-    const max_value = typeof item.maxVal === 'number' ? item.maxVal : 
-                      (typeof legacyRule.maxVal === 'number' ? legacyRule.maxVal : 
-                      (typeof legacyRule.max_value === 'number' ? legacyRule.max_value : null));
+    let max_value = typeof item.maxVal === 'number' ? item.maxVal :
+                    (typeof legacyRule.maxVal === 'number' ? legacyRule.maxVal :
+                    (typeof legacyRule.max_value === 'number' ? legacyRule.max_value : null));
     if (item.maxVal !== undefined || legacyRule.maxVal !== undefined) {
       warningCount++;
       warnings.push(`[Template: ${tplId}, Item: ${itemId}] Using legacy property alias "maxVal"`);
@@ -331,6 +331,38 @@ rawData.forEach((tpl, tplIdx) => {
     }
 
     const type = legacyRule.type || null;
+    let choices = item.choices || [];
+    const choiceOptions = item.choice_options || item.choiceOptions || [];
+
+    if (input_type === 'boolean') {
+      const hasBooleanBounds = [
+        item.min_value,
+        item.max_value,
+        item.minVal,
+        item.maxVal,
+        legacyRule.min_value,
+        legacyRule.max_value,
+        legacyRule.minVal,
+        legacyRule.maxVal
+      ].some(value => value !== undefined && value !== null);
+
+      if (hasBooleanBounds) {
+        warningCount++;
+        warnings.push(`[Template: ${tplId}, Item: ${itemId}] Discarding numeric bounds from boolean item`);
+      }
+      if (choices.length > 0) {
+        warningCount++;
+        warnings.push(`[Template: ${tplId}, Item: ${itemId}] Discarding legacy choices from boolean item`);
+      }
+      if (choiceOptions.length > 0) {
+        warningCount++;
+        warnings.push(`[Template: ${tplId}, Item: ${itemId}] Discarding structured choice_options from boolean item`);
+      }
+
+      min_value = null;
+      max_value = null;
+      choices = [];
+    }
 
     if (type || min_value !== null || max_value !== null || exact_value !== null) {
       validation_rule = {
@@ -352,7 +384,8 @@ rawData.forEach((tpl, tplIdx) => {
       is_active: is_active_item,
       is_critical,
       position,
-      choices: item.choices || [],
+      choices,
+      ...(input_type === 'boolean' ? { min_value, max_value, choice_options: [] } : {}),
       category: item.category || '',
       validation_rule,
       migration_metadata: itemMigrationMetadata

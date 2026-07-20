@@ -7,9 +7,7 @@
     "checklistItems": [
       { "id": "type-booleancheck", "name": "Boolean", "inputType": "BOOLEANCHECK", "category": "Fisik" },
       { "id": "type-number", "name": "Number", "inputType": "NUMBER", "category": "Dimensi" },
-      { "id": "type-choice-upper", "name": "Choice upper", "inputType": "CHOICE", "category": "Provisioning" },
       { "id": "type-text", "name": "Text", "inputType": "TEXT", "category": "Teks" },
-      { "id": "type-choice-lower", "name": "Choice lower", "inputType": "choice", "category": "Assurance" },
       { "id": "type-whitespace", "name": "Whitespace", "inputType": "  Boolean Check  ", "category": "Construction" },
       { "id": "duplicate-source", "name": "First duplicate", "inputType": "TEXT", "category": "Fisik" },
       { "id": "duplicate-source", "name": "Second duplicate", "inputType": "NUMBER", "category": "Dimensi" }

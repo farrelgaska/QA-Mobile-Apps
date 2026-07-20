@@ -244,7 +244,8 @@ try {
 
   assert.strictEqual(template.standard_code, 'SPLN-LEGACY');
   assert.strictEqual(template.category, 'Tiang Besi');
-  assert.deepStrictEqual(firstTemplateItem.choices, ['PASS', 'FAIL']);
+  assert.deepStrictEqual(firstTemplateItem.choices, []);
+  assert.deepStrictEqual(firstTemplateItem.choice_options, []);
   assert.strictEqual(firstTemplateItem.required_photo, true);
   assert.strictEqual(firstTemplateItem.is_critical, true);
   assert.strictEqual(secondTemplateItem.validation_rule.min_value, 80);
@@ -263,16 +264,14 @@ try {
   assert.deepStrictEqual(normalizedInputTypes, {
     'type-booleancheck': 'boolean',
     'type-number': 'number',
-    'type-choice-upper': 'choice',
     'type-text': 'text',
-    'type-choice-lower': 'choice',
     'type-whitespace': 'boolean',
     'duplicate-source': 'text',
     'duplicate-source__duplicate_2': 'number'
   });
   assert.deepStrictEqual(
-    inputTypeTemplate.checklist_items.slice(0, 6).map(item => item.category),
-    ['Fisik', 'Dimensi', 'Provisioning', 'Teks', 'Assurance', 'Construction']
+    inputTypeTemplate.checklist_items.slice(0, 4).map(item => item.category),
+    ['Fisik', 'Dimensi', 'Teks', 'Construction']
   );
   const migratedDuplicate = inputTypeTemplate.checklist_items.find(
     item => item.id === 'duplicate-source__duplicate_2'

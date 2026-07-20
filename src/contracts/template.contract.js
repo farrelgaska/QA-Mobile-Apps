@@ -24,7 +24,7 @@ const checklistItemMigrationMetadataSchema = z.object({
 const checklistItemSchema = z.object({
   id: z.string(),
   parameter_name: z.string(),
-  input_type: z.enum(['number', 'text', 'choice']),
+  input_type: z.enum(['number', 'text', 'choice', 'boolean']),
   standard_text: z.string().default(''),
   min_value: z.number().nullable().default(null),
   max_value: z.number().nullable().default(null),
@@ -55,6 +55,15 @@ const checklistItemSchema = z.object({
     }
     if (item.choices.length > 0 || item.choice_options.length > 0) {
       context.addIssue({ code: 'custom', path: ['choice_options'], message: 'text items cannot define choices' });
+    }
+  }
+
+  if (item.input_type === 'boolean') {
+    if (item.min_value !== null || item.max_value !== null) {
+      context.addIssue({ code: 'custom', path: ['min_value'], message: 'boolean items cannot define numeric bounds' });
+    }
+    if (item.choices.length > 0 || item.choice_options.length > 0) {
+      context.addIssue({ code: 'custom', path: ['choice_options'], message: 'boolean items cannot define choices' });
     }
   }
 

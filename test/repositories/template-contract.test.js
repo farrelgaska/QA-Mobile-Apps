@@ -3,7 +3,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const templateModule = require('../../src/repositories/json-template.repository');
+const { checklistItemSchema, templateSchema } = require('../../src/contracts/template.contract');
 const { canonicalTemplateInput, mapTemplateAggregate } = require('../../src/repositories/postgres/mappers');
 
 const baseTemplate = item => ({
@@ -21,6 +23,106 @@ const textItem = {
   is_required: true,
   required_photo: false
 };
+
+const booleanItem = {
+  ...textItem,
+  id: 'BOOLEAN-1',
+  parameter_name: 'Condition acceptable',
+  input_type: 'boolean',
+  min_value: null,
+  max_value: null,
+  choices: [],
+  choice_options: [],
+  validation_rule: {
+    type: 'BOOLEANREQUIRED',
+    min_value: null,
+    max_value: null,
+    exact_value: true
+  }
+};
+
+test('canonical boolean items accept empty bounds and choices with BOOLEANREQUIRED metadata', () => {
+  const parsed = checklistItemSchema.parse(booleanItem);
+
+  assert.equal(parsed.input_type, 'boolean');
+  assert.equal(parsed.validation_rule.type, 'BOOLEANREQUIRED');
+  assert.equal(parsed.validation_rule.exact_value, true);
+});
+
+test('normalized legacy booleanCheck templates pass templateSchema', t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'template-boolean-normalization-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const input = path.join(directory, 'legacy.json');
+  const output = path.join(directory, 'canonical.json');
+  fs.writeFileSync(input, JSON.stringify([{
+    id: 'legacy-boolean',
+    type: 'MATERIAL',
+    name: 'Legacy boolean',
+    is_active: true,
+    checklist_items: [{
+      id: 'boolean-1',
+      parameter_name: 'Condition acceptable',
+      inputType: 'booleanCheck',
+      minVal: 0,
+      maxVal: 1,
+      choices: ['PASS', 'FAIL'],
+      choiceOptions: [
+        { id: 'yes', label: 'Yes', value: 'yes', outcome: 'PASS', position: 0 }
+      ],
+      is_required: true,
+      required_photo: false,
+      is_active: true,
+      validation_rule: { type: 'BOOLEANREQUIRED', exact_value: true }
+    }]
+  }]));
+
+  const result = spawnSync(
+    process.execPath,
+    [path.join(__dirname, '../../scripts/normalize-templates.js'), '--input', input, '--output', output],
+    { encoding: 'utf8' }
+  );
+
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  const [normalized] = JSON.parse(fs.readFileSync(output, 'utf8'));
+  const [normalizedItem] = normalized.checklist_items;
+  assert.equal(normalizedItem.input_type, 'boolean');
+  assert.equal(normalizedItem.min_value, null);
+  assert.equal(normalizedItem.max_value, null);
+  assert.deepEqual(normalizedItem.choices, []);
+  assert.deepEqual(normalizedItem.choice_options, []);
+  assert.equal(normalizedItem.validation_rule.type, 'BOOLEANREQUIRED');
+  assert.equal(normalizedItem.validation_rule.exact_value, true);
+  assert.match(result.stdout, /Discarding numeric bounds from boolean item/);
+  assert.match(result.stdout, /Discarding legacy choices from boolean item/);
+  assert.match(result.stdout, /Discarding structured choice_options from boolean item/);
+  assert.doesNotThrow(() => templateSchema.parse(normalized));
+});
+
+test('boolean items reject numeric bounds', () => {
+  assert.throws(
+    () => checklistItemSchema.parse({ ...booleanItem, min_value: 1 }),
+    /boolean items cannot define numeric bounds/
+  );
+});
+
+test('boolean items reject legacy choices', () => {
+  assert.throws(
+    () => checklistItemSchema.parse({ ...booleanItem, choices: ['PASS', 'FAIL'] }),
+    /boolean items cannot define choices/
+  );
+});
+
+test('boolean items reject structured choice options', () => {
+  assert.throws(
+    () => checklistItemSchema.parse({
+      ...booleanItem,
+      choice_options: [
+        { id: 'yes', label: 'Yes', value: 'yes', outcome: 'PASS', position: 0 }
+      ]
+    }),
+    /boolean items cannot define choices/
+  );
+});
 
 test('PostgreSQL rows emit the snake_case checklist contract', () => {
   const result = mapTemplateAggregate({
