@@ -5,6 +5,7 @@ import '../../../core/dummy/dummy_state.dart';
 import '../../../core/dummy/dummy_qc_material_templates.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/qc_material_template_model.dart';
+import '../../../shared/models/qc_report_model.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/photo_grid.dart';
@@ -35,6 +36,27 @@ class RenderItem {
     this.unit,
     this.adminNote,
   });
+}
+
+List<RenderItem> resolveReportDetailItems(QCReportModel report) {
+  final answersByItemId = {
+    for (final answer in report.checklistItems) answer.itemId: answer,
+  };
+  return answersByItemId.values
+      .map(
+        (answer) => RenderItem(
+          itemId: answer.itemId,
+          label: answer.paramName,
+          standard: answer.standardText,
+          value: answer.value?.toString() ?? '',
+          status: QCResultStatus.notFilled,
+          issueNote: answer.issueNote ?? '',
+          photos: answer.photoPaths,
+          unit: answer.unit,
+          adminNote: answer.adminNote,
+        ),
+      )
+      .toList(growable: false);
 }
 
 class ReportDetailScreen extends StatefulWidget {
@@ -185,50 +207,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         report.status == QCReportStatus.NEEDS_FOLLOW_UP;
 
     // Build unified render items list
-    final List<RenderItem> renderItems = [];
-    if (report.checklistItems.isNotEmpty) {
-      for (var ans in report.checklistItems) {
-        // Mobile-side: always show neutral status (no pass/fail displayed).
-        dynamic evalStatus = QCResultStatus.notFilled;
-        String? warning;
-
-        renderItems.add(
-          RenderItem(
-            itemId: ans.itemId,
-            label: ans.paramName,
-            standard: ans.standardText,
-            value: ans.value?.toString() ?? '',
-            status: evalStatus,
-            warningMessage: warning,
-            issueNote: ans.issueNote ?? '',
-            photos: ans.photoPaths,
-            unit: ans.unit,
-            adminNote: ans.adminNote,
-          ),
-        );
-      }
-    } else if (report.checklistResults.isNotEmpty) {
-      for (var res in report.checklistResults) {
-        // Mobile-side: always show neutral status (no pass/fail displayed).
-        dynamic evalStatus = QCResultStatus.notFilled;
-        String? warning;
-
-        renderItems.add(
-          RenderItem(
-            itemId: res.itemId,
-            label: res.paramName,
-            standard: res.standard,
-            value: res.resultValue,
-            status: evalStatus,
-            warningMessage: warning,
-            issueNote: res.issueNote,
-            photos: res.photos,
-            unit: res.unit,
-            adminNote: res.adminNote,
-          ),
-        );
-      }
-    }
+    final renderItems = resolveReportDetailItems(report);
 
     return Scaffold(
       backgroundColor: AppColors.background,
