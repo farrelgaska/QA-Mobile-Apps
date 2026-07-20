@@ -95,9 +95,10 @@ const createUploadController = ({ getStorage }) => ({
         throw requestError('paths contains an invalid QC evidence object path');
       }
 
-      const signedUrls = await getStorage().createSignedUrls(paths);
+      const { signedUrls, failedPaths } = await getStorage().createSignedUrls(paths);
       res.json({
         signed_urls: signedUrls,
+        failed_paths: failedPaths,
         expires_in: SIGNED_URL_EXPIRY_SECONDS
       });
     } catch (error) {

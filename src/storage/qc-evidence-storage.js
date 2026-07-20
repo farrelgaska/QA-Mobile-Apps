@@ -23,19 +23,34 @@ const createQCEvidenceStorage = supabaseClient => ({
   },
 
   async createSignedUrls(paths) {
-    const { data, error } = await supabaseClient.storage
+    const response = await supabaseClient.storage
       .from(QC_EVIDENCE_BUCKET)
       .createSignedUrls(paths, SIGNED_URL_EXPIRY_SECONDS);
 
-    if (error || !Array.isArray(data) || data.some(entry => entry.error || !entry.signedUrl)) {
+    if (!response || response.error || !Array.isArray(response.data)) {
       throw storageFailure('QC evidence signed URL creation failed');
     }
+    const { data } = response;
 
-    return data.map(entry => ({
-      object_path: entry.path,
-      signed_url: entry.signedUrl,
-      expires_in: SIGNED_URL_EXPIRY_SECONDS
-    }));
+    return paths.reduce(
+      (result, path, index) => {
+        const entry = data[index];
+        const objectPath = entry?.path || path;
+
+        if (entry?.error || typeof entry?.signedUrl !== 'string' || entry.signedUrl === '') {
+          result.failedPaths.push(objectPath);
+        } else {
+          result.signedUrls.push({
+            object_path: objectPath,
+            signed_url: entry.signedUrl,
+            expires_in: SIGNED_URL_EXPIRY_SECONDS
+          });
+        }
+
+        return result;
+      },
+      { signedUrls: [], failedPaths: [] }
+    );
   }
 });
 

@@ -3,7 +3,10 @@ const assert = require('node:assert/strict');
 const express = require('express');
 const { createUploadRouter, MAX_FILE_SIZE } = require('../../src/routes/upload.routes');
 const errorHandler = require('../../src/middleware/error-handler');
-const { createQCEvidenceStorageProvider } = require('../../src/storage/qc-evidence-storage');
+const {
+  createQCEvidenceStorage,
+  createQCEvidenceStorageProvider
+} = require('../../src/storage/qc-evidence-storage');
 
 const JPEG_BYTES = Buffer.from([
   0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46,
@@ -22,11 +25,28 @@ const createStorageMock = () => ({
   },
   async createSignedUrls(paths) {
     this.signedUrlRequests.push(paths);
-    return paths.map(path => ({
-      object_path: path,
-      signed_url: `https://storage.example.test/${encodeURIComponent(path)}`,
-      expires_in: 3600
-    }));
+    return {
+      signedUrls: paths.map(path => ({
+        object_path: path,
+        signed_url: `https://storage.example.test/${encodeURIComponent(path)}`,
+        expires_in: 3600
+      })),
+      failedPaths: []
+    };
+  }
+});
+
+const createSupabaseStorage = response => createQCEvidenceStorage({
+  storage: {
+    from(bucket) {
+      assert.equal(bucket, 'qc-evidence');
+      return {
+        async createSignedUrls(paths, expiresIn) {
+          assert.equal(expiresIn, 3600);
+          return typeof response === 'function' ? response(paths) : response;
+        }
+      };
+    }
   }
 });
 
@@ -257,6 +277,7 @@ test('creates signed URLs for valid QC evidence paths', async () => {
 
     assert.equal(response.status, 200);
     assert.equal(body.expires_in, 3600);
+    assert.deepEqual(body.failed_paths, []);
     assert.deepEqual(storage.signedUrlRequests, [[path]]);
     assert.deepEqual(body.signed_urls, [{
       object_path: path,
@@ -264,6 +285,100 @@ test('creates signed URLs for valid QC evidence paths', async () => {
       expires_in: 3600
     }]);
   });
+});
+
+test('Supabase adapter returns every signed URL when all paths succeed', async () => {
+  const paths = [
+    'reports/QC-REP-001/general/123e4567-e89b-42d3-a456-426614174000.jpg',
+    'reports/QC-REP-001/checklist/item-1/123e4567-e89b-42d3-a456-426614174001.png'
+  ];
+  const storage = createSupabaseStorage({
+    data: paths.map(path => ({ path, signedUrl: `https://storage.example.test/${path}` })),
+    error: null
+  });
+
+  assert.deepEqual(await storage.createSignedUrls(paths), {
+    signedUrls: paths.map(path => ({
+      object_path: path,
+      signed_url: `https://storage.example.test/${path}`,
+      expires_in: 3600
+    })),
+    failedPaths: []
+  });
+});
+
+test('returns valid signed URLs and reports only missing paths in a mixed batch', async () => {
+  const validPath = 'reports/QC-REP-001/general/123e4567-e89b-42d3-a456-426614174000.jpg';
+  const missingPath = 'reports/QC-REP-001/general/123e4567-e89b-42d3-a456-426614174001.jpg';
+  const signedUrl = `https://storage.example.test/${validPath}`;
+  const storage = createSupabaseStorage({
+    data: [
+      { path: validPath, signedUrl },
+      { path: missingPath, signedUrl: null, error: 'Object not found' }
+    ],
+    error: null
+  });
+
+  await withServer(storage, async baseUrl => {
+    const response = await fetch(`${baseUrl}/uploads/qc-evidence/signed-urls`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ paths: [validPath, missingPath] })
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), {
+      signed_urls: [{ object_path: validPath, signed_url: signedUrl, expires_in: 3600 }],
+      failed_paths: [missingPath],
+      expires_in: 3600
+    });
+  });
+});
+
+test('returns an empty signed URL list when every object is missing', async () => {
+  const paths = [
+    'reports/QC-REP-001/general/123e4567-e89b-42d3-a456-426614174000.jpg',
+    'reports/QC-REP-001/general/123e4567-e89b-42d3-a456-426614174001.jpg'
+  ];
+  const storage = createSupabaseStorage({
+    data: paths.map(path => ({ path, signedUrl: null, error: 'Object not found' })),
+    error: null
+  });
+
+  await withServer(storage, async baseUrl => {
+    const response = await fetch(`${baseUrl}/uploads/qc-evidence/signed-urls`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ paths })
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), {
+      signed_urls: [],
+      failed_paths: paths,
+      expires_in: 3600
+    });
+  });
+});
+
+test('Supabase adapter still throws on a top-level signed URL failure', async () => {
+  const path = 'reports/QC-REP-001/general/123e4567-e89b-42d3-a456-426614174000.jpg';
+  const storage = createSupabaseStorage({ data: null, error: { message: 'Storage unavailable' } });
+
+  await assert.rejects(
+    storage.createSignedUrls([path]),
+    error => error.statusCode === 502 && error.message === 'QC evidence signed URL creation failed'
+  );
+});
+
+test('Supabase adapter still throws on a malformed signed URL response', async () => {
+  const path = 'reports/QC-REP-001/general/123e4567-e89b-42d3-a456-426614174000.jpg';
+  const storage = createSupabaseStorage({ data: null, error: null });
+
+  await assert.rejects(
+    storage.createSignedUrls([path]),
+    error => error.statusCode === 502 && error.message === 'QC evidence signed URL creation failed'
+  );
 });
 
 test('rejects an invalid signed URL path', async () => {
