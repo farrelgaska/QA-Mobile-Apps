@@ -72,6 +72,42 @@ test('report aggregate write rolls back when an item write fails', async () => {
   assert.equal(pool.released, true);
 });
 
+test('staff report creation does not insert a placeholder admin review', async () => {
+  const pool = new FailingPool('never');
+  const repository = new PostgresReportRepository(pool);
+
+  await repository.create({
+    id: 'QC-MAT-2026-1009', type: 'MATERIAL', title: 'Staff report', status: 'SUBMITTED',
+    staff: { name: 'QA Staff', nik: 'QA-1' }, location: {}, checklist_items: [],
+    adminReview: { reviewedBy: '', conclusion: 'Belum Lengkap', adminNote: '' }
+  });
+
+  assert.equal(
+    pool.commands.some(command => command.startsWith('insert into public.qc_report_admin_reviews')),
+    false
+  );
+  assert.equal(pool.commands[0], 'BEGIN');
+  assert.equal(pool.commands.at(-1), 'COMMIT');
+  assert.equal(pool.released, true);
+});
+
+test('genuine canonical admin review continues to persist', async () => {
+  const pool = new FailingPool('never');
+  const repository = new PostgresReportRepository(pool);
+
+  await repository.create({
+    id: 'QC-ADMIN-REVIEW', type: 'MATERIAL', title: 'Reviewed report', status: 'APPROVED',
+    staff: { name: 'QA Staff', nik: 'QA-1' }, location: {}, checklist_items: [],
+    admin_review: { reviewed_by: 'Admin One', conclusion: 'PASSED', admin_note: 'Accepted' }
+  });
+
+  assert.equal(
+    pool.commands.some(command => command.startsWith('insert into public.qc_report_admin_reviews')),
+    true
+  );
+  assert.equal(pool.commands.at(-1), 'COMMIT');
+});
+
 test('successful aggregate transaction commits and releases its client', async () => {
   const pool = new FailingPool('never');
   const repository = new PostgresTemplateRepository(pool);

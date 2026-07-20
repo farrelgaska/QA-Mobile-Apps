@@ -112,15 +112,20 @@ class PostgresReportRepository {
     }
 
     const review = report.admin_review;
-    if (review) {
+    const reviewedBy = review?.reviewed_by ?? review?.reviewedBy ?? '';
+    const conclusion = review?.conclusion ?? null;
+    const hasAdminReview = typeof reviewedBy === 'string'
+      && reviewedBy.trim() !== ''
+      && ['PASSED', 'NOT_PASSED'].includes(conclusion);
+    if (hasAdminReview) {
       await client.query(
         `insert into public.qc_report_admin_reviews
           (report_id,admin_note,conclusion,reviewed_at,reviewed_by)
          values ($1,$2,$3,$4,$5)`,
         [
-          report.id, review.admin_note ?? review.adminNote ?? '', review.conclusion ?? null,
+          report.id, review.admin_note ?? review.adminNote ?? '', conclusion,
           review.reviewed_at ?? review.reviewedAt ?? null,
-          review.reviewed_by ?? review.reviewedBy ?? null
+          reviewedBy
         ]
       );
     }
