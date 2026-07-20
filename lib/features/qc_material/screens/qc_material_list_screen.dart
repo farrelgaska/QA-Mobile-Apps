@@ -52,7 +52,9 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
           _isLoading = false;
         });
       }
-    } catch (e) {
+    } catch (error, stackTrace) {
+      debugPrint('QC Material template loading failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
       if (mounted) {
         setState(() {
           _templates = [];

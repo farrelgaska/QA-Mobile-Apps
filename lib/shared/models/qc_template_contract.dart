@@ -79,13 +79,37 @@ class QCTemplateContract {
 
   static List<TemplateChoiceOption> _choiceOptions(Map<String, dynamic> item) {
     final raw = item['choice_options'] ?? item['choiceOptions'];
-    if (raw is! List) return const [];
-    final options = raw
-        .whereType<Map>()
-        .map((e) => TemplateChoiceOption.fromJson(Map<String, dynamic>.from(e)))
+    if (raw is List) {
+      final options = raw
+          .whereType<Map>()
+          .map(
+            (e) => TemplateChoiceOption.fromJson(Map<String, dynamic>.from(e)),
+          )
+          .toList();
+      if (options.isNotEmpty) {
+        options.sort((a, b) => a.position.compareTo(b.position));
+        return options;
+      }
+    }
+
+    final legacyChoices = item['choices'];
+    if (legacyChoices is! List) return const [];
+    return legacyChoices
+        .whereType<String>()
+        .where((choice) => choice.isNotEmpty)
+        .toList()
+        .asMap()
+        .entries
+        .map(
+          (entry) => TemplateChoiceOption(
+            id: 'legacy-choice-${entry.key}',
+            label: entry.value,
+            value: entry.value,
+            outcome: entry.key == 0 ? 'PASS' : 'FAIL',
+            position: entry.key,
+          ),
+        )
         .toList();
-    options.sort((a, b) => a.position.compareTo(b.position));
-    return options;
   }
 
   static InputType _inputType(Map<String, dynamic> json) {
@@ -102,13 +126,18 @@ class QCTemplateContract {
   }
 
   static QCInputType _qcInputType(Map<String, dynamic> json) {
-    switch (_inputType(json)) {
-      case InputType.number:
+    switch (_string(json, 'input_type', alias: 'inputType').toLowerCase()) {
+      case 'number':
         return QCInputType.number;
-      case InputType.text:
+      case 'text':
         return QCInputType.text;
-      case InputType.choice:
+      case 'choice':
         return QCInputType.choice;
+      case 'boolean':
+      case 'booleancheck':
+        return QCInputType.booleanCheck;
+      default:
+        throw FormatException('Unsupported material input_type');
     }
   }
 
