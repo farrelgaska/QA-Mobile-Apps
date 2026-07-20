@@ -28,11 +28,17 @@ class ApiRequestException implements Exception {
 }
 
 class ApiService {
+  static const String _configuredBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+  );
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
   ApiService._internal();
 
   String get baseUrl {
+    if (_configuredBaseUrl.isNotEmpty) {
+      return _configuredBaseUrl.replaceFirst(RegExp(r'/+$'), '');
+    }
     if (kIsWeb) {
       return 'http://localhost:3002';
     }
