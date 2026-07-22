@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, kReleaseMode, visibleForTesting;
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
@@ -27,6 +28,48 @@ class ApiRequestException implements Exception {
   String toString() => message;
 }
 
+@visibleForTesting
+String resolveApiBaseUrl({
+  required String configuredBaseUrl,
+  required bool isWeb,
+  required bool isReleaseMode,
+  required bool isAndroid,
+}) {
+  final normalized = configuredBaseUrl.trim().replaceFirst(RegExp(r'/+$'), '');
+  if (normalized.isNotEmpty) {
+    final uri = Uri.tryParse(normalized);
+    final isAbsoluteHttpUrl =
+        uri != null &&
+        (uri.scheme == 'http' || uri.scheme == 'https') &&
+        uri.host.isNotEmpty &&
+        !uri.hasQuery &&
+        !uri.hasFragment;
+    final isValidProductionWebUrl =
+        !isWeb || !isReleaseMode || uri?.scheme == 'https';
+    if (!isAbsoluteHttpUrl || !isValidProductionWebUrl) {
+      throw StateError(
+        'API_BASE_URL harus berupa URL HTTP(S) absolut tanpa query atau fragment. '
+        'Build Flutter Web production wajib menggunakan URL HTTPS.',
+      );
+    }
+    return normalized;
+  }
+
+  if (isWeb) {
+    if (isReleaseMode) {
+      throw StateError(
+        'API_BASE_URL wajib diatur untuk build Flutter Web production. '
+        'Gunakan --dart-define=API_BASE_URL=https://backend.example.com.',
+      );
+    }
+    return 'http://localhost:3002';
+  }
+  if (isAndroid) {
+    return 'http://10.0.2.2:3002';
+  }
+  return 'http://localhost:3002';
+}
+
 class ApiService {
   static const String _configuredBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
@@ -40,20 +83,22 @@ class ApiService {
 
   final http.Client? _client;
 
-  String get baseUrl {
-    if (_configuredBaseUrl.isNotEmpty) {
-      return _configuredBaseUrl.replaceFirst(RegExp(r'/+$'), '');
-    }
-    if (kIsWeb) {
-      return 'http://localhost:3002';
-    }
+  static bool get _isAndroid {
+    if (kIsWeb) return false;
     try {
-      if (Platform.isAndroid) {
-        return 'http://10.0.2.2:3002'; // Alias to host machine from Android Emulator
-      }
+      return Platform.isAndroid;
     } catch (_) {}
-    return 'http://localhost:3002';
+    return false;
   }
+
+  String get baseUrl => resolveApiBaseUrl(
+    configuredBaseUrl: _configuredBaseUrl,
+    isWeb: kIsWeb,
+    isReleaseMode: kReleaseMode,
+    isAndroid: _isAndroid,
+  );
+
+  static void validateConfiguration() => ApiService().baseUrl;
 
   /// Fetch all reports from the mock API backend.
   Future<List<QCReportModel>?> fetchReports() async {

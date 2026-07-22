@@ -16,6 +16,74 @@ QCReportModel _report() => QCReportModel(
 );
 
 void main() {
+  group('API base URL resolution', () {
+    test('local Flutter Web defaults to localhost', () {
+      expect(
+        resolveApiBaseUrl(
+          configuredBaseUrl: '',
+          isWeb: true,
+          isReleaseMode: false,
+          isAndroid: false,
+        ),
+        'http://localhost:3002',
+      );
+    });
+
+    test('Android emulator defaults to the host alias', () {
+      expect(
+        resolveApiBaseUrl(
+          configuredBaseUrl: '',
+          isWeb: false,
+          isReleaseMode: false,
+          isAndroid: true,
+        ),
+        'http://10.0.2.2:3002',
+      );
+    });
+
+    test('production Web uses and normalizes configured HTTPS URL', () {
+      expect(
+        resolveApiBaseUrl(
+          configuredBaseUrl: '  https://qa-mobile-api.example.com///  ',
+          isWeb: true,
+          isReleaseMode: true,
+          isAndroid: false,
+        ),
+        'https://qa-mobile-api.example.com',
+      );
+    });
+
+    test('production Web fails clearly when API_BASE_URL is missing', () {
+      expect(
+        () => resolveApiBaseUrl(
+          configuredBaseUrl: '',
+          isWeb: true,
+          isReleaseMode: true,
+          isAndroid: false,
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('API_BASE_URL wajib diatur'),
+          ),
+        ),
+      );
+    });
+
+    test('production Web rejects non-HTTPS API URLs', () {
+      expect(
+        () => resolveApiBaseUrl(
+          configuredBaseUrl: 'http://localhost:3002',
+          isWeb: true,
+          isReleaseMode: true,
+          isAndroid: false,
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+  });
+
   test('HTTP 201 is a successful report create', () async {
     var postCount = 0;
     final service = ApiService.withClient(
