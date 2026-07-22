@@ -147,7 +147,7 @@ XFile _localPng() => XFile.fromData(
 
 void main() {
   test(
-    'material photo capture uses camera and rejects files over 2 MB',
+    'material photo capture uses camera and rejects files over 5 MB',
     () async {
       ImageSource? requestedSource;
       final oversizedPhoto = XFile.fromData(
@@ -170,7 +170,7 @@ void main() {
       expect(result, QCMaterialPhotoAddResult.fileTooLarge);
       expect(provider.localItemPhotos[0], isEmpty);
       expect(provider.localItemPhotoBytes[0], isEmpty);
-      expect(qcPhotoTooLargeMessage, contains('2 MB'));
+      expect(qcPhotoTooLargeMessage, contains('5 MB'));
     },
   );
 
