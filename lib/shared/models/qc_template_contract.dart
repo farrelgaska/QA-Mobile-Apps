@@ -48,6 +48,7 @@ class QCTemplateContract {
       requiredPhoto: _boolean(item, 'required_photo', alias: 'requiredPhoto'),
       isActive: _boolean(item, 'is_active', alias: 'isActive'),
       isCritical: _boolean(item, 'is_critical', alias: 'isCritical'),
+      choices: _choices(item),
       choiceOptions: _choiceOptions(item),
     );
   }
@@ -65,6 +66,7 @@ class QCTemplateContract {
         requiredPhoto: _boolean(item, 'required_photo', alias: 'requiredPhoto'),
         isActive: _boolean(item, 'is_active', alias: 'isActive'),
         isCritical: _boolean(item, 'is_critical', alias: 'isCritical'),
+        choices: _choices(item),
         choiceOptions: _choiceOptions(item),
       );
 
@@ -92,12 +94,7 @@ class QCTemplateContract {
       }
     }
 
-    final legacyChoices = item['choices'];
-    if (legacyChoices is! List) return const [];
-    return legacyChoices
-        .whereType<String>()
-        .where((choice) => choice.isNotEmpty)
-        .toList()
+    return _choices(item)
         .asMap()
         .entries
         .map(
@@ -109,6 +106,15 @@ class QCTemplateContract {
             position: entry.key,
           ),
         )
+        .toList();
+  }
+
+  static List<String> _choices(Map<String, dynamic> item) {
+    final raw = item['choices'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<String>()
+        .where((choice) => choice.isNotEmpty)
         .toList();
   }
 

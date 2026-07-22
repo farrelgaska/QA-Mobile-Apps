@@ -110,7 +110,7 @@ void main() {
     }
   });
 
-  testWidgets('choice displays custom label and stores canonical value', (
+  testWidgets('non-empty choice options take priority over legacy choices', (
     tester,
   ) async {
     String selected = '';
@@ -122,6 +122,7 @@ void main() {
             title: 'Kondisi',
             standardText: 'Harus rapi',
             inputType: QCInputType.choice,
+            choices: const ['Legacy Sesuai', 'Legacy Tidak Sesuai'],
             choiceOptions: const [
               TemplateChoiceOption(
                 id: 'pass',
@@ -154,8 +155,54 @@ void main() {
     );
 
     expect(find.text('PASS'), findsNothing);
+    expect(find.text('Legacy Sesuai'), findsNothing);
     await tester.tap(find.text('Sudah Rapi'));
     expect(selected, 'PASS');
+  });
+
+  testWidgets('empty choice options fall back to ordered legacy choices', (
+    tester,
+  ) async {
+    String selected = '';
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ChecklistItemCard(
+            itemNumber: 1,
+            title: 'Kondisi',
+            standardText: 'Harus sesuai',
+            inputType: QCInputType.choice,
+            choices: const ['Sesuai', 'Tidak Sesuai'],
+            choiceOptions: const [],
+            currentStatus: QCResultStatus.notFilled,
+            resultValue: '',
+            issueDescription: '',
+            photos: const [],
+            isLocked: false,
+            onStatusChanged: (_) {},
+            onResultValueChanged: (value) => selected = value,
+            onIssueDescriptionChanged: (_) {},
+            onAddPhoto: () {},
+            onDeletePhoto: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Sesuai'), findsOneWidget);
+    expect(find.text('Tidak Sesuai'), findsOneWidget);
+    expect(find.textContaining('Opsi belum dikonfigurasi'), findsNothing);
+    final labels = tester
+        .widgetList<Text>(
+          find.descendant(of: find.byType(Wrap), matching: find.byType(Text)),
+        )
+        .map((text) => text.data)
+        .whereType<String>()
+        .toList();
+    expect(labels, ['Sesuai', 'Tidak Sesuai']);
+
+    await tester.tap(find.text('Tidak Sesuai'));
+    expect(selected, 'Tidak Sesuai');
   });
 
   testWidgets('empty legacy choice explains unavailable configuration', (
