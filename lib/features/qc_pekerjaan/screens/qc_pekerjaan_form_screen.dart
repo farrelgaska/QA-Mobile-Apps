@@ -172,6 +172,7 @@ class QCPekerjaanFormScreen extends StatelessWidget {
                 unit: item.unit,
                 minValue: item.minValue,
                 maxValue: item.maxValue,
+                choices: item.choices,
                 choiceOptions: item.choiceOptions,
                 currentStatus: qcStatus,
                 resultValue: p.itemResults[index],

@@ -105,7 +105,7 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
         widget.inputType == QCInputType.booleanCheck ||
         widget.inputType == QCInputType.choice;
     final selectedChoice = choiceOptionForValue(
-      widget.choiceOptions,
+      _resolvedChoiceOptions,
       widget.resultValue,
     );
     final bool isNonIdeal = widget.inputType == QCInputType.choice
@@ -446,7 +446,8 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
         ],
       );
     } else if (widget.inputType == QCInputType.choice) {
-      if (widget.choiceOptions.isEmpty) {
+      final choiceOptions = _resolvedChoiceOptions;
+      if (choiceOptions.isEmpty) {
         return const Padding(
           padding: EdgeInsets.only(bottom: 12),
           child: Text(
@@ -470,7 +471,7 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: widget.choiceOptions.map((option) {
+            children: choiceOptions.map((option) {
               final isSel = widget.resultValue == option.value;
               return _buildChoiceChip(
                 label: option.label,
@@ -491,6 +492,24 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
       );
     }
     return const SizedBox.shrink();
+  }
+
+  List<TemplateChoiceOption> get _resolvedChoiceOptions {
+    if (widget.choiceOptions.isNotEmpty) return widget.choiceOptions;
+    final legacyChoices = widget.choices ?? const <String>[];
+    return legacyChoices
+        .asMap()
+        .entries
+        .map(
+          (entry) => TemplateChoiceOption(
+            id: 'legacy-choice-${entry.key}',
+            label: entry.value,
+            value: entry.value,
+            outcome: entry.key == 0 ? 'PASS' : 'FAIL',
+            position: entry.key,
+          ),
+        )
+        .toList();
   }
 
   Widget _buildChoiceChip({

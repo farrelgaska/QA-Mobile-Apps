@@ -97,9 +97,38 @@ void main() {
     });
 
     final options = template.checklistItems.single.choiceOptions;
+    expect(template.checklistItems.single.choices, ['Sesuai', 'Tidak Sesuai']);
     expect(options.map((option) => option.label), ['Sesuai', 'Tidak Sesuai']);
     expect(options.map((option) => option.value), ['Sesuai', 'Tidak Sesuai']);
     expect(options.map((option) => option.outcome), ['PASS', 'FAIL']);
+  });
+
+  test('falls back to legacy choices when structured options are missing', () {
+    final template = QCTemplateContract.work({
+      'id': 'WRK-LEGACY-CHOICE',
+      'name': 'Work legacy choice',
+      'category': 'Construction',
+      'is_active': true,
+      'checklist_items': [
+        {
+          'id': 'condition',
+          'parameter_name': 'Kondisi',
+          'input_type': 'choice',
+          'standard_text': 'Sesuai',
+          'choices': ['Baik', 'Perlu Perbaikan'],
+          'is_required': true,
+          'required_photo': false,
+          'is_active': true,
+        },
+      ],
+    });
+
+    final item = template.checklistItems.single;
+    expect(item.choices, ['Baik', 'Perlu Perbaikan']);
+    expect(item.choiceOptions.map((option) => option.label), [
+      'Baik',
+      'Perlu Perbaikan',
+    ]);
   });
 
   test('parses and orders structured custom choices', () {
@@ -114,6 +143,7 @@ void main() {
           'parameter_name': 'Kondisi',
           'input_type': 'choice',
           'standard_text': 'Periksa kondisi',
+          'choices': ['Legacy Sesuai', 'Legacy Tidak Sesuai'],
           'is_required': true,
           'required_photo': true,
           'is_active': true,
@@ -143,6 +173,10 @@ void main() {
       'Sudah Rapi',
       'Perlu Perbaikan',
     ]);
+    expect(
+      item.choiceOptions.map((option) => option.label),
+      isNot(contains('Legacy Sesuai')),
+    );
     expect(item.required, isTrue);
     expect(item.requiredPhoto, isTrue);
   });
