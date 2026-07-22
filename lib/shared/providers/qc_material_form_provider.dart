@@ -12,9 +12,12 @@ import '../../shared/models/qc_checklist_answer_model.dart';
 import '../../shared/models/qc_material_template_model.dart';
 import '../../shared/models/work_location_model.dart';
 import '../../shared/models/site_model.dart';
+import '../../shared/utils/qc_photo_validation.dart';
 import '../../core/utils/validators.dart';
 import '../../core/utils/qc_validation_helper.dart';
 import '../../shared/models/template_choice_option.dart';
+
+enum QCMaterialPhotoAddResult { added, cancelled, fileTooLarge }
 
 abstract class QCMaterialPersistenceApi {
   Future<QCEvidenceUploadResult> uploadQCEvidence({
@@ -61,6 +64,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
   // Dependencies
   final DummyState _state = DummyState();
   final ImagePicker _imagePicker;
+  final Future<XFile?> Function(ImageSource source)? photoPicker;
   final QCMaterialPersistenceApi _api;
   final Map<XFile, String> _uploadedObjectPaths = {};
   bool _isPersisting = false;
@@ -69,6 +73,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
   QCMaterialFormProvider({
     ImagePicker? imagePicker,
+    this.photoPicker,
     QCMaterialPersistenceApi? api,
   }) : _imagePicker = imagePicker ?? ImagePicker(),
        _api = api ?? _DefaultQCMaterialPersistenceApi();
@@ -314,16 +319,20 @@ class QCMaterialFormProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addPhoto(int index) async {
-    final selectedPhoto = await _imagePicker.pickImage(
-      source: ImageSource.gallery,
-    );
-    if (selectedPhoto == null) return;
+  Future<QCMaterialPhotoAddResult> addPhoto(int index) async {
+    final selectedPhoto =
+        await (photoPicker?.call(ImageSource.camera) ??
+            _imagePicker.pickImage(source: ImageSource.camera));
+    if (selectedPhoto == null) return QCMaterialPhotoAddResult.cancelled;
 
     final bytes = await selectedPhoto.readAsBytes();
+    if (exceedsQCPhotoSizeLimit(bytes)) {
+      return QCMaterialPhotoAddResult.fileTooLarge;
+    }
     localItemPhotos[index].add(selectedPhoto);
     localItemPhotoBytes[index].add(bytes);
     notifyListeners();
+    return QCMaterialPhotoAddResult.added;
   }
 
   void removePhoto(int index, int photoIdx) {
@@ -605,6 +614,10 @@ class QCMaterialFormProvider extends ChangeNotifier {
       for (final photo in localItemPhotos[itemIndex]) {
         var objectPath = _uploadedObjectPaths[photo];
         if (objectPath == null) {
+          final bytes = await photo.readAsBytes();
+          if (exceedsQCPhotoSizeLimit(bytes)) {
+            throw const QCMaterialPersistenceException(qcPhotoTooLargeMessage);
+          }
           final uploaded = await _api.uploadQCEvidence(
             file: photo,
             reportId: _reportId,

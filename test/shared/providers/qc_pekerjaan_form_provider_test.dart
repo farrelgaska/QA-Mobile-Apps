@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mobile/shared/models/enums.dart';
 import 'package:mobile/core/dummy/dummy_state.dart';
 import 'package:mobile/shared/models/checklist_item_model.dart';
@@ -7,8 +10,52 @@ import 'package:mobile/shared/models/qc_checklist_answer_model.dart';
 import 'package:mobile/shared/models/qc_report_model.dart';
 import 'package:mobile/shared/models/template_choice_option.dart';
 import 'package:mobile/shared/providers/qc_pekerjaan_form_provider.dart';
+import 'package:mobile/shared/utils/qc_photo_validation.dart';
 
 void main() {
+  test(
+    'pekerjaan photo capture uses camera and rejects files over 2 MB',
+    () async {
+      ImageSource? requestedSource;
+      final oversizedPhoto = XFile.fromData(
+        Uint8List(maxQCPhotoSizeBytes + 1),
+        name: 'oversized-pekerjaan.jpg',
+        mimeType: 'image/jpeg',
+      );
+      final template = PekerjaanModel(
+        id: 'WRK-PHOTO-VALIDATION',
+        name: 'Photo validation',
+        segment: WorkSegment.construction,
+        description: '',
+        checklistItems: [
+          ChecklistItemModel(
+            id: 'photo-1',
+            title: 'Dokumentasi',
+            inputType: InputType.text,
+            standard: 'Foto lapangan',
+            requiredPhoto: true,
+          ),
+        ],
+        status: 'Aktif',
+      );
+      final provider = QCPekerjaanFormProvider(
+        photoPicker: (source) async {
+          requestedSource = source;
+          return oversizedPhoto;
+        },
+      )..init(template);
+      addTearDown(provider.dispose);
+
+      final result = await provider.addPhoto(0);
+
+      expect(requestedSource, ImageSource.camera);
+      expect(result, PhotoAddResult.fileTooLarge);
+      expect(provider.pendingItemPhotos[0], isEmpty);
+      expect(provider.pendingItemPhotoBytes[0], isEmpty);
+      expect(qcPhotoTooLargeMessage, contains('2 MB'));
+    },
+  );
+
   test('selected backend WORK template is used without dummy lookup', () {
     final selected = PekerjaanModel(
       id: 'WRK-BACKEND-1',
