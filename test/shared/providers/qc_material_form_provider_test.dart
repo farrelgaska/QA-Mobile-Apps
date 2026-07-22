@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,6 +10,7 @@ import 'package:mobile/shared/models/qc_material_template_model.dart';
 import 'package:mobile/shared/models/qc_report_model.dart';
 import 'package:mobile/shared/models/template_choice_option.dart';
 import 'package:mobile/shared/providers/qc_material_form_provider.dart';
+import 'package:mobile/shared/utils/qc_photo_validation.dart';
 
 class _UploadCall {
   final XFile file;
@@ -144,6 +146,63 @@ XFile _localPng() => XFile.fromData(
 );
 
 void main() {
+  test(
+    'material photo capture uses camera and rejects files over 2 MB',
+    () async {
+      ImageSource? requestedSource;
+      final oversizedPhoto = XFile.fromData(
+        Uint8List(maxQCPhotoSizeBytes + 1),
+        name: 'oversized-material.jpg',
+        mimeType: 'image/jpeg',
+      );
+      final template = _draftTemplate();
+      final provider = QCMaterialFormProvider(
+        photoPicker: (source) async {
+          requestedSource = source;
+          return oversizedPhoto;
+        },
+      )..init(template.id, template: template);
+      addTearDown(provider.dispose);
+
+      final result = await provider.addPhoto(0);
+
+      expect(requestedSource, ImageSource.camera);
+      expect(result, QCMaterialPhotoAddResult.fileTooLarge);
+      expect(provider.localItemPhotos[0], isEmpty);
+      expect(provider.localItemPhotoBytes[0], isEmpty);
+      expect(qcPhotoTooLargeMessage, contains('2 MB'));
+    },
+  );
+
+  test('material revalidates actual bytes immediately before upload', () async {
+    final template = _draftTemplate();
+    final api = _FakeMaterialPersistenceApi();
+    final oversizedPhoto = XFile.fromData(
+      Uint8List(maxQCPhotoSizeBytes + 1),
+      name: 'oversized-material.jpg',
+      mimeType: 'image/jpeg',
+    );
+    final provider = QCMaterialFormProvider(api: api)
+      ..init(template.id, template: template);
+    addTearDown(provider.dispose);
+    provider.localItemPhotos[0].add(oversizedPhoto);
+    provider.localItemPhotoBytes[0].add(await oversizedPhoto.readAsBytes());
+
+    await expectLater(
+      provider.persistReport(QCReportStatus.DRAFT),
+      throwsA(
+        isA<QCMaterialPersistenceException>().having(
+          (error) => error.message,
+          'message',
+          qcPhotoTooLargeMessage,
+        ),
+      ),
+    );
+
+    expect(api.uploads, isEmpty);
+    expect(provider.localItemPhotos[0], [same(oversizedPhoto)]);
+  });
+
   test('material choice validation and stale note follow option outcome', () {
     final template = QCMaterialTemplate(
       id: 'MAT-CHOICE',

@@ -12,8 +12,9 @@ import '../../shared/models/work_location_model.dart';
 import '../../core/utils/validators.dart';
 import '../../shared/models/pekerjaan_model.dart';
 import '../../shared/models/template_choice_option.dart';
+import '../../shared/utils/qc_photo_validation.dart';
 
-enum PhotoAddResult { added, cancelled, limitReached }
+enum PhotoAddResult { added, cancelled, limitReached, fileTooLarge }
 
 class ReportPersistenceException implements Exception {
   final String message;
@@ -26,6 +27,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
 
   final DummyState _state = DummyState();
   final ImagePicker _imagePicker;
+  final Future<XFile?> Function(ImageSource source)? photoPicker;
   final ApiService _apiService;
   bool _isInit = false;
   bool _submitAttempted = false;
@@ -34,9 +36,12 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   late String _reportId;
   late PekerjaanModel _pekerjaan;
 
-  QCPekerjaanFormProvider({ImagePicker? imagePicker, ApiService? apiService})
-    : _imagePicker = imagePicker ?? ImagePicker(),
-      _apiService = apiService ?? ApiService();
+  QCPekerjaanFormProvider({
+    ImagePicker? imagePicker,
+    this.photoPicker,
+    ApiService? apiService,
+  }) : _imagePicker = imagePicker ?? ImagePicker(),
+       _apiService = apiService ?? ApiService();
 
   /// Public getters for UI consumption
   bool get isReady => _isInit;
@@ -229,12 +234,14 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
     // No-op for staff-side QC Pekerjaan since staff doesn't evaluate status
   }
 
-  Future<PhotoAddResult> addPhoto(int index, ImageSource source) async {
+  Future<PhotoAddResult> addPhoto(int index) async {
     if (photoCount(index) >= maxPhotosPerItem) {
       return PhotoAddResult.limitReached;
     }
 
-    final XFile? selectedPhoto = await _imagePicker.pickImage(source: source);
+    final XFile? selectedPhoto =
+        await (photoPicker?.call(ImageSource.camera) ??
+            _imagePicker.pickImage(source: ImageSource.camera));
     if (selectedPhoto == null) {
       return PhotoAddResult.cancelled;
     }
@@ -245,6 +252,9 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
 
     final previewBytes = await selectedPhoto.readAsBytes();
     if (_isDisposed) return PhotoAddResult.cancelled;
+    if (exceedsQCPhotoSizeLimit(previewBytes)) {
+      return PhotoAddResult.fileTooLarge;
+    }
     pendingItemPhotos[index].add(selectedPhoto);
     pendingItemPhotoBytes[index].add(previewBytes);
     _recalculateStatus(index);
@@ -481,6 +491,10 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         final previewBytes = pendingItemPhotoBytes[itemIndex].first;
         var objectPath = _uploadedObjectPaths[photo];
         if (objectPath == null) {
+          final bytes = await photo.readAsBytes();
+          if (exceedsQCPhotoSizeLimit(bytes)) {
+            throw const ReportPersistenceException(qcPhotoTooLargeMessage);
+          }
           final uploaded = await _apiService.uploadQCEvidence(
             file: photo,
             reportId: _reportId,

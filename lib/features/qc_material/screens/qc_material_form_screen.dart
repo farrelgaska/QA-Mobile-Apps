@@ -1,5 +1,6 @@
 // Refactored QC Material Form using Provider
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -13,6 +14,7 @@ import '../../../shared/widgets/screen_header.dart';
 import '../../../shared/widgets/confirmation_modal.dart';
 import '../../../shared/widgets/work_location_selector.dart';
 import '../../../shared/providers/qc_material_form_provider.dart';
+import '../../../shared/utils/qc_photo_validation.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 
 import '../../../shared/models/qc_material_template_model.dart';
@@ -71,7 +73,7 @@ class QCMaterialFormScreen extends StatelessWidget {
                     const SizedBox(height: 20),
                     _buildLocationSection(provider),
                     const SizedBox(height: 24),
-                    _buildChecklistSection(provider, tpl),
+                    _buildChecklistSection(context, provider, tpl),
                     _buildStaffNoteCard(provider),
                     const SizedBox(height: 28),
                     _buildActionButtons(context, provider),
@@ -231,7 +233,11 @@ class QCMaterialFormScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildChecklistSection(QCMaterialFormProvider p, dynamic tpl) {
+  Widget _buildChecklistSection(
+    BuildContext context,
+    QCMaterialFormProvider p,
+    dynamic tpl,
+  ) {
     if (tpl.checklistItems.isEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,7 +315,7 @@ class QCMaterialFormScreen extends StatelessWidget {
                 onResultValueChanged: (val) => p.updateAnswer(index, val),
                 onIssueDescriptionChanged: (val) =>
                     p.updateIssueNote(index, val),
-                onAddPhoto: () => p.addPhoto(index),
+                onAddPhoto: () => _capturePhoto(context, p, index),
                 onDeletePhoto: (pIdx) => p.removePhoto(index, pIdx),
               ),
               if (p.isRevisionMode &&
@@ -368,6 +374,36 @@ class QCMaterialFormScreen extends StatelessWidget {
         }),
       ],
     );
+  }
+
+  Future<void> _capturePhoto(
+    BuildContext context,
+    QCMaterialFormProvider provider,
+    int itemIndex,
+  ) async {
+    if (provider.isPersisting) return;
+
+    try {
+      final result = await provider.addPhoto(itemIndex);
+      if (!context.mounted || result == QCMaterialPhotoAddResult.cancelled) {
+        return;
+      }
+      if (result == QCMaterialPhotoAddResult.fileTooLarge) {
+        AppSnackbar.warning(context, qcPhotoTooLargeMessage);
+      }
+    } on PlatformException {
+      if (!context.mounted) return;
+      AppSnackbar.error(
+        context,
+        'Tidak dapat mengakses kamera. Periksa izin aplikasi lalu coba lagi.',
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      AppSnackbar.error(
+        context,
+        'Foto tidak dapat diambil. Silakan coba lagi.',
+      );
+    }
   }
 
   Widget _buildStaffNoteCard(QCMaterialFormProvider p) {

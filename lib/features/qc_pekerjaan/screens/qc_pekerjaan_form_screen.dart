@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
@@ -14,6 +13,7 @@ import '../../../shared/widgets/checklist_item_card.dart';
 import '../../../shared/widgets/screen_header.dart';
 import '../../../shared/widgets/confirmation_modal.dart';
 import '../../../shared/providers/qc_pekerjaan_form_provider.dart';
+import '../../../shared/utils/qc_photo_validation.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/models/pekerjaan_model.dart';
 
@@ -184,7 +184,7 @@ class QCPekerjaanFormScreen extends StatelessWidget {
                 onResultValueChanged: (val) => p.updateResult(index, val),
                 onIssueDescriptionChanged: (val) =>
                     p.updateIssueNote(index, val),
-                onAddPhoto: () => _showPhotoSourceOptions(context, p, index),
+                onAddPhoto: () => _capturePhoto(context, p, index),
                 onDeletePhoto: (pIdx) => p.removePhoto(index, pIdx),
               ),
               if (p.isRevisionMode &&
@@ -245,7 +245,7 @@ class QCPekerjaanFormScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _showPhotoSourceOptions(
+  Future<void> _capturePhoto(
     BuildContext context,
     QCPekerjaanFormProvider provider,
     int itemIndex,
@@ -260,48 +260,28 @@ class QCPekerjaanFormScreen extends StatelessWidget {
       return;
     }
 
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      useSafeArea: true,
-      builder: (sheetContext) => Wrap(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.camera_alt_outlined),
-            title: const Text('Take Photo'),
-            onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
-          ),
-          ListTile(
-            leading: const Icon(Icons.photo_library_outlined),
-            title: const Text('Choose from Gallery'),
-            onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
-          ),
-        ],
-      ),
-    );
-
-    if (source == null || !context.mounted) return;
-
     try {
-      final result = await provider.addPhoto(itemIndex, source);
+      final result = await provider.addPhoto(itemIndex);
       if (!context.mounted || result == PhotoAddResult.cancelled) return;
       if (result == PhotoAddResult.limitReached) {
         AppSnackbar.warning(
           context,
           'Maksimal ${QCPekerjaanFormProvider.maxPhotosPerItem} foto untuk setiap checklist.',
         );
+      } else if (result == PhotoAddResult.fileTooLarge) {
+        AppSnackbar.warning(context, qcPhotoTooLargeMessage);
       }
     } on PlatformException {
       if (!context.mounted) return;
-      final sourceName = source == ImageSource.camera ? 'kamera' : 'galeri';
       AppSnackbar.error(
         context,
-        'Tidak dapat mengakses $sourceName. Periksa izin aplikasi lalu coba lagi.',
+        'Tidak dapat mengakses kamera. Periksa izin aplikasi lalu coba lagi.',
       );
     } catch (_) {
       if (!context.mounted) return;
       AppSnackbar.error(
         context,
-        'Foto tidak dapat dipilih. Silakan coba lagi.',
+        'Foto tidak dapat diambil. Silakan coba lagi.',
       );
     }
   }
