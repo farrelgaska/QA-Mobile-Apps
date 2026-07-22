@@ -302,6 +302,8 @@ class QCMaterialFormScreen extends StatelessWidget {
                 standardText: item.standardText,
                 inputType: item.inputType,
                 unit: item.unit,
+                minValue: item.minValue ?? item.validationRule?.minValue,
+                maxValue: item.maxValue ?? item.validationRule?.maxValue,
                 choiceOptions: item.choiceOptions,
                 currentStatus: answer.status,
                 resultValue: answer.value,

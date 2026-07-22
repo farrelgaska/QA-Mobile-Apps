@@ -10,12 +10,16 @@ import 'standard_info_box.dart';
 import 'validation_warning_box.dart';
 import '../models/template_choice_option.dart';
 
+enum _NumericStandardCompliance { compliant, nonCompliant }
+
 class ChecklistItemCard extends StatefulWidget {
   final int itemNumber;
   final String title;
   final String standardText;
   final QCInputType inputType;
   final String? unit;
+  final double? minValue;
+  final double? maxValue;
   final List<String>? choices;
   final List<TemplateChoiceOption> choiceOptions;
 
@@ -42,6 +46,8 @@ class ChecklistItemCard extends StatefulWidget {
     required this.standardText,
     required this.inputType,
     this.unit,
+    this.minValue,
+    this.maxValue,
     this.choices,
     this.choiceOptions = const [],
     required this.currentStatus,
@@ -107,6 +113,7 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
         : widget.resultValue == 'Tidak' || widget.resultValue == 'Tidak Sesuai';
 
     final showIssueField = isBooleanOrChoice && isNonIdeal;
+    final numericCompliance = _numericCompliance;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -152,6 +159,11 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
 
             // 1. Render Input Field by inputType
             _buildInputField(),
+
+            if (numericCompliance != null) ...[
+              _buildNumericComplianceIndicator(numericCompliance),
+              const SizedBox(height: 12),
+            ],
 
             // Render Warning Message if fail (only show formatting/filling errors to staff, not standard failures)
             if (widget.warningMessage != null &&
@@ -232,6 +244,66 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  _NumericStandardCompliance? get _numericCompliance {
+    if (widget.inputType != QCInputType.number ||
+        (widget.minValue == null && widget.maxValue == null)) {
+      return null;
+    }
+
+    final normalizedValue = widget.resultValue.trim().replaceAll(',', '.');
+    if (normalizedValue.isEmpty) return null;
+
+    final actualValue = double.tryParse(normalizedValue);
+    if (actualValue == null || !actualValue.isFinite) return null;
+    if (widget.minValue != null && actualValue < widget.minValue!) {
+      return _NumericStandardCompliance.nonCompliant;
+    }
+    if (widget.maxValue != null && actualValue > widget.maxValue!) {
+      return _NumericStandardCompliance.nonCompliant;
+    }
+    return _NumericStandardCompliance.compliant;
+  }
+
+  Widget _buildNumericComplianceIndicator(
+    _NumericStandardCompliance compliance,
+  ) {
+    final isCompliant = compliance == _NumericStandardCompliance.compliant;
+    return Container(
+      key: const Key('numeric-standard-compliance'),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: isCompliant ? AppColors.approvedBg : AppColors.rejectedBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isCompliant ? AppColors.approvedText : AppColors.rejectedText,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isCompliant ? Icons.check_circle_outline : Icons.error_outline,
+            size: 16,
+            color: isCompliant
+                ? AppColors.approvedText
+                : AppColors.rejectedText,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            isCompliant ? 'Sesuai Standar' : 'Tidak Sesuai Standar',
+            style: TextStyle(
+              color: isCompliant
+                  ? AppColors.approvedText
+                  : AppColors.rejectedText,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
