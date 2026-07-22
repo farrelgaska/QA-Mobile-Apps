@@ -14,7 +14,7 @@ import 'package:mobile/shared/utils/qc_photo_validation.dart';
 
 void main() {
   test(
-    'pekerjaan photo capture uses camera and rejects files over 2 MB',
+    'pekerjaan photo capture uses camera and rejects files over 5 MB',
     () async {
       ImageSource? requestedSource;
       final oversizedPhoto = XFile.fromData(
@@ -52,7 +52,7 @@ void main() {
       expect(result, PhotoAddResult.fileTooLarge);
       expect(provider.pendingItemPhotos[0], isEmpty);
       expect(provider.pendingItemPhotoBytes[0], isEmpty);
-      expect(qcPhotoTooLargeMessage, contains('2 MB'));
+      expect(qcPhotoTooLargeMessage, contains('5 MB'));
     },
   );
 
