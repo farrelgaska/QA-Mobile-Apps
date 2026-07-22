@@ -1,8 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/core/constants/app_colors.dart';
 import 'package:mobile/shared/models/enums.dart';
 import 'package:mobile/shared/models/template_choice_option.dart';
 import 'package:mobile/shared/widgets/checklist_item_card.dart';
+
+Future<void> _pumpNumericCard(
+  WidgetTester tester, {
+  required String value,
+}) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Scaffold(
+        body: ChecklistItemCard(
+          itemNumber: 1,
+          title: 'Diameter ruas atas',
+          standardText: '122 - 128 mm',
+          inputType: QCInputType.number,
+          unit: 'mm',
+          minValue: 122,
+          maxValue: 128,
+          currentStatus: QCResultStatus.notFilled,
+          resultValue: value,
+          issueDescription: '',
+          photos: const [],
+          isLocked: false,
+          onStatusChanged: (_) {},
+          onResultValueChanged: (_) {},
+          onIssueDescriptionChanged: (_) {},
+          onAddPhoto: () {},
+          onDeletePhoto: (_) {},
+        ),
+      ),
+    ),
+  );
+}
 
 void main() {
   const customOptions = [
@@ -21,6 +53,62 @@ void main() {
       position: 1,
     ),
   ];
+
+  group('numeric standard compliance indicator', () {
+    final compliantValues = <String, String>{
+      'minimum boundary': '122',
+      'in range': '125',
+      'maximum boundary': '128',
+    };
+    for (final scenario in compliantValues.entries) {
+      testWidgets('${scenario.key} is compliant', (tester) async {
+        await _pumpNumericCard(tester, value: scenario.value);
+
+        expect(find.text('Sesuai Standar'), findsOneWidget);
+        expect(find.text('Tidak Sesuai Standar'), findsNothing);
+        expect(find.text('Standar: 122 - 128 mm'), findsOneWidget);
+        final indicator = tester.widget<Container>(
+          find.byKey(const Key('numeric-standard-compliance')),
+        );
+        expect(
+          (indicator.decoration! as BoxDecoration).color,
+          AppColors.approvedBg,
+        );
+      });
+    }
+
+    final nonCompliantValues = <String, String>{
+      'below minimum': '121.99',
+      'above maximum': '128.01',
+    };
+    for (final scenario in nonCompliantValues.entries) {
+      testWidgets('${scenario.key} is not compliant', (tester) async {
+        await _pumpNumericCard(tester, value: scenario.value);
+
+        expect(find.text('Tidak Sesuai Standar'), findsOneWidget);
+        expect(find.text('Sesuai Standar'), findsNothing);
+        final indicator = tester.widget<Container>(
+          find.byKey(const Key('numeric-standard-compliance')),
+        );
+        expect(
+          (indicator.decoration! as BoxDecoration).color,
+          AppColors.rejectedBg,
+        );
+      });
+    }
+
+    for (final value in ['', 'bukan angka']) {
+      testWidgets(
+        '${value.isEmpty ? 'empty' : 'invalid'} input hides compliance',
+        (tester) async {
+          await _pumpNumericCard(tester, value: value);
+
+          expect(find.text('Sesuai Standar'), findsNothing);
+          expect(find.text('Tidak Sesuai Standar'), findsNothing);
+        },
+      );
+    }
+  });
 
   testWidgets('choice displays custom label and stores canonical value', (
     tester,
