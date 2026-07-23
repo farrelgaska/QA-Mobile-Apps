@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -13,6 +14,7 @@ import '../../core/utils/validators.dart';
 import '../../shared/models/pekerjaan_model.dart';
 import '../../shared/models/template_choice_option.dart';
 import '../../shared/utils/qc_photo_validation.dart';
+import '../../shared/services/qc_photo_processor.dart';
 
 enum PhotoAddResult { added, cancelled, limitReached, fileTooLarge }
 
@@ -29,6 +31,8 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   final ImagePicker _imagePicker;
   final Future<XFile?> Function(ImageSource source)? photoPicker;
   final ApiService _apiService;
+  final QCPhotoProcessor _photoProcessor;
+  final Set<int> _photoCapturesInProgress = <int>{};
   bool _isInit = false;
   bool _submitAttempted = false;
   bool _isPersisting = false;
@@ -40,8 +44,10 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
     ImagePicker? imagePicker,
     this.photoPicker,
     ApiService? apiService,
+    QCPhotoProcessor? photoProcessor,
   }) : _imagePicker = imagePicker ?? ImagePicker(),
-       _apiService = apiService ?? ApiService();
+       _apiService = apiService ?? ApiService(),
+       _photoProcessor = photoProcessor ?? BoundedQCPhotoProcessor();
 
   /// Public getters for UI consumption
   bool get isReady => _isInit;
@@ -238,28 +244,46 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
     if (photoCount(index) >= maxPhotosPerItem) {
       return PhotoAddResult.limitReached;
     }
+    if (!_photoCapturesInProgress.add(index)) return PhotoAddResult.cancelled;
 
-    final XFile? selectedPhoto =
-        await (photoPicker?.call(ImageSource.camera) ??
-            _imagePicker.pickImage(source: ImageSource.camera));
-    if (selectedPhoto == null) {
-      return PhotoAddResult.cancelled;
-    }
+    try {
+      final XFile? selectedPhoto =
+          await (photoPicker?.call(ImageSource.camera) ??
+              _imagePicker.pickImage(source: ImageSource.camera));
+      if (selectedPhoto == null) {
+        return PhotoAddResult.cancelled;
+      }
 
-    if (photoCount(index) >= maxPhotosPerItem) {
-      return PhotoAddResult.limitReached;
-    }
+      if (photoCount(index) >= maxPhotosPerItem) {
+        return PhotoAddResult.limitReached;
+      }
 
-    final previewBytes = await selectedPhoto.readAsBytes();
-    if (_isDisposed) return PhotoAddResult.cancelled;
-    if (exceedsQCPhotoSizeLimit(previewBytes)) {
-      return PhotoAddResult.fileTooLarge;
+      final QCProcessedPhoto processed;
+      try {
+        processed = await _photoProcessor.process(selectedPhoto);
+      } on QCPhotoProcessingException {
+        return PhotoAddResult.fileTooLarge;
+      }
+      if (_isDisposed) {
+        if (processed.isGenerated) {
+          await _photoProcessor.deleteGeneratedFile(processed.file);
+        }
+        return PhotoAddResult.cancelled;
+      }
+      if (exceedsQCPhotoSizeLimit(processed.bytes)) {
+        if (processed.isGenerated) {
+          await _photoProcessor.deleteGeneratedFile(processed.file);
+        }
+        return PhotoAddResult.fileTooLarge;
+      }
+      pendingItemPhotos[index].add(processed.file);
+      pendingItemPhotoBytes[index].add(processed.bytes);
+      _recalculateStatus(index);
+      notifyListeners();
+      return PhotoAddResult.added;
+    } finally {
+      _photoCapturesInProgress.remove(index);
     }
-    pendingItemPhotos[index].add(selectedPhoto);
-    pendingItemPhotoBytes[index].add(previewBytes);
-    _recalculateStatus(index);
-    notifyListeners();
-    return PhotoAddResult.added;
   }
 
   void removePhoto(int index, int photoIdx) {
@@ -271,6 +295,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
       final removed = pendingItemPhotos[index].removeAt(pendingIndex);
       pendingItemPhotoBytes[index].removeAt(pendingIndex);
       _uploadedObjectPaths.remove(removed);
+      unawaited(_photoProcessor.deleteGeneratedFile(removed));
     }
     _recalculateStatus(index);
     notifyListeners();
@@ -512,6 +537,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         uploadedPhotoPreviewBytes[objectPath] = previewBytes;
         pendingItemPhotos[itemIndex].removeAt(0);
         pendingItemPhotoBytes[itemIndex].removeAt(0);
+        unawaited(_photoProcessor.deleteGeneratedFile(photo));
         persistedPhotos[itemIndex].add(objectPath);
         if (!_isDisposed) notifyListeners();
       }
@@ -547,6 +573,11 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
+    for (final photos in pendingItemPhotos) {
+      for (final photo in photos) {
+        unawaited(_photoProcessor.deleteGeneratedFile(photo));
+      }
+    }
     _isPersisting = false;
     areaController.dispose();
     locationDetailController.dispose();

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -10,7 +11,20 @@ import 'package:mobile/shared/models/qc_material_template_model.dart';
 import 'package:mobile/shared/models/qc_report_model.dart';
 import 'package:mobile/shared/models/template_choice_option.dart';
 import 'package:mobile/shared/providers/qc_material_form_provider.dart';
+import 'package:mobile/shared/services/qc_photo_processor.dart';
 import 'package:mobile/shared/utils/qc_photo_validation.dart';
+
+class _FakePhotoProcessor implements QCPhotoProcessor {
+  final QCProcessedPhoto result;
+
+  _FakePhotoProcessor(this.result);
+
+  @override
+  Future<QCProcessedPhoto> process(XFile photo) async => result;
+
+  @override
+  Future<void> deleteGeneratedFile(XFile photo) async {}
+}
 
 class _UploadCall {
   final XFile file;
@@ -147,7 +161,7 @@ XFile _localPng() => XFile.fromData(
 
 void main() {
   test(
-    'material photo capture uses camera and rejects files over 5 MB',
+    'material photo capture uses camera and rejects processing failure',
     () async {
       ImageSource? requestedSource;
       final oversizedPhoto = XFile.fromData(
@@ -170,9 +184,62 @@ void main() {
       expect(result, QCMaterialPhotoAddResult.fileTooLarge);
       expect(provider.localItemPhotos[0], isEmpty);
       expect(provider.localItemPhotoBytes[0], isEmpty);
-      expect(qcPhotoTooLargeMessage, contains('5 MB'));
+      expect(qcPhotoTooLargeMessage, contains('2 MB'));
     },
   );
+
+  test(
+    'material photo capture stores the processed file and preview',
+    () async {
+      final captured = _localPng();
+      final processedBytes = Uint8List.fromList([4, 3, 2, 1]);
+      final processedFile = XFile.fromData(
+        processedBytes,
+        name: 'processed.jpg',
+        mimeType: 'image/jpeg',
+      );
+      final template = _draftTemplate();
+      final provider = QCMaterialFormProvider(
+        photoPicker: (_) async => captured,
+        photoProcessor: _FakePhotoProcessor(
+          QCProcessedPhoto(
+            file: processedFile,
+            bytes: processedBytes,
+            isGenerated: true,
+          ),
+        ),
+      )..init(template.id, template: template);
+      addTearDown(provider.dispose);
+
+      final result = await provider.addPhoto(0);
+
+      expect(result, QCMaterialPhotoAddResult.added);
+      expect(provider.localItemPhotos[0], [same(processedFile)]);
+      expect(provider.localItemPhotoBytes[0], [processedBytes]);
+    },
+  );
+
+  test('material ignores a repeated capture while one is active', () async {
+    final pickerCompleter = Completer<XFile?>();
+    var pickerCalls = 0;
+    final template = _draftTemplate();
+    final provider = QCMaterialFormProvider(
+      photoPicker: (_) {
+        pickerCalls++;
+        return pickerCompleter.future;
+      },
+    )..init(template.id, template: template);
+    addTearDown(provider.dispose);
+
+    final firstCapture = provider.addPhoto(0);
+    await Future<void>.delayed(Duration.zero);
+    final repeatedResult = await provider.addPhoto(0);
+    pickerCompleter.complete(null);
+
+    expect(repeatedResult, QCMaterialPhotoAddResult.cancelled);
+    expect(await firstCapture, QCMaterialPhotoAddResult.cancelled);
+    expect(pickerCalls, 1);
+  });
 
   test('material revalidates actual bytes immediately before upload', () async {
     final template = _draftTemplate();
