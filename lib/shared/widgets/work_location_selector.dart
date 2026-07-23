@@ -14,6 +14,13 @@ class WorkLocationSelector extends StatefulWidget {
   final TextEditingController noteController;
   final Function(SiteModel) onSiteChanged;
   final Function(bool) onModeChanged;
+  final String? nameErrorText;
+  final String? areaErrorText;
+  final String? segmentErrorText;
+  final ValueChanged<String>? onNameChanged;
+  final ValueChanged<String>? onAreaChanged;
+  final ValueChanged<String>? onSegmentChanged;
+  final String? locationErrorText;
 
   const WorkLocationSelector({
     super.key,
@@ -25,6 +32,13 @@ class WorkLocationSelector extends StatefulWidget {
     required this.noteController,
     required this.onSiteChanged,
     required this.onModeChanged,
+    this.nameErrorText,
+    this.areaErrorText,
+    this.segmentErrorText,
+    this.onNameChanged,
+    this.onAreaChanged,
+    this.onSegmentChanged,
+    this.locationErrorText,
   });
 
   @override
@@ -92,6 +106,13 @@ class _WorkLocationSelectorState extends State<WorkLocationSelector> {
                 ),
               ),
             ),
+            if (widget.locationErrorText != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                widget.locationErrorText!,
+                style: const TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ],
           ],
           
           const SizedBox(height: 12),
@@ -129,6 +150,8 @@ class _WorkLocationSelectorState extends State<WorkLocationSelector> {
               hintText: 'Misal: Pabrikasi Baru Cikarang',
               controller: widget.nameController,
               prefixIcon: Icons.business_outlined,
+              errorText: widget.nameErrorText,
+              onChanged: widget.onNameChanged,
             ),
             const SizedBox(height: 12),
             AppInput(
@@ -136,6 +159,8 @@ class _WorkLocationSelectorState extends State<WorkLocationSelector> {
               hintText: 'Misal: Sektor Timur - Jalur 2',
               controller: widget.areaController,
               prefixIcon: Icons.map_outlined,
+              errorText: widget.areaErrorText,
+              onChanged: widget.onAreaChanged,
             ),
             const SizedBox(height: 12),
             AppInput(
@@ -143,6 +168,8 @@ class _WorkLocationSelectorState extends State<WorkLocationSelector> {
               hintText: 'Misal: Dekat Tiang No. 05',
               controller: widget.segmentController,
               prefixIcon: Icons.location_searching_outlined,
+              errorText: widget.segmentErrorText,
+              onChanged: widget.onSegmentChanged,
             ),
             const SizedBox(height: 12),
             AppInput(
