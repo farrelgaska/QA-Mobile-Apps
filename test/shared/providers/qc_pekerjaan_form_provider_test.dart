@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -20,6 +21,16 @@ class _FailingPhotoProcessor implements QCPhotoProcessor {
 
   @override
   Future<QCProcessedPhoto> process(XFile photo) => Future.error(error);
+
+  @override
+  Future<void> deleteGeneratedFile(XFile photo) async {}
+}
+
+class _ControlledPhotoProcessor implements QCPhotoProcessor {
+  final Completer<QCProcessedPhoto> completer = Completer<QCProcessedPhoto>();
+
+  @override
+  Future<QCProcessedPhoto> process(XFile photo) => completer.future;
 
   @override
   Future<void> deleteGeneratedFile(XFile photo) async {}
@@ -69,6 +80,76 @@ void main() {
       expect(provider.pendingItemPhotos[0], isEmpty);
       expect(provider.pendingItemPhotoBytes[0], isEmpty);
       expect(qcPhotoTooLargeMessage, contains('2 MB'));
+    },
+  );
+
+  test(
+    'pekerjaan exposes preview while processing and blocks persistence',
+    () async {
+      final capturedBytes = Uint8List.fromList([1, 2, 3, 4]);
+      final captured = XFile.fromData(
+        capturedBytes,
+        name: 'capture.jpg',
+        mimeType: 'image/jpeg',
+      );
+      final processor = _ControlledPhotoProcessor();
+      final template = PekerjaanModel(
+        id: 'WRK-PROCESSING',
+        name: 'Processing preview',
+        segment: WorkSegment.construction,
+        description: '',
+        checklistItems: [
+          ChecklistItemModel(
+            id: 'photo-1',
+            title: 'Dokumentasi',
+            inputType: InputType.text,
+            standard: 'Foto lapangan',
+            requiredPhoto: true,
+          ),
+        ],
+        status: 'Aktif',
+      );
+      final provider = QCPekerjaanFormProvider(
+        photoPicker: (_) async => captured,
+        photoProcessor: processor,
+      )..init(template);
+      addTearDown(provider.dispose);
+
+      final addFuture = provider.addPhoto(0);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(provider.processingItemPhotos[0], hasLength(1));
+      expect(
+        provider.processingItemPhotos[0].single.canPreviewSource,
+        isTrue,
+      );
+      expect(provider.pendingItemPhotos[0], isEmpty);
+      provider.updateResult(0, 'Masih dapat diedit');
+      expect(provider.itemResults[0], 'Masih dapat diedit');
+      expect(provider.validateForm(), qcPhotoProcessingMessage);
+      await expectLater(
+        provider.persistReport(QCReportStatus.DRAFT),
+        throwsA(
+          isA<ReportPersistenceException>().having(
+            (error) => error.message,
+            'message',
+            qcPhotoProcessingMessage,
+          ),
+        ),
+      );
+
+      processor.completer.complete(
+        QCProcessedPhoto(
+          file: captured,
+          bytes: capturedBytes,
+          isGenerated: false,
+        ),
+      );
+
+      expect(await addFuture, PhotoAddResult.added);
+      expect(provider.processingItemPhotos[0], isEmpty);
+      expect(provider.pendingItemPhotos[0], [same(captured)]);
+      expect(provider.pendingItemPhotoBytes[0], [capturedBytes]);
     },
   );
 

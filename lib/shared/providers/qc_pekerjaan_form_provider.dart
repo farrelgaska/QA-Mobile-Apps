@@ -9,6 +9,7 @@ import '../../core/services/api_service.dart';
 import '../../shared/models/enums.dart';
 import '../../shared/models/qc_report_model.dart'; // QCReportModel, AdminReview
 import '../../shared/models/qc_checklist_answer_model.dart';
+import '../../shared/models/qc_photo_processing_entry.dart';
 import '../../shared/models/work_location_model.dart';
 import '../../core/utils/validators.dart';
 import '../../shared/models/pekerjaan_model.dart';
@@ -33,6 +34,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   final ApiService _apiService;
   final QCPhotoProcessor _photoProcessor;
   final Set<int> _photoCapturesInProgress = <int>{};
+  int _processingPhotoSequence = 0;
   bool _isInit = false;
   bool _submitAttempted = false;
   bool _isPersisting = false;
@@ -53,6 +55,8 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   bool get isReady => _isInit;
   bool get submitAttempted => _submitAttempted;
   bool get isPersisting => _isPersisting;
+  bool get hasProcessingPhotos =>
+      processingItemPhotos.any((photos) => photos.isNotEmpty);
   PekerjaanModel get pekerjaan => _pekerjaan;
   DummyState get state => _state;
 
@@ -70,6 +74,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   final List<List<String>> itemPhotos = [];
   final List<List<XFile>> pendingItemPhotos = [];
   final List<List<Uint8List>> pendingItemPhotoBytes = [];
+  final List<List<QCPhotoProcessingEntry>> processingItemPhotos = [];
   final Map<String, Uint8List> uploadedPhotoPreviewBytes = {};
   final List<String?> itemWarnings = [];
   final List<String?> itemAdminNotes = [];
@@ -131,6 +136,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         );
         pendingItemPhotos.add([]);
         pendingItemPhotoBytes.add([]);
+        processingItemPhotos.add([]);
         itemStatuses.add(ChecklistStatus.belumDiisi);
         itemWarnings.add(null);
         itemAdminNotes.add(matchingAnswer.adminNote);
@@ -149,6 +155,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         itemPhotos.add([]);
         pendingItemPhotos.add([]);
         pendingItemPhotoBytes.add([]);
+        processingItemPhotos.add([]);
         itemWarnings.add(null);
         itemAdminNotes.add(null);
       }
@@ -189,7 +196,9 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
     final item = _pekerjaan.checklistItems[index];
     final value = itemResults[index].trim();
     final hasPhotos =
-        itemPhotos[index].isNotEmpty || pendingItemPhotos[index].isNotEmpty;
+        itemPhotos[index].isNotEmpty ||
+        pendingItemPhotos[index].isNotEmpty ||
+        processingItemPhotos[index].isNotEmpty;
     final issue = itemIssues[index].trim();
 
     if (value.isEmpty) {
@@ -253,29 +262,43 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
       if (selectedPhoto == null) {
         return PhotoAddResult.cancelled;
       }
+      if (_isDisposed) return PhotoAddResult.cancelled;
 
       if (photoCount(index) >= maxPhotosPerItem) {
         return PhotoAddResult.limitReached;
       }
 
+      final processingEntry = QCPhotoProcessingEntry.fromCapture(
+        id: '$index:${++_processingPhotoSequence}',
+        source: selectedPhoto,
+      );
+      processingItemPhotos[index].add(processingEntry);
+      if (!_isDisposed) notifyListeners();
+
       final QCProcessedPhoto processed;
       try {
         processed = await _photoProcessor.process(selectedPhoto);
       } on QCPhotoProcessingException {
+        _removeProcessingEntry(index, processingEntry.id);
         return PhotoAddResult.fileTooLarge;
+      } catch (_) {
+        _removeProcessingEntry(index, processingEntry.id);
+        rethrow;
       }
-      if (_isDisposed) {
+      if (_isDisposed || !_hasProcessingEntry(index, processingEntry.id)) {
         if (processed.isGenerated) {
           await _photoProcessor.deleteGeneratedFile(processed.file);
         }
         return PhotoAddResult.cancelled;
       }
       if (exceedsQCPhotoSizeLimit(processed.bytes)) {
+        _removeProcessingEntry(index, processingEntry.id);
         if (processed.isGenerated) {
           await _photoProcessor.deleteGeneratedFile(processed.file);
         }
         return PhotoAddResult.fileTooLarge;
       }
+      _removeProcessingEntry(index, processingEntry.id, notify: false);
       pendingItemPhotos[index].add(processed.file);
       pendingItemPhotoBytes[index].add(processed.bytes);
       _recalculateStatus(index);
@@ -292,17 +315,42 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
       uploadedPhotoPreviewBytes.remove(removed);
     } else {
       final pendingIndex = photoIdx - itemPhotos[index].length;
-      final removed = pendingItemPhotos[index].removeAt(pendingIndex);
-      pendingItemPhotoBytes[index].removeAt(pendingIndex);
-      _uploadedObjectPaths.remove(removed);
-      unawaited(_photoProcessor.deleteGeneratedFile(removed));
+      if (pendingIndex < pendingItemPhotos[index].length) {
+        final removed = pendingItemPhotos[index].removeAt(pendingIndex);
+        pendingItemPhotoBytes[index].removeAt(pendingIndex);
+        _uploadedObjectPaths.remove(removed);
+        unawaited(_photoProcessor.deleteGeneratedFile(removed));
+      } else {
+        final processingIndex =
+            pendingIndex - pendingItemPhotos[index].length;
+        processingItemPhotos[index].removeAt(processingIndex);
+      }
     }
     _recalculateStatus(index);
     notifyListeners();
   }
 
   int photoCount(int index) =>
-      itemPhotos[index].length + pendingItemPhotos[index].length;
+      itemPhotos[index].length +
+      pendingItemPhotos[index].length +
+      processingItemPhotos[index].length;
+
+  bool _hasProcessingEntry(int itemIndex, String entryId) {
+    return itemIndex < processingItemPhotos.length &&
+        processingItemPhotos[itemIndex].any((entry) => entry.id == entryId);
+  }
+
+  void _removeProcessingEntry(
+    int itemIndex,
+    String entryId, {
+    bool notify = true,
+  }) {
+    if (itemIndex >= processingItemPhotos.length) return;
+    processingItemPhotos[itemIndex].removeWhere(
+      (entry) => entry.id == entryId,
+    );
+    if (notify && !_isDisposed) notifyListeners();
+  }
 
   bool get hasAnyDraftContent {
     return areaController.text.trim().isNotEmpty ||
@@ -311,10 +359,12 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         staffNoteController.text.trim().isNotEmpty ||
         itemResults.any((val) => val.trim().isNotEmpty) ||
         itemPhotos.any((photosList) => photosList.isNotEmpty) ||
-        pendingItemPhotos.any((photosList) => photosList.isNotEmpty);
+        pendingItemPhotos.any((photosList) => photosList.isNotEmpty) ||
+        processingItemPhotos.any((photosList) => photosList.isNotEmpty);
   }
 
   String? validateForm() {
+    if (hasProcessingPhotos) return qcPhotoProcessingMessage;
     _submitAttempted = true;
     for (int i = 0; i < _pekerjaan.checklistItems.length; i++) {
       _recalculateStatus(i);
@@ -326,7 +376,9 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
       final valStr = itemResults[i].trim();
       final issue = itemIssues[i].trim();
       final hasPhotos =
-          itemPhotos[i].isNotEmpty || pendingItemPhotos[i].isNotEmpty;
+          itemPhotos[i].isNotEmpty ||
+          pendingItemPhotos[i].isNotEmpty ||
+          processingItemPhotos[i].isNotEmpty;
 
       if (item.required && valStr.isEmpty) {
         if (item.inputType == InputType.number) {
@@ -365,6 +417,9 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
 
   Future<void> persistReport(QCReportStatus status) async {
     if (_isPersisting) return;
+    if (hasProcessingPhotos) {
+      throw const ReportPersistenceException(qcPhotoProcessingMessage);
+    }
     _isPersisting = true;
     notifyListeners();
 
@@ -577,6 +632,9 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
       for (final photo in photos) {
         unawaited(_photoProcessor.deleteGeneratedFile(photo));
       }
+    }
+    for (final photos in processingItemPhotos) {
+      photos.clear();
     }
     _isPersisting = false;
     areaController.dispose();

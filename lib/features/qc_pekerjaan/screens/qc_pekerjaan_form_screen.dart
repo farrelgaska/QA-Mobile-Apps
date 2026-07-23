@@ -180,6 +180,7 @@ class QCPekerjaanFormScreen extends StatelessWidget {
                 photos: p.itemPhotos[index],
                 localPhotos: p.pendingItemPhotos[index],
                 localPhotoBytes: p.pendingItemPhotoBytes[index],
+                processingPhotos: p.processingItemPhotos[index],
                 uploadedPhotoPreviewBytes: p.uploadedPhotoPreviewBytes,
                 warningMessage: p.itemWarnings[index],
                 isLocked: false,

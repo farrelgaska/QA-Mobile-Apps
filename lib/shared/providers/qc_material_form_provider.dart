@@ -12,6 +12,7 @@ import '../../shared/models/qc_report_model.dart'; // QCReportModel, AdminReview
 import '../../shared/models/qc_report_sample_model.dart';
 import '../../shared/models/qc_checklist_answer_model.dart';
 import '../../shared/models/qc_material_template_model.dart';
+import '../../shared/models/qc_photo_processing_entry.dart';
 import '../../shared/models/work_location_model.dart';
 import '../../shared/models/site_model.dart';
 import '../../shared/utils/qc_photo_validation.dart';
@@ -74,6 +75,7 @@ class QCMaterialSampleState {
   DateTime updatedAt;
   final List<List<XFile>> localItemPhotos;
   final List<List<Uint8List>> localItemPhotoBytes;
+  final List<List<QCPhotoProcessingEntry>> processingItemPhotos;
 
   QCMaterialSampleState({
     required this.id,
@@ -89,6 +91,10 @@ class QCMaterialSampleState {
        localItemPhotoBytes = List.generate(
          answers.length,
          (_) => <Uint8List>[],
+       ),
+       processingItemPhotos = List.generate(
+         answers.length,
+         (_) => <QCPhotoProcessingEntry>[],
        );
 
   bool get hasContent =>
@@ -98,7 +104,8 @@ class QCMaterialSampleState {
         (answer) => answer.value?.toString().trim().isNotEmpty == true,
       ) ||
       answers.any((answer) => answer.photoPaths.isNotEmpty) ||
-      localItemPhotos.any((photos) => photos.isNotEmpty);
+      localItemPhotos.any((photos) => photos.isNotEmpty) ||
+      processingItemPhotos.any((photos) => photos.isNotEmpty);
 
   void dispose() {
     notesController.dispose();
@@ -114,6 +121,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
   final QCPhotoProcessor _photoProcessor;
   final Map<XFile, String> _uploadedObjectPaths = {};
   final Set<String> _photoCapturesInProgress = <String>{};
+  int _processingPhotoSequence = 0;
   bool _isPersisting = false;
   bool _isNavigating = false;
   bool _isDisposed = false;
@@ -136,6 +144,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
   bool get isReady => _isInit;
   bool get isPersisting => _isPersisting;
   bool get isNavigating => _isNavigating;
+  bool get hasProcessingPhotos => samples.any(
+    (sample) => sample.processingItemPhotos.any((photos) => photos.isNotEmpty),
+  );
   String get reportId => _reportId;
   QCMaterialTemplate get template => _template;
 
@@ -221,6 +232,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
       currentSample?.localItemPhotos ?? samples.first.localItemPhotos;
   List<List<Uint8List>> get localItemPhotoBytes =>
       currentSample?.localItemPhotoBytes ?? samples.first.localItemPhotoBytes;
+  List<List<QCPhotoProcessingEntry>> get processingItemPhotos =>
+      currentSample?.processingItemPhotos ??
+      samples.first.processingItemPhotos;
 
   // Revision state
   bool isRevisionMode = false;
@@ -475,28 +489,52 @@ class QCMaterialFormProvider extends ChangeNotifier {
           await (photoPicker?.call(ImageSource.camera) ??
               _imagePicker.pickImage(source: ImageSource.camera));
       if (selectedPhoto == null) return QCMaterialPhotoAddResult.cancelled;
+      if (_isDisposed) return QCMaterialPhotoAddResult.cancelled;
+
+      final processingEntry = QCPhotoProcessingEntry.fromCapture(
+        id: '$captureKey:${++_processingPhotoSequence}',
+        source: selectedPhoto,
+      );
+      activeSample.processingItemPhotos[index].add(processingEntry);
+      if (!_isDisposed) notifyListeners();
 
       final QCProcessedPhoto processed;
       try {
         processed = await _photoProcessor.process(selectedPhoto);
       } on QCPhotoProcessingException {
+        _removeProcessingEntry(activeSample, index, processingEntry.id);
         return QCMaterialPhotoAddResult.fileTooLarge;
+      } catch (_) {
+        _removeProcessingEntry(activeSample, index, processingEntry.id);
+        rethrow;
       }
-      if (_isDisposed) {
+      if (_isDisposed ||
+          !_hasProcessingEntry(activeSample, index, processingEntry.id)) {
         if (processed.isGenerated) {
           await _photoProcessor.deleteGeneratedFile(processed.file);
         }
         return QCMaterialPhotoAddResult.cancelled;
       }
       if (exceedsQCPhotoSizeLimit(processed.bytes)) {
+        _removeProcessingEntry(activeSample, index, processingEntry.id);
         if (processed.isGenerated) {
           await _photoProcessor.deleteGeneratedFile(processed.file);
         }
         return QCMaterialPhotoAddResult.fileTooLarge;
       }
-      localItemPhotos[index].add(processed.file);
-      localItemPhotoBytes[index].add(processed.bytes);
-      _markCurrentSampleInProgress();
+      _removeProcessingEntry(
+        activeSample,
+        index,
+        processingEntry.id,
+        notify: false,
+      );
+      activeSample.localItemPhotos[index].add(processed.file);
+      activeSample.localItemPhotoBytes[index].add(processed.bytes);
+      activeSample.updatedAt = DateTime.now();
+      if (activeSample.inspectionStatus ==
+          QCSampleInspectionStatus.notStarted) {
+        activeSample.inspectionStatus = QCSampleInspectionStatus.inProgress;
+      }
       notifyListeners();
       return QCMaterialPhotoAddResult.added;
     } finally {
@@ -515,13 +553,43 @@ class QCMaterialFormProvider extends ChangeNotifier {
       answers[answerIndex] = answer.copyWith(photoPaths: updatedPhotoPaths);
     } else {
       final localIndex = photoIdx - storedPhotoCount;
-      final removed = localItemPhotos[index].removeAt(localIndex);
-      localItemPhotoBytes[index].removeAt(localIndex);
-      _uploadedObjectPaths.remove(removed);
-      unawaited(_photoProcessor.deleteGeneratedFile(removed));
+      if (localIndex < localItemPhotos[index].length) {
+        final removed = localItemPhotos[index].removeAt(localIndex);
+        localItemPhotoBytes[index].removeAt(localIndex);
+        _uploadedObjectPaths.remove(removed);
+        unawaited(_photoProcessor.deleteGeneratedFile(removed));
+      } else {
+        final processingIndex = localIndex - localItemPhotos[index].length;
+        processingItemPhotos[index].removeAt(processingIndex);
+      }
     }
     _markCurrentSampleInProgress();
     notifyListeners();
+  }
+
+  bool _hasProcessingEntry(
+    QCMaterialSampleState sample,
+    int itemIndex,
+    String entryId,
+  ) {
+    return samples.contains(sample) &&
+        itemIndex < sample.processingItemPhotos.length &&
+        sample.processingItemPhotos[itemIndex].any(
+          (entry) => entry.id == entryId,
+        );
+  }
+
+  void _removeProcessingEntry(
+    QCMaterialSampleState sample,
+    int itemIndex,
+    String entryId, {
+    bool notify = true,
+  }) {
+    if (itemIndex >= sample.processingItemPhotos.length) return;
+    sample.processingItemPhotos[itemIndex].removeWhere(
+      (entry) => entry.id == entryId,
+    );
+    if (notify && !_isDisposed) notifyListeners();
   }
 
   void updateIssueNote(int index, String value) {
@@ -587,7 +655,8 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
       if (item.requiredPhoto &&
           photos.isEmpty &&
-          sample.localItemPhotos[i].isEmpty) {
+          sample.localItemPhotos[i].isEmpty &&
+          sample.processingItemPhotos[i].isEmpty) {
         return 'Form ${i + 1} - ${item.label}: tambahkan dokumentasi foto terlebih dahulu';
       }
 
@@ -645,6 +714,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
       for (final photo in photos) {
         unawaited(_photoProcessor.deleteGeneratedFile(photo));
       }
+    }
+    for (final photos in sample.processingItemPhotos) {
+      photos.clear();
     }
     sample.dispose();
   }
@@ -720,6 +792,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
   Future<void> persistReport(QCReportStatus status) async {
     if (_isPersisting) return;
+    if (hasProcessingPhotos) {
+      throw const QCMaterialPersistenceException(qcPhotoProcessingMessage);
+    }
     final sampleCountError = _synchronizeSampleCount();
     if (sampleCountError != null) {
       throw QCMaterialPersistenceException(sampleCountError);

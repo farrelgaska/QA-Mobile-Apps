@@ -396,6 +396,7 @@ class QCMaterialFormScreen extends StatelessWidget {
                 photos: answer.photoPaths,
                 localPhotos: p.localItemPhotos[index],
                 localPhotoBytes: p.localItemPhotoBytes[index],
+                processingPhotos: p.processingItemPhotos[index],
                 warningMessage: answer.warningMessage,
                 isLocked: hasValidationError,
                 onStatusChanged: (status) => p.answers[index].status = status,
@@ -599,6 +600,10 @@ class QCMaterialFormScreen extends StatelessWidget {
   }
 
   void _submit(BuildContext context, QCMaterialFormProvider p) {
+    if (p.hasProcessingPhotos) {
+      AppSnackbar.warning(context, qcPhotoProcessingMessage);
+      return;
+    }
     final error = p.validateCurrentStep();
     if (error != null) {
       AppSnackbar.error(context, error);
