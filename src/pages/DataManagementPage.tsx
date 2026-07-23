@@ -69,7 +69,7 @@ export const DataManagementPage: React.FC = () => {
       id: 'template-checklist',
       icon: <ClipboardCheck className="h-7 w-7" />,
       label: 'Template Checklist',
-      description: 'Kelola master template checklist yang digunakan oleh aplikasi mobile QA Staff saat mengisi laporan pengujian di lapangan.',
+      description: 'Kelola master template checklist yang digunakan oleh aplikasi mobile Staff Warehouse saat mengisi laporan pengujian di lapangan.',
       stats: [
         { label: 'Total Checklist', value: dummyMaterials.reduce((a, m) => a + m.checklistItems.length, 0) + dummyPekerjaan.reduce((a, p) => a + p.checklistItems.length, 0) },
         { label: 'Material', value: dummyMaterials.reduce((a, m) => a + m.checklistItems.length, 0) },

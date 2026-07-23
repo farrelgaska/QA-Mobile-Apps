@@ -183,7 +183,7 @@ export const ApprovalPage: React.FC = () => {
                   <TableCell isHeader className="w-24">Jenis QC</TableCell>
                   <TableCell isHeader>Judul Laporan</TableCell>
                   <TableCell isHeader className="w-36">Lokasi</TableCell>
-                  <TableCell isHeader className="w-36">QA Staff</TableCell>
+                  <TableCell isHeader className="w-36">Staff Warehouse</TableCell>
                   <TableCell isHeader className="w-28">Tgl Submit</TableCell>
                   <TableCell isHeader className="w-28 text-center">Hasil Standar</TableCell>
                   <TableCell isHeader className="w-48 text-center">Aksi</TableCell>
@@ -245,7 +245,7 @@ export const ApprovalPage: React.FC = () => {
                         <TableCell>
                           <span className="text-sm text-gray-600">{rep.locationName}</span>
                         </TableCell>
-                        {/* Staff */}
+                        {/* Staff Warehouse */}
                         <TableCell>
                           <p className="text-sm font-semibold text-gray-700">{rep.submittedBy}</p>
                           <p className="text-xs text-gray-400 font-mono">{rep.submittedByNik}</p>

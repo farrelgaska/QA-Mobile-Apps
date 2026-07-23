@@ -250,7 +250,7 @@ export const ReportDetailPage: React.FC = () => {
                 { icon: <FileText className="h-4 w-4" />, label: 'Jenis Inspeksi', value: `QC ${report.type === 'material' ? 'Material' : 'Pekerjaan'}` },
                 { icon: <ClipboardList className="h-4 w-4" />, label: 'Nama Item / Aktivitas', value: report.title },
                 { icon: <MapPin className="h-4 w-4" />, label: 'Lokasi Konstruksi', value: report.locationName },
-                { icon: <User className="h-4 w-4" />, label: 'QA Staff Pengirim', value: `${report.submittedBy} (${report.submittedByNik})` },
+                { icon: <User className="h-4 w-4" />, label: 'Staff Warehouse Pengirim', value: `${report.submittedBy} (${report.submittedByNik})` },
                 {
                   icon: <Calendar className="h-4 w-4" />,
                   label: 'Waktu Pengiriman',

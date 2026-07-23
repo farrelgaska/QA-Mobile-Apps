@@ -276,7 +276,7 @@ export const QCMaterialDetailPage: React.FC = () => {
         <div className="md:col-span-2 space-y-6">
           <Card title="Daftar Parameter Checklist Uji">
             <div className="flex justify-between items-center px-6 py-3 border-b border-gray-100 bg-gray-50/50">
-              <p className="text-xs text-gray-500">Kriteria verifikasi fisik material yang harus diisi oleh QA Staff di lapangan.</p>
+              <p className="text-xs text-gray-500">Kriteria verifikasi fisik material yang harus diisi oleh Staff Warehouse di lapangan.</p>
               <Button
                 onClick={() => { setEditingItem(null); setIsParameterModalOpen(true); }}
                 size="sm"
