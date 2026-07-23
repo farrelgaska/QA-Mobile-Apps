@@ -1,4 +1,6 @@
 // Refactored QC Material Form using Provider
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -20,7 +22,7 @@ import '../../../shared/widgets/app_snackbar.dart';
 
 import '../../../shared/models/qc_material_template_model.dart';
 
-class QCMaterialFormScreen extends StatelessWidget {
+class QCMaterialFormScreen extends StatefulWidget {
   final String materialId;
   final String? editReportId;
   final bool isRevision;
@@ -35,14 +37,33 @@ class QCMaterialFormScreen extends StatelessWidget {
   });
 
   @override
+  State<QCMaterialFormScreen> createState() => _QCMaterialFormScreenState();
+}
+
+class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
+  final ScrollController _scrollController = ScrollController();
+  Timer? _reviewHighlightTimer;
+  bool _navigationEligibilityInitialized = false;
+  bool _eligibilityAtLastNavigation = false;
+  bool _hasHighlightedReviewEligibility = false;
+  bool _highlightReviewWarning = false;
+
+  @override
+  void dispose() {
+    _reviewHighlightTimer?.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => QCMaterialFormProvider()
         ..init(
-          materialId,
-          editReportId: editReportId,
-          isRevision: isRevision,
-          template: template,
+          widget.materialId,
+          editReportId: widget.editReportId,
+          isRevision: widget.isRevision,
+          template: widget.template,
         ),
       child: Consumer<QCMaterialFormProvider>(
         builder: (context, provider, _) {
@@ -54,11 +75,18 @@ class QCMaterialFormScreen extends StatelessWidget {
             );
           }
           final tpl = provider.template;
+          if (!_navigationEligibilityInitialized) {
+            _navigationEligibilityInitialized = true;
+            _eligibilityAtLastNavigation = provider.isReviewRequestEligible;
+            _hasHighlightedReviewEligibility = provider.isReviewRequestEligible;
+          }
           final generalFieldContexts = <QCMaterialGeneralField, BuildContext>{};
           return Scaffold(
             backgroundColor: AppColors.background,
             body: SafeArea(
               child: SingleChildScrollView(
+                key: const Key('qc_material_form_scroll'),
+                controller: _scrollController,
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20.0,
@@ -224,7 +252,7 @@ class QCMaterialFormScreen extends StatelessWidget {
     QCMaterialFormProvider provider,
   ) {
     final request = provider.reviewRequest;
-    return AppCard(
+    final card = AppCard(
       key: const Key('qc_material_review_request_card'),
       color: AppColors.rejectedBg,
       border: Border.all(color: AppColors.rejectedText),
@@ -290,6 +318,19 @@ class QCMaterialFormScreen extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+    return AnimatedScale(
+      scale: _highlightReviewWarning ? 1.015 : 1,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+      child: KeyedSubtree(
+        key: Key(
+          _highlightReviewWarning
+              ? 'qc_material_review_warning_highlight'
+              : 'qc_material_review_warning_idle',
+        ),
+        child: card,
       ),
     );
   }
@@ -811,8 +852,15 @@ class QCMaterialFormScreen extends StatelessWidget {
                       onPressed: navigationDisabled
                           ? null
                           : () async {
+                              final previousStep = p.currentStep;
                               final error = await p.nextStep();
-                              if (!context.mounted || error == null) return;
+                              if (!mounted || !context.mounted) return;
+                              if (error == null) {
+                                if (p.currentStep != previousStep) {
+                                  _handleSuccessfulNext(p);
+                                }
+                                return;
+                              }
                               final invalidField = p.firstInvalidGeneralField;
                               final invalidContext =
                                   generalFieldContexts[invalidField];
@@ -863,6 +911,45 @@ class QCMaterialFormScreen extends StatelessWidget {
         ],
       ],
     );
+  }
+
+  void _handleSuccessfulNext(QCMaterialFormProvider provider) {
+    final eligibilityBecameActive =
+        provider.isReviewRequestEligible && !_eligibilityAtLastNavigation;
+    _eligibilityAtLastNavigation = provider.isReviewRequestEligible;
+    if (eligibilityBecameActive && !_hasHighlightedReviewEligibility) {
+      _startReviewWarningHighlight();
+    }
+    _scheduleScrollToTop();
+  }
+
+  void _startReviewWarningHighlight() {
+    _hasHighlightedReviewEligibility = true;
+    _reviewHighlightTimer?.cancel();
+    setState(() => _highlightReviewWarning = true);
+    _reviewHighlightTimer = Timer(const Duration(milliseconds: 800), () {
+      if (!mounted) return;
+      setState(() => _highlightReviewWarning = false);
+    });
+  }
+
+  void _scheduleScrollToTop() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      unawaited(_animateScrollToTop());
+    });
+  }
+
+  Future<void> _animateScrollToTop() async {
+    try {
+      await _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    } catch (_) {
+      // The route may be disposed while the post-navigation animation runs.
+    }
   }
 
   void _submit(BuildContext context, QCMaterialFormProvider p) {
