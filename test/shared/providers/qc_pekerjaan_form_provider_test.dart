@@ -10,7 +10,20 @@ import 'package:mobile/shared/models/qc_checklist_answer_model.dart';
 import 'package:mobile/shared/models/qc_report_model.dart';
 import 'package:mobile/shared/models/template_choice_option.dart';
 import 'package:mobile/shared/providers/qc_pekerjaan_form_provider.dart';
+import 'package:mobile/shared/services/qc_photo_processor.dart';
 import 'package:mobile/shared/utils/qc_photo_validation.dart';
+
+class _FailingPhotoProcessor implements QCPhotoProcessor {
+  final Object error;
+
+  _FailingPhotoProcessor(this.error);
+
+  @override
+  Future<QCProcessedPhoto> process(XFile photo) => Future.error(error);
+
+  @override
+  Future<void> deleteGeneratedFile(XFile photo) async {}
+}
 
 void main() {
   test(
@@ -18,7 +31,7 @@ void main() {
     () async {
       ImageSource? requestedSource;
       final oversizedPhoto = XFile.fromData(
-        Uint8List(maxQCPhotoSizeBytes + 1),
+        Uint8List.fromList([1]),
         name: 'oversized-pekerjaan.jpg',
         mimeType: 'image/jpeg',
       );
@@ -43,6 +56,9 @@ void main() {
           requestedSource = source;
           return oversizedPhoto;
         },
+        photoProcessor: _FailingPhotoProcessor(
+          const QCPhotoProcessingException(),
+        ),
       )..init(template);
       addTearDown(provider.dispose);
 

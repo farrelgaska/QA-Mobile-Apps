@@ -26,6 +26,18 @@ class _FakePhotoProcessor implements QCPhotoProcessor {
   Future<void> deleteGeneratedFile(XFile photo) async {}
 }
 
+class _FailingPhotoProcessor implements QCPhotoProcessor {
+  final Object error;
+
+  _FailingPhotoProcessor(this.error);
+
+  @override
+  Future<QCProcessedPhoto> process(XFile photo) => Future.error(error);
+
+  @override
+  Future<void> deleteGeneratedFile(XFile photo) async {}
+}
+
 class _UploadCall {
   final XFile file;
   final String reportId;
@@ -165,7 +177,7 @@ void main() {
     () async {
       ImageSource? requestedSource;
       final oversizedPhoto = XFile.fromData(
-        Uint8List(maxQCPhotoSizeBytes + 1),
+        Uint8List.fromList([1]),
         name: 'oversized-material.jpg',
         mimeType: 'image/jpeg',
       );
@@ -175,6 +187,9 @@ void main() {
           requestedSource = source;
           return oversizedPhoto;
         },
+        photoProcessor: _FailingPhotoProcessor(
+          const QCPhotoProcessingException(),
+        ),
       )..init(template.id, template: template);
       addTearDown(provider.dispose);
 
@@ -187,6 +202,27 @@ void main() {
       expect(qcPhotoTooLargeMessage, contains('2 MB'));
     },
   );
+
+  test('failed HEIC conversion does not add a material photo', () async {
+    final captured = XFile.fromData(
+      Uint8List.fromList([1]),
+      name: 'broken.heic',
+      mimeType: 'image/heic',
+    );
+    final template = _draftTemplate();
+    final provider = QCMaterialFormProvider(
+      photoPicker: (_) async => captured,
+      photoProcessor: _FailingPhotoProcessor(const QCPhotoDecodingException()),
+    )..init(template.id, template: template);
+    addTearDown(provider.dispose);
+
+    await expectLater(
+      provider.addPhoto(0),
+      throwsA(isA<QCPhotoDecodingException>()),
+    );
+    expect(provider.localItemPhotos[0], isEmpty);
+    expect(provider.localItemPhotoBytes[0], isEmpty);
+  });
 
   test(
     'material photo capture stores the processed file and preview',
