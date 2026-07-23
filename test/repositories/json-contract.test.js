@@ -34,7 +34,11 @@ test('JSON repositories satisfy the existing repository contract in OS temp', t 
   assert.equal(templates.findById('MAT-JSON'), undefined);
   assert.throws(() => templates.delete('MAT-MISSING'), error => error.statusCode === 404);
 
-  assert.deepEqual(reports.create(report), report);
+  assert.deepEqual(reports.create(report), {
+    ...report,
+    sample_count: 1,
+    samples: []
+  });
   assert.equal(reports.findById('QC-JSON').status, 'DRAFT');
   assert.equal(reports.update('QC-JSON', { status: 'SUBMITTED' }).status, 'SUBMITTED');
   assert.equal(reports.findAll().length, 1);

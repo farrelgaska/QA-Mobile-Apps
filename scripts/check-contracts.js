@@ -90,6 +90,47 @@ const mockReport = {
     reviewed_at: new Date().toISOString()
   },
   general_photos: [],
+  sample_count: 2,
+  samples: [
+    {
+      id: 'sample-001',
+      sample_number: 1,
+      inspection_status: 'COMPLETED',
+      checklist_answers: [
+        {
+          checklist_item_id: 'item-1',
+          input_type: 'number',
+          actual_value: 6,
+          note: 'Measured',
+          photo_paths: [
+            'reports/QC-REP-123/checklist/item-1/123e4567-e89b-42d3-a456-426614174000.jpg'
+          ],
+          standard_text: '>= 5mm',
+          standard_value: 5,
+          unit: 'mm',
+          upper_tolerance: null,
+          lower_tolerance: null,
+          minimum_value: 5,
+          maximum_value: 10,
+          evaluation_status: 'WITHIN_STANDARD'
+        }
+      ],
+      notes: '',
+      photo_paths: [],
+      created_at: '2026-07-23T01:00:00.000Z',
+      updated_at: '2026-07-23T01:05:00.000Z'
+    },
+    {
+      id: 'sample-002',
+      sample_number: 2,
+      inspection_status: 'NOT_STARTED',
+      checklist_answers: [],
+      notes: '',
+      photo_paths: [],
+      created_at: '2026-07-23T01:10:00.000Z',
+      updated_at: '2026-07-23T01:10:00.000Z'
+    }
+  ],
   revision_number: 1,
   migration_metadata: {
     legacy_revision_history: []

@@ -1,6 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 const { REPORTS_FILE } = require('../config/env');
+const {
+  mergeReportSamplePatch,
+  normalizeReportSampleFields
+} = require('../contracts/report.contract');
 
 class JsonReportRepository {
   constructor(filePath = REPORTS_FILE) {
@@ -8,6 +12,7 @@ class JsonReportRepository {
   }
 
   _read() {
+    let reports;
     try {
       if (!fs.existsSync(this.filePath)) {
         const dir = path.dirname(this.filePath);
@@ -18,10 +23,14 @@ class JsonReportRepository {
         return [];
       }
       const raw = fs.readFileSync(this.filePath, 'utf-8');
-      return JSON.parse(raw);
+      reports = JSON.parse(raw);
     } catch (e) {
       throw new Error(`Failed to read reports database: ${e.message}`);
     }
+    return reports.map(report => ({
+      ...report,
+      ...normalizeReportSampleFields(report)
+    }));
   }
 
   _write(data) {
@@ -59,9 +68,13 @@ class JsonReportRepository {
       err.statusCode = 409;
       throw err;
     }
-    reports.push(report);
+    const normalized = {
+      ...report,
+      ...normalizeReportSampleFields(report)
+    };
+    reports.push(normalized);
     this._write(reports);
-    return report;
+    return normalized;
   }
 
   update(id, patchData) {
@@ -72,10 +85,20 @@ class JsonReportRepository {
       err.statusCode = 404;
       throw err;
     }
-    const updated = {
+    const merged = {
       ...reports[index],
       ...patchData,
       id // Ensure ID is never changed
+    };
+    if (patchData.sampleCount !== undefined && patchData.sample_count === undefined) {
+      merged.sample_count = patchData.sampleCount;
+    }
+    if (patchData.samples !== undefined) {
+      merged.samples = mergeReportSamplePatch(reports[index].samples, patchData.samples);
+    }
+    const updated = {
+      ...merged,
+      ...normalizeReportSampleFields(merged)
     };
     reports[index] = updated;
     this._write(reports);

@@ -1,4 +1,5 @@
 const { checklistItemSchema, templateSchema } = require('../../contracts/template.contract');
+const { normalizeReportSampleFields } = require('../../contracts/report.contract');
 
 const toIso = value => value instanceof Date ? value.toISOString() : value;
 const valueOf = (object, canonical, legacy, fallback) => {
@@ -136,7 +137,30 @@ const mapReportItemRow = (row, attachmentRows = []) => ({
   admin_note: row.admin_note
 });
 
-const mapReportAggregate = (row, itemRows = [], reviewRow = null, attachmentRows = []) => {
+const mapSampleAnswerRow = row => ({
+  checklist_item_id: row.checklist_item_id,
+  input_type: row.input_type,
+  actual_value: row.actual_value,
+  note: row.note,
+  photo_paths: row.photo_paths || [],
+  standard_text: row.standard_text,
+  standard_value: nullableNumber(row.standard_value),
+  unit: row.unit,
+  upper_tolerance: nullableNumber(row.upper_tolerance),
+  lower_tolerance: nullableNumber(row.lower_tolerance),
+  minimum_value: nullableNumber(row.minimum_value),
+  maximum_value: nullableNumber(row.maximum_value),
+  evaluation_status: row.evaluation_status
+});
+
+const mapReportAggregate = (
+  row,
+  itemRows = [],
+  reviewRow = null,
+  attachmentRows = [],
+  sampleRows = [],
+  sampleAnswerRows = []
+) => {
   const itemAttachments = new Map();
   const generalPhotos = [];
   for (const attachment of attachmentRows) {
@@ -146,6 +170,13 @@ const mapReportAggregate = (row, itemRows = [], reviewRow = null, attachmentRows
       list.push(attachment);
       itemAttachments.set(attachment.report_item_id, list);
     }
+  }
+
+  const answersBySample = new Map();
+  for (const answer of sampleAnswerRows) {
+    const answers = answersBySample.get(answer.sample_id) || [];
+    answers.push(mapSampleAnswerRow(answer));
+    answersBySample.set(answer.sample_id, answers);
   }
 
   return {
@@ -173,6 +204,17 @@ const mapReportAggregate = (row, itemRows = [], reviewRow = null, attachmentRows
       reviewed_by: reviewRow.reviewed_by
     } : null,
     general_photos: generalPhotos,
+    sample_count: row.sample_count ?? 1,
+    samples: sampleRows.map(sample => ({
+      id: sample.id,
+      sample_number: sample.sample_number,
+      inspection_status: sample.inspection_status,
+      checklist_answers: answersBySample.get(sample.id) || [],
+      notes: sample.notes,
+      photo_paths: sample.photo_paths || [],
+      created_at: toIso(sample.created_at),
+      updated_at: toIso(sample.updated_at)
+    })),
     revision_number: row.revision_number,
     ...(row.migration_metadata ? { migration_metadata: row.migration_metadata } : {})
   };
@@ -204,7 +246,9 @@ const canonicalTemplateInput = template => {
   throw error;
 };
 
-const canonicalReportInput = report => ({
+const canonicalReportInput = report => {
+  const sampleFields = normalizeReportSampleFields(report);
+  return {
   id: report.id,
   type: report.type || 'MATERIAL',
   template_id: valueOf(report, 'template_id', 'templateId', ''),
@@ -230,9 +274,12 @@ const canonicalReportInput = report => ({
   submitted_at: valueOf(report, 'submitted_at', 'submittedAt', null),
   admin_review: valueOf(report, 'admin_review', 'adminReview', null),
   general_photos: valueOf(report, 'general_photos', 'generalPhotos', []),
+  sample_count: sampleFields.sample_count,
+  samples: sampleFields.samples,
   revision_number: valueOf(report, 'revision_number', 'revisionNumber', 1),
   migration_metadata: report.migration_metadata || null
-});
+  };
+};
 
 module.exports = {
   mapTemplateItemRow,
@@ -241,6 +288,7 @@ module.exports = {
   canonicalTemplateItemInput,
   mergeTemplateItemPatch,
   mapReportItemRow,
+  mapSampleAnswerRow,
   mapReportAggregate,
   canonicalTemplateShape,
   canonicalTemplateInput,

@@ -1,10 +1,11 @@
 const { getPool } = require('../database/postgres');
 const { canonicalReportInput, mapReportAggregate } = require('./postgres/mappers');
 const { notFound, translatePostgresError } = require('./repository-errors');
+const { mergeReportSamplePatch } = require('../contracts/report.contract');
 
 const ROOT_COLUMNS = `id, type, template_id, form_code, title, status, staff_name,
   staff_nik, site_id, site_name, area, detail_location, general_info, staff_note,
-  submitted_at, revision_number, migration_metadata, created_at, updated_at`;
+  submitted_at, revision_number, migration_metadata, sample_count, created_at, updated_at`;
 
 class PostgresReportRepository {
   constructor(pool = getPool()) {
@@ -32,34 +33,51 @@ class PostgresReportRepository {
       [id]
     );
     if (!rootResult.rows[0]) return undefined;
-    const [items, reviews, attachments] = await Promise.all([
+    const [items, reviews, attachments, samples, sampleAnswers] = await Promise.all([
       executor.query('select * from public.qc_report_items where report_id = $1 order by id', [id]),
       executor.query('select * from public.qc_report_admin_reviews where report_id = $1', [id]),
-      executor.query('select * from public.qc_report_attachments where report_id = $1 order by sort_order, id', [id])
+      executor.query('select * from public.qc_report_attachments where report_id = $1 order by sort_order, id', [id]),
+      executor.query('select * from public.qc_report_samples where report_id = $1 order by position', [id]),
+      executor.query('select * from public.qc_report_sample_answers where report_id = $1 order by sample_id, position', [id])
     ]);
-    return mapReportAggregate(rootResult.rows[0], items.rows, reviews.rows[0] || null, attachments.rows);
+    return mapReportAggregate(
+      rootResult.rows[0],
+      items.rows,
+      reviews.rows[0] || null,
+      attachments.rows,
+      samples.rows,
+      sampleAnswers.rows
+    );
   }
 
   async findAll() {
     const roots = await this.pool.query(`select ${ROOT_COLUMNS} from public.qc_reports order by created_at, id`);
     if (roots.rows.length === 0) return [];
     const ids = roots.rows.map(row => row.id);
-    const [items, reviews, attachments] = await Promise.all([
+    const [items, reviews, attachments, samples, sampleAnswers] = await Promise.all([
       this.pool.query('select * from public.qc_report_items where report_id = any($1::text[]) order by report_id, id', [ids]),
       this.pool.query('select * from public.qc_report_admin_reviews where report_id = any($1::text[])', [ids]),
-      this.pool.query('select * from public.qc_report_attachments where report_id = any($1::text[]) order by report_id, sort_order, id', [ids])
+      this.pool.query('select * from public.qc_report_attachments where report_id = any($1::text[]) order by report_id, sort_order, id', [ids]),
+      this.pool.query('select * from public.qc_report_samples where report_id = any($1::text[]) order by report_id, position', [ids]),
+      this.pool.query('select * from public.qc_report_sample_answers where report_id = any($1::text[]) order by report_id, sample_id, position', [ids])
     ]);
     const itemMap = new Map(ids.map(id => [id, []]));
     const reviewMap = new Map();
     const attachmentMap = new Map(ids.map(id => [id, []]));
+    const sampleMap = new Map(ids.map(id => [id, []]));
+    const sampleAnswerMap = new Map(ids.map(id => [id, []]));
     for (const item of items.rows) itemMap.get(item.report_id).push(item);
     for (const review of reviews.rows) reviewMap.set(review.report_id, review);
     for (const attachment of attachments.rows) attachmentMap.get(attachment.report_id).push(attachment);
+    for (const sample of samples.rows) sampleMap.get(sample.report_id).push(sample);
+    for (const answer of sampleAnswers.rows) sampleAnswerMap.get(answer.report_id).push(answer);
     return roots.rows.map(row => mapReportAggregate(
       row,
       itemMap.get(row.id),
       reviewMap.get(row.id) || null,
-      attachmentMap.get(row.id)
+      attachmentMap.get(row.id),
+      sampleMap.get(row.id),
+      sampleAnswerMap.get(row.id)
     ));
   }
 
@@ -74,14 +92,15 @@ class PostgresReportRepository {
       report.location?.site_id || '', report.location?.site_name || '',
       report.location?.area || '', report.location?.detail_location || '',
       report.general_info, report.staff_note, report.submitted_at,
-      report.revision_number, report.migration_metadata
+      report.revision_number, report.migration_metadata, report.sample_count
     ];
     if (update) {
       await client.query(
         `update public.qc_reports set type=$2, template_id=$3, form_code=$4, title=$5,
           status=$6, staff_name=$7, staff_nik=$8, site_id=$9, site_name=$10,
           area=$11, detail_location=$12, general_info=$13, staff_note=$14,
-          submitted_at=$15, revision_number=$16, migration_metadata=$17, updated_at=now()
+          submitted_at=$15, revision_number=$16, migration_metadata=$17,
+          sample_count=$18, updated_at=now()
          where id=$1`,
         values
       );
@@ -90,8 +109,8 @@ class PostgresReportRepository {
         `insert into public.qc_reports (
           id,type,template_id,form_code,title,status,staff_name,staff_nik,site_id,
           site_name,area,detail_location,general_info,staff_note,submitted_at,
-          revision_number,migration_metadata
-        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+          revision_number,migration_metadata,sample_count
+        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
         values
       );
     }
@@ -109,6 +128,37 @@ class PostgresReportRepository {
           item.unit, item.actual_value, item.staff_note, item.admin_evaluation, item.admin_note
         ]
       );
+    }
+
+    for (let sampleIndex = 0; sampleIndex < report.samples.length; sampleIndex++) {
+      const sample = report.samples[sampleIndex];
+      await client.query(
+        `insert into public.qc_report_samples (
+          report_id,id,sample_number,inspection_status,notes,photo_paths,position,
+          created_at,updated_at
+        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [
+          report.id, sample.id, sample.sample_number, sample.inspection_status,
+          sample.notes, sample.photo_paths, sampleIndex, sample.created_at, sample.updated_at
+        ]
+      );
+      for (let answerIndex = 0; answerIndex < sample.checklist_answers.length; answerIndex++) {
+        const answer = sample.checklist_answers[answerIndex];
+        await client.query(
+          `insert into public.qc_report_sample_answers (
+            report_id,sample_id,checklist_item_id,input_type,actual_value,note,
+            photo_paths,standard_text,standard_value,unit,upper_tolerance,
+            lower_tolerance,minimum_value,maximum_value,evaluation_status,position
+          ) values ($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+          [
+            report.id, sample.id, answer.checklist_item_id, answer.input_type,
+            JSON.stringify(answer.actual_value), answer.note, answer.photo_paths,
+            answer.standard_text, answer.standard_value, answer.unit,
+            answer.upper_tolerance, answer.lower_tolerance, answer.minimum_value,
+            answer.maximum_value, answer.evaluation_status, answerIndex
+          ]
+        );
+      }
     }
 
     const review = report.admin_review;
@@ -172,15 +222,20 @@ class PostgresReportRepository {
         ['templateId', 'template_id'], ['formCode', 'form_code'],
         ['checklistItems', 'checklist_items'], ['staffNote', 'staff_note'],
         ['submittedAt', 'submitted_at'], ['adminReview', 'admin_review'],
-        ['generalPhotos', 'general_photos'], ['revisionNumber', 'revision_number']
+        ['generalPhotos', 'general_photos'], ['revisionNumber', 'revision_number'],
+        ['sampleCount', 'sample_count']
       ];
       for (const [legacy, canonical] of aliases) {
         if (patch[legacy] !== undefined && patch[canonical] === undefined) merged[canonical] = patch[legacy];
+      }
+      if (patch.samples !== undefined) {
+        merged.samples = mergeReportSamplePatch(current.samples, patch.samples);
       }
       const report = canonicalReportInput(merged);
       await this._writeRoot(client, report, true);
       await client.query('delete from public.qc_report_attachments where report_id = $1', [id]);
       await client.query('delete from public.qc_report_admin_reviews where report_id = $1', [id]);
+      await client.query('delete from public.qc_report_samples where report_id = $1', [id]);
       await client.query('delete from public.qc_report_items where report_id = $1', [id]);
       await this._writeChildren(client, report);
       return this._findById(client, id);

@@ -32,7 +32,7 @@ test('report rows and attachment rows map to the canonical nested contract', () 
     status: 'SUBMITTED', staff_name: 'Ayu', staff_nik: 'N-1', site_id: 'S-1',
     site_name: 'Site', area: 'A', detail_location: 'Bay', general_info: { batch: 'B' },
     staff_note: '', submitted_at: new Date('2026-01-03T00:00:00.000Z'),
-    revision_number: 1, migration_metadata: null
+    sample_count: 2, revision_number: 1, migration_metadata: null
   }, [{
     report_id: 'QC-1', id: 'I-1', parameter_name: 'Length', input_type: 'number',
     standard_text: '10', unit: 'm', actual_value: '9.8', staff_note: '',
@@ -40,10 +40,29 @@ test('report rows and attachment rows map to the canonical nested contract', () 
   }], null, [
     { id: 1, attachment_scope: 'GENERAL', report_item_id: null, uri: 'general.jpg' },
     { id: 2, attachment_scope: 'ITEM', report_item_id: 'I-1', uri: 'item.jpg' }
-  ]);
+  ], [{
+    report_id: 'QC-1', id: 'sample-2', sample_number: 2,
+    inspection_status: 'IN_PROGRESS', notes: '', photo_paths: [],
+    position: 0, created_at: new Date('2026-01-03T01:00:00.000Z'),
+    updated_at: new Date('2026-01-03T01:05:00.000Z')
+  }, {
+    report_id: 'QC-1', id: 'sample-1', sample_number: 1,
+    inspection_status: 'COMPLETED', notes: 'First', photo_paths: [],
+    position: 1, created_at: new Date('2026-01-03T00:00:00.000Z'),
+    updated_at: new Date('2026-01-03T00:05:00.000Z')
+  }], [{
+    report_id: 'QC-1', sample_id: 'sample-1', checklist_item_id: 'I-1',
+    input_type: 'number', actual_value: 9.8, note: '',
+    photo_paths: [], standard_text: '10 mm', standard_value: '10', unit: 'mm',
+    upper_tolerance: '5', lower_tolerance: '-5', minimum_value: '9.5',
+    maximum_value: '10.5', evaluation_status: 'WITHIN_STANDARD', position: 0
+  }]);
 
   assert.deepEqual(report.general_photos, ['general.jpg']);
   assert.deepEqual(report.checklist_items[0].item_photos, ['item.jpg']);
+  assert.deepEqual(report.samples.map(sample => sample.id), ['sample-2', 'sample-1']);
+  assert.equal(report.samples[1].checklist_answers[0].standard_value, 10);
+  assert.equal(report.samples[1].checklist_answers[0].actual_value, 9.8);
   assert.equal(report.admin_review, null);
   assert.doesNotThrow(() => reportSchema.parse(report));
 });

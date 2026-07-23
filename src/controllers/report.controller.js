@@ -1,10 +1,29 @@
 const { reportRepository } = require('../repositories');
+const { normalizeReportSampleFields } = require('../contracts/report.contract');
 
 const validateObjectBody = (req, res, next) => {
   if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
     return res.status(400).json({ error: 'Request body must be a non-array JSON object' });
   }
   next();
+};
+
+const validateAndNormalizeSampleInput = (reportData, { patch = false } = {}) => {
+  const hasSampleCount = reportData.sample_count !== undefined ||
+    reportData.sampleCount !== undefined;
+  const hasSamples = reportData.samples !== undefined;
+  if (patch && !hasSampleCount && !hasSamples) return;
+
+  const normalized = normalizeReportSampleFields({
+    sample_count: hasSampleCount
+      ? (reportData.sample_count ?? reportData.sampleCount)
+      : undefined,
+    samples: hasSamples ? reportData.samples : []
+  });
+
+  if (!patch || hasSampleCount) reportData.sample_count = normalized.sample_count;
+  if (!patch || hasSamples) reportData.samples = normalized.samples;
+  delete reportData.sampleCount;
 };
 
 const getReports = async (req, res, next) => {
@@ -45,6 +64,7 @@ const createReport = async (req, res, next) => {
       });
     }
 
+    validateAndNormalizeSampleInput(reportData);
     const created = await reportRepository.create(reportData);
     res.status(201).json(created);
   } catch (err) {
@@ -61,6 +81,7 @@ const patchReport = async (req, res, next) => {
       });
     }
 
+    validateAndNormalizeSampleInput(req.body, { patch: true });
     const updated = await reportRepository.update(req.params.id, req.body);
     res.json(updated);
   } catch (err) {
@@ -79,6 +100,7 @@ const deleteReport = async (req, res, next) => {
 
 module.exports = {
   validateObjectBody,
+  validateAndNormalizeSampleInput,
   getReports,
   getReportById,
   createReport,

@@ -114,3 +114,32 @@ migration. After deployment, create a new compensating migration that drops, in
 order, the constraint triggers, attachment/review/item tables, report/template
 tables, and finally the two trigger functions. Dropping these tables destroys
 data and must never be done as an automatic application rollback.
+
+## Multi-sample persistence
+
+Migration `20260723000100_add_qc_report_samples.sql` adds
+`qc_reports.sample_count`, `qc_report_samples`, and
+`qc_report_sample_answers`. The migration is additive and does not change or
+remove the existing report checklist tables. `sample_count` defaults to `1`,
+so historical rows remain readable with an empty `samples` collection.
+
+Samples and their answers are normalized instead of storing the entire sample
+array in a report JSON document. This avoids duplicating the report snapshot,
+supports updates to one sample independently, and makes identity, uniqueness,
+and ordering enforceable in PostgreSQL. Explicit `position` columns preserve
+API array order. Only the polymorphic `actual_value` uses JSONB, preserving
+number, boolean, choice, text, and null values without coercion.
+
+Sample answer checklist IDs are preserved as provided but are not foreign-keyed
+to `qc_report_items`: the existing root checklist is a backward-compatible
+snapshot and may be empty for a new sample-native report. The composite sample
+answer key still prevents duplicate checklist item IDs within one sample.
+
+Structured standard fields are stored alongside `standard_text`. The original
+text is retained verbatim for display; `minimum_value` and `maximum_value` are
+calculation inputs only. Parameter evaluation is limited to `NOT_EVALUATED`,
+`WITHIN_STANDARD`, or `OUT_OF_STANDARD`. There is intentionally no sample-level
+pass/fail column or database rule.
+
+Sample and answer photo arrays contain only canonical Supabase `object_path`
+values. Signed URLs and HTTP URLs are rejected by API and database checks.
