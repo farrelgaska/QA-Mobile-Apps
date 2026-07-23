@@ -9,6 +9,7 @@ import 'photo_grid.dart';
 import 'standard_info_box.dart';
 import 'validation_warning_box.dart';
 import '../models/template_choice_option.dart';
+import '../models/qc_photo_processing_entry.dart';
 
 enum _NumericStandardCompliance { compliant, nonCompliant }
 
@@ -29,6 +30,7 @@ class ChecklistItemCard extends StatefulWidget {
   final List<String> photos;
   final List<XFile> localPhotos;
   final List<Uint8List> localPhotoBytes;
+  final List<QCPhotoProcessingEntry> processingPhotos;
   final Map<String, Uint8List> uploadedPhotoPreviewBytes;
   final String? warningMessage;
   final bool isLocked; // locked if auto-validation fails/succeeds on numerics
@@ -56,6 +58,7 @@ class ChecklistItemCard extends StatefulWidget {
     required this.photos,
     this.localPhotos = const [],
     this.localPhotoBytes = const [],
+    this.processingPhotos = const [],
     this.uploadedPhotoPreviewBytes = const {},
     this.warningMessage,
     required this.isLocked,
@@ -236,6 +239,7 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
                     photos: widget.photos,
                     localPhotos: widget.localPhotos,
                     localPhotoBytes: widget.localPhotoBytes,
+                    processingPhotos: widget.processingPhotos,
                     uploadedPhotoPreviewBytes: widget.uploadedPhotoPreviewBytes,
                     onDelete: widget.onDeletePhoto,
                   ),

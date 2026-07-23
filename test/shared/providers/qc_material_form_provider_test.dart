@@ -38,6 +38,19 @@ class _FailingPhotoProcessor implements QCPhotoProcessor {
   Future<void> deleteGeneratedFile(XFile photo) async {}
 }
 
+class _ControlledPhotoProcessor implements QCPhotoProcessor {
+  final Completer<QCProcessedPhoto> completer = Completer<QCProcessedPhoto>();
+  final List<XFile> deletedFiles = [];
+
+  @override
+  Future<QCProcessedPhoto> process(XFile photo) => completer.future;
+
+  @override
+  Future<void> deleteGeneratedFile(XFile photo) async {
+    deletedFiles.add(photo);
+  }
+}
+
 class _UploadCall {
   final XFile file;
   final String reportId;
@@ -222,6 +235,155 @@ void main() {
     );
     expect(provider.localItemPhotos[0], isEmpty);
     expect(provider.localItemPhotoBytes[0], isEmpty);
+  });
+
+  test(
+    'material shows JPEG processing preview before final photo is ready',
+    () async {
+      final captured = _localPng();
+      final capturedBytes = await captured.readAsBytes();
+      final processor = _ControlledPhotoProcessor();
+      final template = _draftTemplate();
+      final provider = QCMaterialFormProvider(
+        photoPicker: (_) async => captured,
+        photoProcessor: processor,
+      )..init(template.id, template: template);
+      addTearDown(provider.dispose);
+
+      final addFuture = provider.addPhoto(0);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(provider.processingItemPhotos[0], hasLength(1));
+      expect(
+        provider.processingItemPhotos[0].single.canPreviewSource,
+        isTrue,
+      );
+      expect(provider.localItemPhotos[0], isEmpty);
+      provider.updateAnswer(0, '12');
+      expect(provider.answers[0].value, '12');
+      await expectLater(
+        provider.persistReport(QCReportStatus.DRAFT),
+        throwsA(
+          isA<QCMaterialPersistenceException>().having(
+            (error) => error.message,
+            'message',
+            qcPhotoProcessingMessage,
+          ),
+        ),
+      );
+
+      processor.completer.complete(
+        QCProcessedPhoto(
+          file: captured,
+          bytes: capturedBytes,
+          isGenerated: false,
+        ),
+      );
+
+      expect(await addFuture, QCMaterialPhotoAddResult.added);
+      expect(provider.processingItemPhotos[0], isEmpty);
+      expect(provider.localItemPhotos[0], [same(captured)]);
+      expect(provider.localItemPhotoBytes[0], [capturedBytes]);
+    },
+  );
+
+  test('material shows HEIC placeholder and removes it on failure', () async {
+    final captured = XFile.fromData(
+      Uint8List.fromList([0, 1, 2, 3]),
+      name: 'iphone.heic',
+      mimeType: 'image/heic',
+    );
+    final processor = _ControlledPhotoProcessor();
+    final template = _draftTemplate();
+    final provider = QCMaterialFormProvider(
+      photoPicker: (_) async => captured,
+      photoProcessor: processor,
+    )..init(template.id, template: template);
+    addTearDown(provider.dispose);
+
+    final addFuture = provider.addPhoto(0);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(provider.processingItemPhotos[0], hasLength(1));
+    expect(
+      provider.processingItemPhotos[0].single.canPreviewSource,
+      isFalse,
+    );
+    expect(
+      provider.processingItemPhotos[0].single.processingLabel,
+      'Memproses foto…',
+    );
+
+    processor.completer.completeError(const QCPhotoDecodingException());
+    await expectLater(
+      addFuture,
+      throwsA(isA<QCPhotoDecodingException>()),
+    );
+    expect(provider.processingItemPhotos[0], isEmpty);
+    expect(provider.localItemPhotos[0], isEmpty);
+  });
+
+  test('material ignores a late result after processing preview removal', () async {
+    final captured = _localPng();
+    final processor = _ControlledPhotoProcessor();
+    final template = _draftTemplate();
+    final provider = QCMaterialFormProvider(
+      photoPicker: (_) async => captured,
+      photoProcessor: processor,
+    )..init(template.id, template: template);
+    addTearDown(provider.dispose);
+
+    final addFuture = provider.addPhoto(0);
+    await Future<void>.delayed(Duration.zero);
+    provider.removePhoto(0, 0);
+    expect(provider.processingItemPhotos[0], isEmpty);
+
+    final generated = XFile.fromData(
+      Uint8List.fromList([4, 3, 2, 1]),
+      name: 'processed.jpg',
+      mimeType: 'image/jpeg',
+    );
+    processor.completer.complete(
+      QCProcessedPhoto(
+        file: generated,
+        bytes: Uint8List.fromList([4, 3, 2, 1]),
+        isGenerated: true,
+      ),
+    );
+
+    expect(await addFuture, QCMaterialPhotoAddResult.cancelled);
+    expect(provider.localItemPhotos[0], isEmpty);
+    expect(processor.deletedFiles, [same(generated)]);
+  });
+
+  test('material ignores and cleans a late result after disposal', () async {
+    final captured = _localPng();
+    final processor = _ControlledPhotoProcessor();
+    final template = _draftTemplate();
+    final provider = QCMaterialFormProvider(
+      photoPicker: (_) async => captured,
+      photoProcessor: processor,
+    )..init(template.id, template: template);
+
+    final addFuture = provider.addPhoto(0);
+    await Future<void>.delayed(Duration.zero);
+    provider.dispose();
+
+    final generated = XFile.fromData(
+      Uint8List.fromList([1]),
+      name: 'late.jpg',
+      mimeType: 'image/jpeg',
+    );
+    processor.completer.complete(
+      QCProcessedPhoto(
+        file: generated,
+        bytes: Uint8List.fromList([1]),
+        isGenerated: true,
+      ),
+    );
+
+    expect(await addFuture, QCMaterialPhotoAddResult.cancelled);
+    expect(processor.deletedFiles, [same(generated)]);
   });
 
   test(
