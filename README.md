@@ -1,15 +1,8 @@
 # QA Mobile Apps
 
-QA Mobile Apps adalah prototipe alur **Quality Control (QC)** untuk pemeriksaan
-material dan pekerjaan. Staff Warehouse mencatat inspeksi dan bukti melalui
-aplikasi Mobile, sedangkan Admin meninjau laporan, meminta tindak lanjut, atau
-memberikan persetujuan melalui Admin Web.
+QA Mobile Apps is an integrated Quality Assurance system designed to manage **QC Material** and **QC Pekerjaan** workflows.
 
-> [!WARNING]
-> Proyek ini masih berupa **prototipe/demo** dan tidak boleh dianggap aman atau
-> siap produksi. Login masih disimulasikan, otorisasi role belum ditegakkan
-> end-to-end oleh Backend, dan kebutuhan operasional serta security hardening
-> belum lengkap.
+The system consists of a Flutter application for QA Staff, a React-based Admin Dashboard, an Express API, PostgreSQL, and private object storage.
 
 > Dokumentasi utama: **[Handover Teknis lengkap](docs/HANDOVER.md)**.
 
@@ -28,71 +21,157 @@ assignment, domain API, maupun pengaturan Vercel lainnya.
 
 | Komponen | Pengguna | Tanggung jawab |
 |---|---|---|
-| **Flutter Mobile** | `STAFF_WAREHOUSE` | Mengisi QC Material/QC Pekerjaan, mengambil dan memproses bukti foto, menyimpan draft, submit, melihat riwayat, dan menindaklanjuti revisi |
-| **React Admin Web** | `ADMIN` | Melihat laporan, meninjau jawaban dan bukti, memberi evaluasi/catatan, meminta revisi, dan menyetujui laporan |
-| **Express Backend** | Mobile dan Web | Menyediakan REST API, memvalidasi/menormalisasi data, menangani transaksi laporan dan signed URL, serta menjadi satu-satunya batas akses ke Supabase PostgreSQL dan Storage |
+| QA Staff Mobile App | QA Staff | [Open Mobile Demo](https://qa-mobile-app.vercel.app/) |
+| Web Admin Dashboard | Administrator | [Open Admin Demo](https://qa-mobile-web.vercel.app/) |
 
-Backend dapat memakai provider JSON untuk pengembangan lokal. Data aplikasi
-terintegrasi disimpan di **Supabase PostgreSQL**, sedangkan bukti foto disimpan
-sebagai objek privat di **Supabase Storage**.
+Demo credentials are displayed on each application's login page.
+
+> The deployments are intended for demonstration and testing. Authentication, account management, security hardening, and several production requirements are still under development.
+
+## System Overview
+
+QA Mobile Apps supports two main actors:
+
+### QA Staff
+
+QA Staff use the Flutter application to:
+
+- View available QC Material and QC Pekerjaan templates.
+- Fill numeric, boolean, choice, and text checklist items.
+- Add notes and multiple evidence photos to checklist items.
+- Save inspections as drafts.
+- Restore and continue previously saved drafts.
+- Submit completed inspection reports.
+- View report history and report details.
+- Monitor inspection summaries through the dashboard.
+- Manage basic profile information.
+
+QA Staff record inspection data but do not determine the final pass or fail result.
+
+### Administrator
+
+Administrators use the React Web Dashboard to:
+
+- Monitor Quality Control activity.
+- Manage QC Material and QC Pekerjaan templates.
+- Review reports submitted by QA Staff.
+- Inspect checklist answers, notes, and evidence photos.
+- Approve or reject inspection reports.
+- Determine the final inspection result.
+- Filter reports by location, QC type, status, and standard result.
+- View report statistics and dashboard summaries.
 
 ## Arsitektur dan aliran data
 
 ```mermaid
 flowchart LR
-    S["Staff Warehouse"] --> M["Flutter Mobile"]
-    A["Admin"] --> W["React Admin Web"]
-    M --> API["Express REST API"]
-    W --> API
-    API --> DB[("Supabase PostgreSQL")]
-    API --> ST[("Private Supabase Storage")]
-    API -. "pengembangan lokal" .-> J[("JSON")]
+    Mobile["Flutter QA Staff App"]
+    Admin["React Web Admin"]
+    API["Express REST API"]
+    Database["Supabase PostgreSQL"]
+    Storage["Private Supabase Storage"]
+    JSON["JSON Local Fallback"]
+
+    Mobile --> API
+    Admin --> API
+    API --> Database
+    API --> Storage
+    API -. Local development .-> JSON
 ```
 
-Alur ringkas: Staff Warehouse memilih template, mengisi checklist dan bukti,
-lalu menyimpan draft atau mengirim laporan. Backend memvalidasi dan menyimpan
-laporan serta object path bukti. Admin Web membaca laporan melalui Backend,
-meminta signed URL untuk menampilkan bukti privat, kemudian menyimpan hasil
-review melalui API. Mobile dan Web tidak mengakses tabel atau kredensial
-Storage secara langsung.
+The mobile and web applications must not access PostgreSQL tables or private storage credentials directly. Database and object-storage credentials are only configured in the Express backend environment.
 
-## Topologi branch aktif
+## Technology Stack
 
-`main` **bukan** gabungan implementasi terbaru ketiga aplikasi.
+| Layer | Technology |
+|---|---|
+| QA Staff Application | Flutter / Dart |
+| Admin Dashboard | React / TypeScript |
+| Backend API | Node.js / Express |
+| Database | Supabase PostgreSQL |
+| Evidence Storage | Private Supabase Storage |
+| Local Data Fallback | JSON |
+| Frontend Deployment | Vercel |
+| Version Control | Git / GitHub |
 
-| Branch | Isi aktif | Navigasi |
-|---|---|---|
-| `main` | Titik masuk repository dan dokumentasi | [Buka branch](https://github.com/farrelgaska/QA-Mobile-Apps/tree/main) |
-| `feat/mobile-qc-photo-integration` | Implementasi Mobile terbaru | [Buka Mobile](https://github.com/farrelgaska/QA-Mobile-Apps/tree/feat/mobile-qc-photo-integration) |
-| `web` | Implementasi Admin Web terbaru | [Buka Admin Web](https://github.com/farrelgaska/QA-Mobile-Apps/tree/web) |
-| `shared-integration` | Implementasi Backend terbaru | [Buka Backend](https://github.com/farrelgaska/QA-Mobile-Apps/tree/shared-integration) |
+## Repository Structure
 
-Branch `web` dan `shared-integration` mempunyai garis riwayat yang berbeda dari
-`main`. **Jangan merge branch aplikasi tersebut secara langsung** untuk
-menyatukan repository. Integrasi memerlukan rencana migrasi repository,
-pemetaan struktur, validasi kontrak lintas aplikasi, dan review khusus. Kerjakan
-setiap komponen pada checkout/worktree terpisah tanpa mengubah branch aplikasi
-lain.
+```text
+QA-APPS-MOBILE/
+├── apps/
+│   ├── mobile/          # Flutter application for QA Staff
+│   └── web/             # React Admin Dashboard
+├── mock-api/            # Canonical Express API
+├── docs/                # Project and integration documentation
+└── README.md
+```
 
-## Quick orientation
+The deprecated backend previously located at `apps/mobile/mock-api` must not be used. The canonical backend is located at the repository root in `mock-api`.
 
-1. Baca **[Handover Teknis](docs/HANDOVER.md)** sebelum mengubah kode.
-2. Pilih komponen dan gunakan branch aktifnya sebagai baseline; jangan memakai
-   implementasi aplikasi pada `main` sebagai versi terbaru.
-3. Pastikan status dan diff diperiksa dari checkout/worktree komponen yang
-   benar.
-4. Salin file contoh environment hanya secara lokal. Jangan memasukkan password,
-   database URL, service-role key, access token, atau secret lain ke Git,
-   dokumentasi, aplikasi Mobile, maupun browser.
-5. Mulai dengan Backend provider JSON untuk orientasi tanpa PostgreSQL. Upload
-   foto tetap memerlukan konfigurasi Storage yang sesuai.
-6. Jalankan pengujian komponen dan smoke test pada environment non-produksi
-   sebelum menyerahkan perubahan.
+## Main Workflows
 
-Perintah awal berikut diverifikasi dari branch aktif masing-masing. Jalankan
-dari root checkout/worktree branch yang sesuai.
+### QC Material
 
-### Backend - `shared-integration`
+```text
+Admin creates a template
+        ↓
+QA Staff selects the material
+        ↓
+QA Staff fills checklist items and evidence
+        ↓
+Report is saved as Draft or Submitted
+        ↓
+Admin reviews the submitted report
+        ↓
+Admin approves or rejects the report
+```
+
+### QC Pekerjaan
+
+```text
+Admin creates a work template
+        ↓
+QA Staff selects the work inspection
+        ↓
+QA Staff fills checklist items and evidence
+        ↓
+Report is saved as Draft or Submitted
+        ↓
+Admin reviews the submitted report
+        ↓
+Admin determines the final result
+```
+
+## Evidence Photo Management
+
+Evidence photos can be attached to individual checklist items.
+
+The current implementation supports:
+
+- Camera and gallery selection.
+- Multiple photos per checklist item.
+- Draft photo persistence.
+- Upload retry handling.
+- Canonical object-path persistence.
+- Private storage through the backend.
+- Evidence display in report details.
+- Removal of newly selected or restored draft photos.
+
+Stored reports persist canonical object paths instead of temporary signed URLs.
+
+## Local Development
+
+### Prerequisites
+
+Install the following tools:
+
+- Node.js and npm
+- Flutter SDK
+- Android SDK for Android development
+- A supported web browser
+- Supabase project access when using PostgreSQL and Storage
+
+### Backend API
 
 ```powershell
 Copy-Item .env.example .env

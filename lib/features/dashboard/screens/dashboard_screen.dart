@@ -1193,7 +1193,7 @@ class MaterialRepairDetailSheet extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 _buildInfoRow(
-                  'Catatan QA Staff',
+                  'Catatan Staff Warehouse',
                   item['qaNote'] ??
                       'Segera lakukan tindak lanjut pengerjaan/coating ulang.',
                 ),

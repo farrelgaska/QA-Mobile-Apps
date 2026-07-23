@@ -204,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Demo Akun Kredensial (QA Staff):',
+                              'Demo Akun Kredensial (Staff Warehouse):',
                               style: TextStyle(
                                 color: AppColors.waitingText,
                                 fontWeight: FontWeight.bold,
@@ -213,11 +213,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             SizedBox(height: 6),
                             Text(
-                              '• Staff 1: NIK-908271 (atau ketik "yanuar")',
+                              '• Staff Warehouse 1: NIK-908271 (atau ketik "yanuar")',
                               style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
                             ),
                             Text(
-                              '• Staff 2: NIK-908272 (atau ketik "budi")',
+                              '• Staff Warehouse 2: NIK-908272 (atau ketik "budi")',
                               style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
                             ),
                           ],

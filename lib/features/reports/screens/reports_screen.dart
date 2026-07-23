@@ -106,7 +106,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     final filteredReports = _state.reports.where((report) {
-      // Filter: QA Staff hanya boleh melihat laporan yang dibuat oleh dirinya sendiri
+      // Filter: Staff Warehouse hanya boleh melihat laporan yang dibuat oleh dirinya sendiri
       if (report.createdByNik != DummyAuth.current.nik) return false;
 
       final matchesSearch = report.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||

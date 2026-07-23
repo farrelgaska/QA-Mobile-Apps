@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mobile/core/dummy/dummy_state.dart';
 import 'package:mobile/features/profile/profile_photo_controller.dart';
 import 'package:mobile/features/profile/screens/profile_screen.dart';
+import 'package:mobile/shared/models/user_model.dart';
 
 class _MemoryPersistence implements ProfilePhotoPersistence {
   final Map<String, Uint8List> values = {};
@@ -49,6 +50,34 @@ Future<void> _openPicker(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('legacy QA Staff profile displays Staff Warehouse', (
+    tester,
+  ) async {
+    final state = DummyState();
+    final originalUser = state.currentUser;
+    state.currentUser = UserModel(
+      id: originalUser.id,
+      name: originalUser.name,
+      role: 'QA Staff',
+      nik: originalUser.nik,
+      site: originalUser.site,
+    );
+    addTearDown(() => state.currentUser = originalUser);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProfileScreen(
+          photoPicker: _FakePicker(null),
+          photoPersistence: _MemoryPersistence(),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Staff Warehouse'), findsOneWidget);
+    expect(find.text('QA Staff'), findsNothing);
+  });
+
   testWidgets('gallery selection updates avatar with selected bytes', (
     tester,
   ) async {

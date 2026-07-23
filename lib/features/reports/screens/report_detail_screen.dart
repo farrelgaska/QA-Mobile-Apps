@@ -304,7 +304,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                     _buildInfoRow('Area / Zona', report.area),
                     _buildInfoRow('Detail Titik', report.detailLocation),
                     if (report.finalConclusion != null &&
-                        state.currentUser.role == 'Admin')
+                        state.currentUser.isAdmin)
                       _buildInfoRow('Kesimpulan', report.finalConclusion!),
                   ],
                 ),
@@ -533,7 +533,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Catatan QA Staff',
+                        'Catatan Staff Warehouse',
                         style: TextStyle(
                           color: AppColors.textMain,
                           fontWeight: FontWeight.bold,

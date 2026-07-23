@@ -144,7 +144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) => ConfirmationModal(
         title: 'Logout Akun',
-        message: 'Apakah Anda yakin ingin keluar dari akun QA Staff Anda?',
+        message: 'Apakah Anda yakin ingin keluar dari akun Staff Warehouse Anda?',
         confirmText: 'Keluar',
         isDanger: true,
         onConfirm: () {
@@ -220,7 +220,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _state.currentUser.role,
+                      _state.currentUser.roleLabel,
                       style: const TextStyle(
                         color: AppColors.textMuted,
                         fontSize: 13,

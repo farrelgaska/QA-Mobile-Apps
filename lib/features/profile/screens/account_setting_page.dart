@@ -83,7 +83,7 @@ class _AccountSettingPageState extends State<AccountSettingPage> {
       context: context,
       builder: (context) => ConfirmationModal(
         title: 'Logout Akun',
-        message: 'Apakah Anda yakin ingin keluar dari akun QA Staff Anda?',
+        message: 'Apakah Anda yakin ingin keluar dari akun Staff Warehouse Anda?',
         confirmText: 'Keluar',
         isDanger: true,
         onConfirm: () {
@@ -237,7 +237,7 @@ class _AccountSettingPageState extends State<AccountSettingPage> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            user.role,
+                            user.roleLabel,
                             style: const TextStyle(
                               color: AppColors.primary,
                               fontWeight: FontWeight.w600,
@@ -375,7 +375,7 @@ class _AccountSettingPageState extends State<AccountSettingPage> {
                     const Divider(color: AppColors.borderSoft),
                     _buildDetailRow(
                       icon: Icons.fingerprint_outlined,
-                      label: 'NIK / ID Staff',
+                      label: 'NIK / ID Staff Warehouse',
                       value: user.nik,
                     ),
                     const Divider(color: AppColors.borderSoft),
