@@ -253,6 +253,71 @@ On read, the backend exposes sensible additive defaults:
 The legacy root checklist remains readable and is not copied into a synthetic
 sample.
 
+### QC Material review request snapshot
+
+A Staff Warehouse review request is stored as report-level evidence. It records
+the failed samples at the moment the request is made; it is not an Admin
+decision and does not change `status` or `admin_review`.
+
+```json
+{
+  "review_requested": true,
+  "review_requested_at": "2026-07-23T04:00:00.000Z",
+  "review_requested_by_role": "STAFF_WAREHOUSE",
+  "review_failed_sample_count": 2,
+  "review_failed_sample_ids": ["sample-001", "sample-002"],
+  "review_failed_sample_numbers": [1, 2]
+}
+```
+
+When no request exists, the additive defaults are:
+
+```json
+{
+  "review_requested": false,
+  "review_requested_at": null,
+  "review_requested_by_role": null,
+  "review_failed_sample_count": null,
+  "review_failed_sample_ids": [],
+  "review_failed_sample_numbers": []
+}
+```
+
+For a requested snapshot, the timestamp must be valid, the role must be exactly
+`STAFF_WAREHOUSE`, and both unique sample arrays must contain at least two
+entries. `review_failed_sample_count` must equal both array lengths. Review
+requests are supported only on `MATERIAL` reports. Invalid input uses the
+existing HTTP 400 body:
+
+```json
+{
+  "error": "review_failed_sample_ids: failed sample IDs must be unique"
+}
+```
+
+Once stored, this snapshot is immutable. PATCH requests that omit these fields
+preserve it, while attempts to clear or overwrite it return HTTP 400. The
+backend still reads the legacy mobile keys in `general_info`
+(`qcReviewRequested`, `qcReviewRequestedAt`,
+`qcReviewFailedSampleIds`, `qcReviewFailedSampleNumbers`, and
+`qcFailedSampleCount`) and promotes a valid legacy snapshot in API output. The
+legacy keys are retained for backward compatibility.
+
+Legacy-compatible input example:
+
+```json
+{
+  "general_info": {
+    "qcReviewRequested": "true",
+    "qcReviewRequestedAt": "2026-07-23T04:00:00.000Z",
+    "qcReviewFailedSampleIds": "[\"sample-001\",\"sample-002\"]",
+    "qcReviewFailedSampleNumbers": "[1,2]",
+    "qcFailedSampleCount": "2",
+    "qcReviewRequestEligible": "true"
+  }
+}
+```
+
 ---
 
 ## 5. Legacy Property Alias Mapping

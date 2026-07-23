@@ -2,7 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const { REPORTS_FILE } = require('../config/env');
 const {
+  mergeReportReviewRequestPatch,
   mergeReportSamplePatch,
+  normalizeReportReviewRequestFields,
   normalizeReportSampleFields
 } = require('../contracts/report.contract');
 
@@ -29,7 +31,8 @@ class JsonReportRepository {
     }
     return reports.map(report => ({
       ...report,
-      ...normalizeReportSampleFields(report)
+      ...normalizeReportSampleFields(report),
+      ...normalizeReportReviewRequestFields(report, { tolerateInvalidLegacy: true })
     }));
   }
 
@@ -70,7 +73,8 @@ class JsonReportRepository {
     }
     const normalized = {
       ...report,
-      ...normalizeReportSampleFields(report)
+      ...normalizeReportSampleFields(report),
+      ...normalizeReportReviewRequestFields(report)
     };
     reports.push(normalized);
     this._write(reports);
@@ -96,9 +100,11 @@ class JsonReportRepository {
     if (patchData.samples !== undefined) {
       merged.samples = mergeReportSamplePatch(reports[index].samples, patchData.samples);
     }
+    Object.assign(merged, mergeReportReviewRequestPatch(reports[index], patchData));
     const updated = {
       ...merged,
-      ...normalizeReportSampleFields(merged)
+      ...normalizeReportSampleFields(merged),
+      ...normalizeReportReviewRequestFields(merged)
     };
     reports[index] = updated;
     this._write(reports);

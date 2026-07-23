@@ -5,6 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const templateModule = require('../../src/repositories/json-template.repository');
 const reportModule = require('../../src/repositories/json-report.repository');
+const { EMPTY_REVIEW_REQUEST } = require('../../src/contracts/report.contract');
 
 test('JSON repositories satisfy the existing repository contract in OS temp', t => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mock-api-json-repositories-'));
@@ -37,7 +38,8 @@ test('JSON repositories satisfy the existing repository contract in OS temp', t 
   assert.deepEqual(reports.create(report), {
     ...report,
     sample_count: 1,
-    samples: []
+    samples: [],
+    ...EMPTY_REVIEW_REQUEST
   });
   assert.equal(reports.findById('QC-JSON').status, 'DRAFT');
   assert.equal(reports.update('QC-JSON', { status: 'SUBMITTED' }).status, 'SUBMITTED');

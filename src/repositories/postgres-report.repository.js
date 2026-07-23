@@ -1,11 +1,17 @@
 const { getPool } = require('../database/postgres');
 const { canonicalReportInput, mapReportAggregate } = require('./postgres/mappers');
 const { notFound, translatePostgresError } = require('./repository-errors');
-const { mergeReportSamplePatch } = require('../contracts/report.contract');
+const {
+  mergeReportReviewRequestPatch,
+  mergeReportSamplePatch
+} = require('../contracts/report.contract');
 
 const ROOT_COLUMNS = `id, type, template_id, form_code, title, status, staff_name,
   staff_nik, site_id, site_name, area, detail_location, general_info, staff_note,
-  submitted_at, revision_number, migration_metadata, sample_count, created_at, updated_at`;
+  submitted_at, revision_number, migration_metadata, sample_count,
+  review_requested, review_requested_at, review_requested_by_role,
+  review_failed_sample_count, review_failed_sample_ids, review_failed_sample_numbers,
+  created_at, updated_at`;
 
 class PostgresReportRepository {
   constructor(pool = getPool()) {
@@ -92,7 +98,10 @@ class PostgresReportRepository {
       report.location?.site_id || '', report.location?.site_name || '',
       report.location?.area || '', report.location?.detail_location || '',
       report.general_info, report.staff_note, report.submitted_at,
-      report.revision_number, report.migration_metadata, report.sample_count
+      report.revision_number, report.migration_metadata, report.sample_count,
+      report.review_requested, report.review_requested_at,
+      report.review_requested_by_role, report.review_failed_sample_count,
+      report.review_failed_sample_ids, report.review_failed_sample_numbers
     ];
     if (update) {
       await client.query(
@@ -100,7 +109,10 @@ class PostgresReportRepository {
           status=$6, staff_name=$7, staff_nik=$8, site_id=$9, site_name=$10,
           area=$11, detail_location=$12, general_info=$13, staff_note=$14,
           submitted_at=$15, revision_number=$16, migration_metadata=$17,
-          sample_count=$18, updated_at=now()
+          sample_count=$18, review_requested=$19, review_requested_at=$20,
+          review_requested_by_role=$21, review_failed_sample_count=$22,
+          review_failed_sample_ids=$23, review_failed_sample_numbers=$24,
+          updated_at=now()
          where id=$1`,
         values
       );
@@ -109,8 +121,10 @@ class PostgresReportRepository {
         `insert into public.qc_reports (
           id,type,template_id,form_code,title,status,staff_name,staff_nik,site_id,
           site_name,area,detail_location,general_info,staff_note,submitted_at,
-          revision_number,migration_metadata,sample_count
-        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+          revision_number,migration_metadata,sample_count,review_requested,
+          review_requested_at,review_requested_by_role,review_failed_sample_count,
+          review_failed_sample_ids,review_failed_sample_numbers
+        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
         values
       );
     }
@@ -231,6 +245,7 @@ class PostgresReportRepository {
       if (patch.samples !== undefined) {
         merged.samples = mergeReportSamplePatch(current.samples, patch.samples);
       }
+      Object.assign(merged, mergeReportReviewRequestPatch(current, patch));
       const report = canonicalReportInput(merged);
       await this._writeRoot(client, report, true);
       await client.query('delete from public.qc_report_attachments where report_id = $1', [id]);

@@ -1,5 +1,8 @@
 const { checklistItemSchema, templateSchema } = require('../../contracts/template.contract');
-const { normalizeReportSampleFields } = require('../../contracts/report.contract');
+const {
+  normalizeReportReviewRequestFields,
+  normalizeReportSampleFields
+} = require('../../contracts/report.contract');
 
 const toIso = value => value instanceof Date ? value.toISOString() : value;
 const valueOf = (object, canonical, legacy, fallback) => {
@@ -179,7 +182,7 @@ const mapReportAggregate = (
     answersBySample.set(answer.sample_id, answers);
   }
 
-  return {
+  const report = {
     id: row.id,
     type: row.type,
     template_id: row.template_id || '',
@@ -215,8 +218,18 @@ const mapReportAggregate = (
       created_at: toIso(sample.created_at),
       updated_at: toIso(sample.updated_at)
     })),
+    review_requested: row.review_requested ?? false,
+    review_requested_at: toIso(row.review_requested_at) ?? null,
+    review_requested_by_role: row.review_requested_by_role ?? null,
+    review_failed_sample_count: nullableNumber(row.review_failed_sample_count),
+    review_failed_sample_ids: row.review_failed_sample_ids || [],
+    review_failed_sample_numbers: (row.review_failed_sample_numbers || []).map(Number),
     revision_number: row.revision_number,
     ...(row.migration_metadata ? { migration_metadata: row.migration_metadata } : {})
+  };
+  return {
+    ...report,
+    ...normalizeReportReviewRequestFields(report, { tolerateInvalidLegacy: true })
   };
 };
 
@@ -248,6 +261,7 @@ const canonicalTemplateInput = template => {
 
 const canonicalReportInput = report => {
   const sampleFields = normalizeReportSampleFields(report);
+  const reviewRequestFields = normalizeReportReviewRequestFields(report);
   return {
   id: report.id,
   type: report.type || 'MATERIAL',
@@ -276,6 +290,7 @@ const canonicalReportInput = report => {
   general_photos: valueOf(report, 'general_photos', 'generalPhotos', []),
   sample_count: sampleFields.sample_count,
   samples: sampleFields.samples,
+  ...reviewRequestFields,
   revision_number: valueOf(report, 'revision_number', 'revisionNumber', 1),
   migration_metadata: report.migration_metadata || null
   };

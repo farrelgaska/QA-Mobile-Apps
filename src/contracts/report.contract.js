@@ -9,6 +9,45 @@ const PARAMETER_EVALUATION_STATUSES = [
   'WITHIN_STANDARD',
   'OUT_OF_STANDARD'
 ];
+const REVIEW_REQUEST_ROLE = 'STAFF_WAREHOUSE';
+const REVIEW_REQUEST_FIELDS = [
+  'review_requested',
+  'review_requested_at',
+  'review_requested_by_role',
+  'review_failed_sample_count',
+  'review_failed_sample_ids',
+  'review_failed_sample_numbers'
+];
+const REVIEW_REQUEST_ALIASES = {
+  review_requested: 'reviewRequested',
+  review_requested_at: 'reviewRequestedAt',
+  review_requested_by_role: 'reviewRequestedByRole',
+  review_failed_sample_count: 'reviewFailedSampleCount',
+  review_failed_sample_ids: 'reviewFailedSampleIds',
+  review_failed_sample_numbers: 'reviewFailedSampleNumbers'
+};
+const EMPTY_REVIEW_REQUEST = Object.freeze({
+  review_requested: false,
+  review_requested_at: null,
+  review_requested_by_role: null,
+  review_failed_sample_count: null,
+  review_failed_sample_ids: [],
+  review_failed_sample_numbers: []
+});
+const STABLE_SAMPLE_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
+const emptyArrayWhenNull = schema => z.preprocess(
+  value => value === null ? [] : value,
+  schema
+);
+const reviewFailedSampleIdsSchema = emptyArrayWhenNull(
+  z.array(z.string().min(1).max(128).regex(
+    STABLE_SAMPLE_ID_PATTERN,
+    'sample id may contain only letters, numbers, underscores, or hyphens'
+  )).default([])
+);
+const reviewFailedSampleNumbersSchema = emptyArrayWhenNull(
+  z.array(z.number().int().positive()).default([])
+);
 
 const staffSchema = z.object({
   name: z.string().default(""),
@@ -122,7 +161,7 @@ const sampleFieldsSchema = z.object({
   samples: reportSamplesSchema
 });
 
-const sampleValidationError = issues => {
+const contractValidationError = issues => {
   const error = new Error(issues
     .map(issue => `${issue.path.join('.') || 'samples'}: ${issue.message}`)
     .join('; '));
@@ -144,7 +183,7 @@ const normalizeReportSampleFields = report => {
     }))
   };
   const result = sampleFieldsSchema.safeParse(candidate);
-  if (!result.success) throw sampleValidationError(result.error.issues);
+  if (!result.success) throw contractValidationError(result.error.issues);
   return result.data;
 };
 
@@ -178,6 +217,242 @@ const migrationMetadataSchema = z.object({
   unknown_fields: z.record(z.any()).optional()
 }).nullable().optional();
 
+const reviewRequestFieldsSchema = z.object({
+  review_requested: z.boolean().default(false),
+  review_requested_at: isoDateSchema.nullable().default(null),
+  review_requested_by_role: z.literal(REVIEW_REQUEST_ROLE).nullable().default(null),
+  review_failed_sample_count: z.number().int().nullable().default(null),
+  review_failed_sample_ids: reviewFailedSampleIdsSchema,
+  review_failed_sample_numbers: reviewFailedSampleNumbersSchema
+}).superRefine((request, ctx) => {
+  const ids = request.review_failed_sample_ids;
+  const numbers = request.review_failed_sample_numbers;
+
+  if (!request.review_requested) {
+    if (request.review_requested_at !== null ||
+        request.review_requested_by_role !== null ||
+        request.review_failed_sample_count !== null ||
+        ids.length > 0 ||
+        numbers.length > 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['review_requested'],
+        message: 'review request metadata must be null or empty when review_requested is false'
+      });
+    }
+    return;
+  }
+
+  if (request.review_requested_at === null) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['review_requested_at'],
+      message: 'review_requested_at is required when review_requested is true'
+    });
+  }
+  if (request.review_requested_by_role !== REVIEW_REQUEST_ROLE) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['review_requested_by_role'],
+      message: `review_requested_by_role must be ${REVIEW_REQUEST_ROLE}`
+    });
+  }
+  if (request.review_failed_sample_count === null ||
+      request.review_failed_sample_count < 2) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['review_failed_sample_count'],
+      message: 'review_failed_sample_count must be at least 2'
+    });
+  }
+  if (ids.length < 2) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['review_failed_sample_ids'],
+      message: 'at least 2 failed sample IDs are required'
+    });
+  }
+  if (numbers.length < 2) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['review_failed_sample_numbers'],
+      message: 'at least 2 failed sample numbers are required'
+    });
+  }
+  if (new Set(ids).size !== ids.length) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['review_failed_sample_ids'],
+      message: 'failed sample IDs must be unique'
+    });
+  }
+  if (new Set(numbers).size !== numbers.length) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['review_failed_sample_numbers'],
+      message: 'failed sample numbers must be unique'
+    });
+  }
+  if (request.review_failed_sample_count !== ids.length ||
+      request.review_failed_sample_count !== numbers.length) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['review_failed_sample_count'],
+      message: 'review_failed_sample_count must match both failed sample arrays'
+    });
+  }
+});
+
+const hasReviewRequestInput = report => REVIEW_REQUEST_FIELDS.some(field =>
+  report?.[field] !== undefined ||
+  report?.[REVIEW_REQUEST_ALIASES[field]] !== undefined
+);
+
+const parseLegacyArray = value => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string') return value;
+  return JSON.parse(value);
+};
+
+const legacyReviewRequestCandidate = generalInfo => {
+  if (!generalInfo || typeof generalInfo !== 'object' || Array.isArray(generalInfo)) {
+    return null;
+  }
+  const requested = generalInfo.qcReviewRequested === true ||
+    generalInfo.qcReviewRequested === 'true';
+  const explicitlyFalse = generalInfo.qcReviewRequested === false ||
+    generalInfo.qcReviewRequested === 'false';
+  if (!requested && !explicitlyFalse) return null;
+  if (!requested) return { ...EMPTY_REVIEW_REQUEST };
+
+  let ids;
+  let numbers;
+  try {
+    ids = parseLegacyArray(generalInfo.qcReviewFailedSampleIds);
+    numbers = parseLegacyArray(generalInfo.qcReviewFailedSampleNumbers);
+  } catch (_) {
+    return { invalid: true };
+  }
+  const count = Number(generalInfo.qcFailedSampleCount);
+  return {
+    review_requested: true,
+    review_requested_at: generalInfo.qcReviewRequestedAt ?? null,
+    review_requested_by_role: REVIEW_REQUEST_ROLE,
+    review_failed_sample_count: Number.isFinite(count) ? count : null,
+    review_failed_sample_ids: ids ?? [],
+    review_failed_sample_numbers: numbers ?? []
+  };
+};
+
+const canonicalReviewRequestCandidate = report => Object.fromEntries(
+  REVIEW_REQUEST_FIELDS.map(field => [
+    field,
+    report?.[field] !== undefined
+      ? report[field]
+      : report?.[REVIEW_REQUEST_ALIASES[field]] !== undefined
+        ? report[REVIEW_REQUEST_ALIASES[field]]
+        : EMPTY_REVIEW_REQUEST[field]
+  ])
+);
+
+const normalizeReportReviewRequestFields = (
+  report,
+  { tolerateInvalidLegacy = false } = {}
+) => {
+  const hasCanonicalInput = hasReviewRequestInput(report);
+  const canonicalCandidate = hasCanonicalInput
+    ? canonicalReviewRequestCandidate(report)
+    : null;
+  const legacyCandidate = legacyReviewRequestCandidate(
+    report?.general_info ?? report?.generalInfo
+  );
+  const canonicalIsEmpty = canonicalCandidate &&
+    sameReviewRequest(canonicalCandidate, EMPTY_REVIEW_REQUEST);
+  const candidate = legacyCandidate?.review_requested && canonicalIsEmpty
+    ? legacyCandidate
+    : canonicalCandidate || legacyCandidate || { ...EMPTY_REVIEW_REQUEST };
+
+  if (candidate.invalid) {
+    if (tolerateInvalidLegacy) return { ...EMPTY_REVIEW_REQUEST };
+    throw contractValidationError([{
+      path: ['general_info'],
+      message: 'legacy review request metadata is malformed'
+    }]);
+  }
+  const result = reviewRequestFieldsSchema.safeParse(candidate);
+  if (!result.success) {
+    if (legacyCandidate && tolerateInvalidLegacy) return { ...EMPTY_REVIEW_REQUEST };
+    throw contractValidationError(result.error.issues);
+  }
+  if (result.data.review_requested && (report?.type ?? 'MATERIAL') !== 'MATERIAL') {
+    throw contractValidationError([{
+      path: ['review_requested'],
+      message: 'review requests are supported only for QC Material reports'
+    }]);
+  }
+  return result.data;
+};
+
+const sameReviewRequest = (left, right) =>
+  REVIEW_REQUEST_FIELDS.every(field =>
+    JSON.stringify(left[field]) === JSON.stringify(right[field])
+  );
+
+const mergeReportReviewRequestPatch = (current, patch) => {
+  const currentRequest = normalizeReportReviewRequestFields(current, {
+    tolerateInvalidLegacy: true
+  });
+  const hasCanonicalPatch = hasReviewRequestInput(patch);
+  const legacyPatch = hasCanonicalPatch
+    ? null
+    : legacyReviewRequestCandidate(patch?.general_info ?? patch?.generalInfo);
+  let requestedPatch = currentRequest;
+
+  if (hasCanonicalPatch) {
+    if (currentRequest.review_requested) {
+      const changesExistingRequest = REVIEW_REQUEST_FIELDS.some(field => {
+        const alias = REVIEW_REQUEST_ALIASES[field];
+        const patchedValue = patch[field] !== undefined ? patch[field] : patch[alias];
+        return patchedValue !== undefined &&
+          JSON.stringify(patchedValue) !== JSON.stringify(currentRequest[field]);
+      });
+      if (changesExistingRequest) {
+        throw contractValidationError([{
+          path: ['review_requested'],
+          message: 'an existing review request is immutable and cannot be cleared or overwritten'
+        }]);
+      }
+      return currentRequest;
+    }
+    const mergedRequest = { ...currentRequest };
+    for (const field of REVIEW_REQUEST_FIELDS) {
+      const alias = REVIEW_REQUEST_ALIASES[field];
+      if (patch[field] !== undefined) mergedRequest[field] = patch[field];
+      else if (patch[alias] !== undefined) mergedRequest[field] = patch[alias];
+    }
+    requestedPatch = normalizeReportReviewRequestFields({
+      ...current,
+      ...patch,
+      ...mergedRequest,
+      type: patch.type ?? current.type
+    });
+  } else if (legacyPatch) {
+    requestedPatch = normalizeReportReviewRequestFields({
+      type: patch.type ?? current.type,
+      general_info: patch.general_info ?? patch.generalInfo
+    });
+  }
+
+  if (currentRequest.review_requested &&
+      !sameReviewRequest(currentRequest, requestedPatch)) {
+    throw contractValidationError([{
+      path: ['review_requested'],
+      message: 'an existing review request is immutable and cannot be cleared or overwritten'
+    }]);
+  }
+  return currentRequest.review_requested ? currentRequest : requestedPatch;
+};
+
 const reportSchema = z.object({
   id: z.string(),
   type: z.enum(["MATERIAL", "WORK"]),
@@ -195,6 +470,12 @@ const reportSchema = z.object({
   general_photos: z.array(z.string()).default([]),
   sample_count: z.number().int().positive().default(1),
   samples: reportSamplesSchema.default([]),
+  review_requested: z.boolean().default(false),
+  review_requested_at: isoDateSchema.nullable().default(null),
+  review_requested_by_role: z.literal(REVIEW_REQUEST_ROLE).nullable().default(null),
+  review_failed_sample_count: z.number().int().nullable().default(null),
+  review_failed_sample_ids: reviewFailedSampleIdsSchema,
+  review_failed_sample_numbers: reviewFailedSampleNumbersSchema,
   revision_number: z.number().int().default(1),
   migration_metadata: migrationMetadataSchema
 }).superRefine((report, ctx) => {
@@ -206,6 +487,18 @@ const reportSchema = z.object({
       code: 'custom',
       path: ['admin_review', 'conclusion'],
       message: `Report status ${report.status} requires an explicit final conclusion; manual resolution is required`
+    });
+  }
+
+  const reviewResult = reviewRequestFieldsSchema.safeParse(report);
+  if (!reviewResult.success) {
+    for (const issue of reviewResult.error.issues) ctx.addIssue(issue);
+  }
+  if (report.review_requested && report.type !== 'MATERIAL') {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['review_requested'],
+      message: 'review requests are supported only for QC Material reports'
     });
   }
 });
@@ -222,6 +515,14 @@ module.exports = {
   reportSamplesSchema,
   normalizeReportSampleFields,
   mergeReportSamplePatch,
+  REVIEW_REQUEST_ROLE,
+  REVIEW_REQUEST_FIELDS,
+  EMPTY_REVIEW_REQUEST,
+  reviewRequestFieldsSchema,
+  hasReviewRequestInput,
+  legacyReviewRequestCandidate,
+  normalizeReportReviewRequestFields,
+  mergeReportReviewRequestPatch,
   adminReviewSchema,
   conclusionMigrationSchema,
   migrationMetadataSchema,

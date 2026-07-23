@@ -143,3 +143,25 @@ pass/fail column or database rule.
 
 Sample and answer photo arrays contain only canonical Supabase `object_path`
 values. Signed URLs and HTTP URLs are rejected by API and database checks.
+
+## QC Material review-request persistence
+
+Migration `20260723000200_add_qc_material_review_requests.sql` adds six
+first-class columns to `qc_reports`: the request flag and timestamp, canonical
+requester role, failed-sample count, stable sample-ID array, and sample-number
+array. Keeping this evidence on the report root makes the snapshot atomic with
+report draft/submit updates and avoids introducing an approval or decision
+entity for a Staff Warehouse request.
+
+The check constraint permits only an empty snapshot when `review_requested` is
+false. A requested snapshot is limited to `MATERIAL`, requires
+`STAFF_WAREHOUSE`, at least two unique valid IDs and positive unique sample
+numbers, and matching counts. A partial index supports finding requested reports
+by request time.
+
+The migration is additive and defaults existing rows to a non-requested empty
+snapshot. Repository mapping promotes valid legacy request metadata from
+`general_info` on reads and subsequent unrelated updates without deleting those
+legacy keys. Once a canonical request exists, repository updates preserve it
+when omitted and reject clearing or overwriting it. These columns do not infer
+or store an Admin decision, review status, or report-status transition.

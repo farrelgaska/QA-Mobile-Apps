@@ -1,5 +1,8 @@
 const { reportRepository } = require('../repositories');
-const { normalizeReportSampleFields } = require('../contracts/report.contract');
+const {
+  normalizeReportReviewRequestFields,
+  normalizeReportSampleFields
+} = require('../contracts/report.contract');
 
 const validateObjectBody = (req, res, next) => {
   if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
@@ -65,6 +68,7 @@ const createReport = async (req, res, next) => {
     }
 
     validateAndNormalizeSampleInput(reportData);
+    Object.assign(reportData, normalizeReportReviewRequestFields(reportData));
     const created = await reportRepository.create(reportData);
     res.status(201).json(created);
   } catch (err) {
