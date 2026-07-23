@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../shared/models/enums.dart';
+import '../../../shared/models/qc_material_evaluation_model.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_input.dart';
@@ -53,8 +54,7 @@ class QCMaterialFormScreen extends StatelessWidget {
             );
           }
           final tpl = provider.template;
-          final generalFieldContexts =
-              <QCMaterialGeneralField, BuildContext>{};
+          final generalFieldContexts = <QCMaterialGeneralField, BuildContext>{};
           return Scaffold(
             backgroundColor: AppColors.background,
             body: SafeArea(
@@ -72,6 +72,11 @@ class QCMaterialFormScreen extends StatelessWidget {
                       subtitle: '${tpl.name} (${tpl.code})',
                     ),
                     _buildProgressSection(provider),
+                    if (provider.isReviewRequestEligible ||
+                        provider.reviewRequested) ...[
+                      const SizedBox(height: 16),
+                      _buildReviewRequestCard(context, provider),
+                    ],
                     const SizedBox(height: 24),
                     if (provider.isGeneralStep) ...[
                       _buildGeneralInfoCard(provider, generalFieldContexts),
@@ -147,6 +152,19 @@ class QCMaterialFormScreen extends StatelessWidget {
   }
 
   Widget _buildSampleHeading(QCMaterialFormProvider provider) {
+    final status = provider.currentSampleEvaluationStatus;
+    final isOutOfStandard = status == QCSampleEvaluationStatus.outOfStandard;
+    final isWithinStandard = status == QCSampleEvaluationStatus.withinStandard;
+    final statusColor = isOutOfStandard
+        ? AppColors.rejectedText
+        : isWithinStandard
+        ? AppColors.approvedText
+        : AppColors.inactiveText;
+    final statusBackground = isOutOfStandard
+        ? AppColors.rejectedBg
+        : isWithinStandard
+        ? AppColors.approvedBg
+        : AppColors.inactiveBg;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -164,8 +182,123 @@ class QCMaterialFormScreen extends StatelessWidget {
           'Isi checklist hanya untuk sampel ini.',
           style: TextStyle(color: AppColors.textMuted, fontSize: 13),
         ),
+        const SizedBox(height: 10),
+        Container(
+          key: const Key('qc_material_current_sample_status'),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            color: statusBackground,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: statusColor),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isOutOfStandard
+                    ? Icons.error_outline
+                    : isWithinStandard
+                    ? Icons.check_circle_outline
+                    : Icons.schedule_outlined,
+                color: statusColor,
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Status Sampel: ${status.displayLabel}',
+                style: TextStyle(
+                  color: statusColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
+  }
+
+  Widget _buildReviewRequestCard(
+    BuildContext context,
+    QCMaterialFormProvider provider,
+  ) {
+    final request = provider.reviewRequest;
+    return AppCard(
+      key: const Key('qc_material_review_request_card'),
+      color: AppColors.rejectedBg,
+      border: Border.all(color: AppColors.rejectedText),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: AppColors.rejectedText,
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  request == null
+                      ? 'Material memiliki beberapa sampel tidak sesuai.'
+                      : 'Permintaan review sudah dicatat.',
+                  style: const TextStyle(
+                    color: AppColors.rejectedText,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Jumlah sampel tidak sesuai saat ini: '
+            '${provider.failedSampleCount}. '
+            'Pemeriksaan dapat tetap dilanjutkan.',
+            style: const TextStyle(
+              color: AppColors.textMain,
+              fontSize: 12,
+              height: 1.4,
+            ),
+          ),
+          if (request != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Diajukan pada ${_reviewTimestamp(request.requestedAt)} '
+              'untuk sampel ${request.failedSampleNumbers.join(', ')}.',
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+            ),
+          ] else if (provider.isReviewRequestEligible) ...[
+            const SizedBox(height: 12),
+            AppButton(
+              key: const Key('qc_material_request_review_button'),
+              text: 'Ajukan Review',
+              icon: Icons.rate_review_outlined,
+              variant: AppButtonVariant.danger,
+              onPressed: () {
+                if (!provider.requestReview()) return;
+                AppSnackbar.success(
+                  context,
+                  'Permintaan review berhasil dicatat.',
+                );
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _reviewTimestamp(DateTime value) {
+    final local = value.toLocal();
+    String twoDigits(int number) => number.toString().padLeft(2, '0');
+    return '${twoDigits(local.day)}-${twoDigits(local.month)}-${local.year} '
+        '${twoDigits(local.hour)}:${twoDigits(local.minute)}';
   }
 
   Widget _buildGeneralInfoCard(
@@ -680,8 +813,7 @@ class QCMaterialFormScreen extends StatelessWidget {
                           : () async {
                               final error = await p.nextStep();
                               if (!context.mounted || error == null) return;
-                              final invalidField =
-                                  p.firstInvalidGeneralField;
+                              final invalidField = p.firstInvalidGeneralField;
                               final invalidContext =
                                   generalFieldContexts[invalidField];
                               if (invalidContext != null &&

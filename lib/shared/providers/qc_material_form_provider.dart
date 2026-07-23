@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -12,6 +13,7 @@ import '../../shared/models/qc_report_model.dart'; // QCReportModel, AdminReview
 import '../../shared/models/qc_report_sample_model.dart';
 import '../../shared/models/qc_checklist_answer_model.dart';
 import '../../shared/models/qc_material_template_model.dart';
+import '../../shared/models/qc_material_evaluation_model.dart';
 import '../../shared/models/qc_photo_processing_entry.dart';
 import '../../shared/models/work_location_model.dart';
 import '../../shared/models/site_model.dart';
@@ -149,6 +151,11 @@ class QCMaterialFormProvider extends ChangeNotifier {
   bool _isDisposed = false;
   late String _reportId;
   final Map<QCMaterialGeneralField, String> _generalFieldErrors = {};
+  QCMaterialReviewRequest? _reviewRequest;
+
+  static const _sampleStatusesKey = 'qcSampleEvaluationStatuses';
+  static const _failedSampleCountKey = 'qcFailedSampleCount';
+  static const _reviewEligibleKey = 'qcReviewRequestEligible';
 
   QCMaterialFormProvider({
     ImagePicker? imagePicker,
@@ -176,6 +183,29 @@ class QCMaterialFormProvider extends ChangeNotifier {
   );
   String get reportId => _reportId;
   QCMaterialTemplate get template => _template;
+  QCMaterialReviewRequest? get reviewRequest => _reviewRequest;
+  bool get reviewRequested => _reviewRequest != null;
+  DateTime? get reviewRequestedAt => _reviewRequest?.requestedAt;
+  List<String> get reviewRequestedFailedSampleIds =>
+      _reviewRequest?.failedSampleIds ?? const [];
+  List<int> get reviewRequestedFailedSampleNumbers =>
+      _reviewRequest?.failedSampleNumbers ?? const [];
+
+  List<QCMaterialSampleState> get outOfStandardSamples => samples
+      .where(
+        (sample) =>
+            sampleEvaluationStatus(sample) ==
+            QCSampleEvaluationStatus.outOfStandard,
+      )
+      .toList(growable: false);
+  int get failedSampleCount => outOfStandardSamples.length;
+  bool get isReviewRequestEligible => failedSampleCount >= 2;
+  QCSampleEvaluationStatus get currentSampleEvaluationStatus {
+    final sample = currentSample;
+    return sample == null
+        ? QCSampleEvaluationStatus.notEvaluated
+        : sampleEvaluationStatus(sample);
+  }
 
   // Controllers for general info
   final TextEditingController poNumberController = TextEditingController();
@@ -265,10 +295,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
     _generalFieldErrors.clear();
 
     final requiredFields = <QCMaterialGeneralField, (String, String)>{
-      QCMaterialGeneralField.poNumber: (
-        poNumberController.text,
-        'Nomor PO',
-      ),
+      QCMaterialGeneralField.poNumber: (poNumberController.text, 'Nomor PO'),
       QCMaterialGeneralField.poDate: (poDateController.text, 'Tanggal PO'),
       QCMaterialGeneralField.doNumber: (
         doNumberController.text,
@@ -412,8 +439,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
   List<List<Uint8List>> get localItemPhotoBytes =>
       currentSample?.localItemPhotoBytes ?? samples.first.localItemPhotoBytes;
   List<List<QCPhotoProcessingEntry>> get processingItemPhotos =>
-      currentSample?.processingItemPhotos ??
-      samples.first.processingItemPhotos;
+      currentSample?.processingItemPhotos ?? samples.first.processingItemPhotos;
 
   // Revision state
   bool isRevisionMode = false;
@@ -481,6 +507,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
       }
 
       samples.clear();
+      _reviewRequest = QCMaterialReviewRequest.fromGeneralInfo(
+        report.generalInfo,
+      );
       if (report.samples.isNotEmpty) {
         for (final sample in report.samples) {
           samples.add(
@@ -517,6 +546,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
       _appendMissingSamples();
       _currentStep = _restoredStep(report);
     } else {
+      _reviewRequest = null;
       // Prepopulate default template fields
       materialIdController.text = _template.id;
       stelVersionController.text = _template.code == 'TA-FR-048-010-01'
@@ -538,6 +568,64 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
     _isInit = true;
     notifyListeners();
+  }
+
+  QCSampleEvaluationStatus sampleEvaluationStatus(
+    QCMaterialSampleState sample,
+  ) {
+    if (sample.answers.any(
+      (answer) =>
+          qcSampleEvaluationStatusFromValue(answer.evaluationStatus) ==
+          QCSampleEvaluationStatus.outOfStandard,
+    )) {
+      return QCSampleEvaluationStatus.outOfStandard;
+    }
+
+    final answersByItemId = {
+      for (final answer in sample.answers) answer.itemId: answer,
+    };
+    final requiredEvaluableItems = _template.checklistItems.where(
+      (item) => item.required && item.isActive && _isParameterEvaluable(item),
+    );
+    if (requiredEvaluableItems.isEmpty) {
+      return QCSampleEvaluationStatus.notEvaluated;
+    }
+    final allWithinStandard = requiredEvaluableItems.every((item) {
+      final answer = answersByItemId[item.id];
+      return answer != null &&
+          qcSampleEvaluationStatusFromValue(answer.evaluationStatus) ==
+              QCSampleEvaluationStatus.withinStandard;
+    });
+    return allWithinStandard
+        ? QCSampleEvaluationStatus.withinStandard
+        : QCSampleEvaluationStatus.notEvaluated;
+  }
+
+  void setParameterEvaluationStatus({
+    required int sampleIndex,
+    required int answerIndex,
+    required QCSampleEvaluationStatus status,
+  }) {
+    final sample = samples[sampleIndex];
+    sample.answers[answerIndex].evaluationStatus = status.apiValue;
+    sample.updatedAt = DateTime.now();
+    notifyListeners();
+  }
+
+  bool requestReview({DateTime? requestedAt}) {
+    if (!isReviewRequestEligible || reviewRequested) return false;
+    final failedSamples = outOfStandardSamples;
+    _reviewRequest = QCMaterialReviewRequest(
+      requestedAt: requestedAt ?? DateTime.now(),
+      failedSampleIds: List.unmodifiable(
+        failedSamples.map((sample) => sample.id),
+      ),
+      failedSampleNumbers: List.unmodifiable(
+        failedSamples.map((sample) => sample.sampleNumber),
+      ),
+    );
+    notifyListeners();
+    return true;
   }
 
   QCMaterialSampleState _newSampleState(
@@ -653,8 +741,88 @@ class QCMaterialFormProvider extends ChangeNotifier {
     );
     answers[index].warningMessage = valRes.warningMessage;
     answers[index].status = valRes.status;
+    answers[index].evaluationStatus = _evaluateParameter(
+      item,
+      valueText,
+    ).apiValue;
     _markCurrentSampleInProgress();
     notifyListeners();
+  }
+
+  bool _isParameterEvaluable(QCChecklistItem item) {
+    return switch (item.inputType) {
+      QCInputType.number =>
+        item.minValue != null ||
+            item.maxValue != null ||
+            item.validationRule?.minValue != null ||
+            item.validationRule?.maxValue != null,
+      QCInputType.choice => _resolvedChoiceOptions(item).isNotEmpty,
+      QCInputType.booleanCheck => true,
+      QCInputType.text || QCInputType.photo => false,
+    };
+  }
+
+  QCSampleEvaluationStatus _evaluateParameter(
+    QCChecklistItem item,
+    String rawValue,
+  ) {
+    final value = rawValue.trim();
+    if (value.isEmpty || !_isParameterEvaluable(item)) {
+      return QCSampleEvaluationStatus.notEvaluated;
+    }
+
+    switch (item.inputType) {
+      case QCInputType.number:
+        final actual = double.tryParse(value.replaceAll(',', '.'));
+        if (actual == null || !actual.isFinite) {
+          return QCSampleEvaluationStatus.notEvaluated;
+        }
+        final minimum = item.minValue ?? item.validationRule?.minValue;
+        final maximum = item.maxValue ?? item.validationRule?.maxValue;
+        if ((minimum != null && actual < minimum) ||
+            (maximum != null && actual > maximum)) {
+          return QCSampleEvaluationStatus.outOfStandard;
+        }
+        return QCSampleEvaluationStatus.withinStandard;
+      case QCInputType.choice:
+        final option = choiceOptionForValue(
+          _resolvedChoiceOptions(item),
+          value,
+        );
+        return switch (option?.outcome.toUpperCase()) {
+          'PASS' => QCSampleEvaluationStatus.withinStandard,
+          'FAIL' => QCSampleEvaluationStatus.outOfStandard,
+          _ => QCSampleEvaluationStatus.notEvaluated,
+        };
+      case QCInputType.booleanCheck:
+        if (value == 'Tidak' || value == 'Tidak Sesuai') {
+          return QCSampleEvaluationStatus.outOfStandard;
+        }
+        if (value == 'Ya' || value == 'Sesuai' || value == 'OK') {
+          return QCSampleEvaluationStatus.withinStandard;
+        }
+        return QCSampleEvaluationStatus.notEvaluated;
+      case QCInputType.text:
+      case QCInputType.photo:
+        return QCSampleEvaluationStatus.notEvaluated;
+    }
+  }
+
+  List<TemplateChoiceOption> _resolvedChoiceOptions(QCChecklistItem item) {
+    if (item.choiceOptions.isNotEmpty) return item.choiceOptions;
+    return (item.choices ?? const <String>[])
+        .asMap()
+        .entries
+        .map(
+          (entry) => TemplateChoiceOption(
+            id: 'legacy-choice-${entry.key}',
+            label: entry.value,
+            value: entry.value,
+            outcome: entry.key == 0 ? 'PASS' : 'FAIL',
+            position: entry.key,
+          ),
+        )
+        .toList(growable: false);
   }
 
   Future<QCMaterialPhotoAddResult> addPhoto(int index) async {
@@ -1039,7 +1207,15 @@ class QCMaterialFormProvider extends ChangeNotifier {
       'tkdnCertDate': tkdnCertDateController.text.trim(),
       'tkdnValue': tkdnValueController.text.trim(),
       'currentStep': _currentStep.toString(),
+      _sampleStatusesKey: jsonEncode({
+        for (final sample in samples)
+          sample.id: sampleEvaluationStatus(sample).apiValue,
+      }),
+      _failedSampleCountKey: failedSampleCount.toString(),
+      _reviewEligibleKey: isReviewRequestEligible.toString(),
+      QCMaterialReviewRequest.requestedKey: reviewRequested.toString(),
     };
+    _reviewRequest?.writeToGeneralInfo(genInfo);
     final sampleSnapshots = List<QCReportSample>.generate(samples.length, (
       index,
     ) {
