@@ -69,12 +69,20 @@ class QCMaterialFormScreen extends StatelessWidget {
                       title: 'Form QC Material',
                       subtitle: '${tpl.name} (${tpl.code})',
                     ),
-                    _buildGeneralInfoCard(provider),
-                    const SizedBox(height: 20),
-                    _buildLocationSection(provider),
+                    _buildProgressSection(provider),
                     const SizedBox(height: 24),
-                    _buildChecklistSection(context, provider, tpl),
-                    _buildStaffNoteCard(provider),
+                    if (provider.isGeneralStep) ...[
+                      _buildGeneralInfoCard(provider),
+                      const SizedBox(height: 20),
+                      _buildLocationSection(provider),
+                      const SizedBox(height: 20),
+                      _buildStaffNoteCard(provider),
+                    ] else ...[
+                      _buildSampleHeading(provider),
+                      const SizedBox(height: 16),
+                      _buildChecklistSection(context, provider, tpl),
+                      _buildSampleNoteCard(provider),
+                    ],
                     const SizedBox(height: 28),
                     _buildActionButtons(context, provider),
                     const SizedBox(height: 36),
@@ -85,6 +93,72 @@ class QCMaterialFormScreen extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildProgressSection(QCMaterialFormProvider provider) {
+    final stepNumber = provider.currentStep + 1;
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Langkah $stepNumber dari ${provider.totalSteps}',
+                style: const TextStyle(
+                  color: AppColors.textMain,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                provider.isGeneralStep
+                    ? 'Informasi Pengadaan'
+                    : 'Sampel ${provider.currentSample!.sampleNumber}',
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LinearProgressIndicator(
+            key: const Key('qc_material_progress'),
+            value: stepNumber / provider.totalSteps,
+            minHeight: 7,
+            borderRadius: BorderRadius.circular(8),
+            color: AppColors.primary,
+            backgroundColor: AppColors.inactiveBg,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSampleHeading(QCMaterialFormProvider provider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Sampel ${provider.currentSample!.sampleNumber} dari ${provider.sampleCount}',
+          key: const Key('qc_material_sample_indicator'),
+          style: const TextStyle(
+            color: AppColors.textMain,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Isi checklist hanya untuk sampel ini.',
+          style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+        ),
+      ],
     );
   }
 
@@ -158,6 +232,16 @@ class QCMaterialFormScreen extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          AppInput(
+            key: const Key('qc_material_sample_count'),
+            label: 'Jumlah Sampel',
+            hintText: 'Contoh: 5',
+            controller: p.sampleCountController,
+            keyboardType: TextInputType.number,
+            helperText: 'Menentukan jumlah langkah pemeriksaan sampel.',
+            prefixIcon: Icons.format_list_numbered,
           ),
           const SizedBox(height: 12),
           AppInput(
@@ -413,7 +497,7 @@ class QCMaterialFormScreen extends StatelessWidget {
     return AppCard(
       padding: const EdgeInsets.all(20),
       child: AppInput(
-        label: 'Catatan QA Staff (Opsional)',
+        label: 'Catatan Staff Warehouse (Opsional)',
         hintText:
             'Tuliskan catatan tambahan mengenai hasil pengujian material...',
         controller: p.staffNoteController,
@@ -422,82 +506,125 @@ class QCMaterialFormScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildSampleNoteCard(QCMaterialFormProvider p) {
+    return AppCard(
+      padding: const EdgeInsets.all(20),
+      child: AppInput(
+        key: ValueKey('sample_note_${p.currentSample!.id}'),
+        label: 'Catatan Sampel ${p.currentSample!.sampleNumber} (Opsional)',
+        hintText: 'Tuliskan catatan khusus untuk sampel ini...',
+        controller: p.currentSample!.notesController,
+        onChanged: p.updateSampleNotes,
+        maxLines: 3,
+      ),
+    );
+  }
+
   Widget _buildActionButtons(BuildContext context, QCMaterialFormProvider p) {
-    return Row(
+    final navigationDisabled = p.isPersisting || p.isNavigating;
+    return Column(
       children: [
-        if (!p.isRevisionMode) ...[
-          Expanded(
-            flex: 4,
-            child: AppButton(
-              text: 'Simpan Form',
-              variant: AppButtonVariant.secondary,
-              isLoading: p.isPersisting,
-              onPressed: () async {
-                if (!p.hasAnyDraftContent) {
-                  AppSnackbar.warning(
-                    context,
-                    'Isi minimal satu data pemeriksaan sebelum menyimpan draft.',
-                  );
-                  return;
-                }
-                try {
-                  await p.persistReport(QCReportStatus.DRAFT);
-                  if (!context.mounted) return;
-                  AppSnackbar.success(context, 'Draft berhasil disimpan');
-                  context.pop();
-                } on QCMaterialPersistenceException catch (error) {
-                  if (!context.mounted) return;
-                  AppSnackbar.error(context, error.message);
-                }
-              },
+        Row(
+          children: [
+            Expanded(
+              child: AppButton(
+                key: const Key('qc_material_back_button'),
+                text: 'Kembali',
+                icon: Icons.arrow_back,
+                variant: AppButtonVariant.ghost,
+                onPressed: navigationDisabled || p.isFirstStep
+                    ? null
+                    : () => p.previousStep(),
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-        ],
-        Expanded(
-          flex: 6,
-          child: AppButton(
-            text: p.isRevisionMode ? 'Kirim Ulang' : 'Kirim Laporan',
-            variant: AppButtonVariant.primary,
+            const SizedBox(width: 12),
+            Expanded(
+              child: p.isFinalStep
+                  ? AppButton(
+                      key: const Key('qc_material_submit_button'),
+                      text: p.isRevisionMode ? 'Kirim Ulang' : 'Kirim Laporan',
+                      variant: AppButtonVariant.primary,
+                      isLoading: p.isPersisting,
+                      onPressed: navigationDisabled
+                          ? null
+                          : () => _submit(context, p),
+                    )
+                  : AppButton(
+                      key: const Key('qc_material_next_button'),
+                      text: 'Selanjutnya',
+                      icon: Icons.arrow_forward,
+                      variant: AppButtonVariant.primary,
+                      onPressed: navigationDisabled
+                          ? null
+                          : () async {
+                              final error = await p.nextStep();
+                              if (!context.mounted || error == null) return;
+                              AppSnackbar.error(context, error);
+                            },
+                    ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (!p.isRevisionMode) ...[
+          AppButton(
+            key: const Key('qc_material_save_draft_button'),
+            text: 'Simpan Draft',
+            variant: AppButtonVariant.secondary,
             isLoading: p.isPersisting,
-            onPressed: () {
-              final locError = p.validateLocation();
-              if (locError != null) {
-                AppSnackbar.error(context, locError);
-                return;
-              }
-              final error = p.validateForm();
-              if (error != null) {
-                AppSnackbar.error(context, error);
-                return;
-              }
-              showDialog(
-                context: context,
-                builder: (c) => ConfirmationModal(
-                  title: p.isRevisionMode
-                      ? 'Kirim Ulang Laporan'
-                      : 'Kirim Laporan QC',
-                  message: p.isRevisionMode
-                      ? 'Apakah perbaikan data pengujian sudah benar dan siap dikirim ulang?'
-                      : 'Apakah seluruh data pengujian sudah benar dan siap dikirim?',
-                  confirmText: p.isRevisionMode ? 'Kirim Ulang' : 'Kirim',
-                  onConfirm: () async {
-                    Navigator.pop(c);
+            onPressed: navigationDisabled
+                ? null
+                : () async {
+                    if (!p.hasAnyDraftContent) {
+                      AppSnackbar.warning(
+                        context,
+                        'Isi minimal satu data pemeriksaan sebelum menyimpan draft.',
+                      );
+                      return;
+                    }
                     try {
-                      await p.persistReport(QCReportStatus.SUBMITTED);
+                      await p.persistReport(QCReportStatus.DRAFT);
                       if (!context.mounted) return;
+                      AppSnackbar.success(context, 'Draft berhasil disimpan');
                       context.pop();
                     } on QCMaterialPersistenceException catch (error) {
                       if (!context.mounted) return;
                       AppSnackbar.error(context, error.message);
                     }
                   },
-                ),
-              );
-            },
           ),
-        ),
+        ],
       ],
+    );
+  }
+
+  void _submit(BuildContext context, QCMaterialFormProvider p) {
+    final error = p.validateCurrentStep();
+    if (error != null) {
+      AppSnackbar.error(context, error);
+      return;
+    }
+    showDialog(
+      context: context,
+      builder: (c) => ConfirmationModal(
+        title: p.isRevisionMode ? 'Kirim Ulang Laporan' : 'Kirim Laporan QC',
+        message: p.isRevisionMode
+            ? 'Apakah perbaikan data pengujian sudah benar dan siap dikirim ulang?'
+            : 'Apakah seluruh data pengujian sudah benar dan siap dikirim?',
+        confirmText: p.isRevisionMode ? 'Kirim Ulang' : 'Kirim',
+        onConfirm: () async {
+          Navigator.pop(c);
+          p.completeCurrentSample();
+          try {
+            await p.persistReport(QCReportStatus.SUBMITTED);
+            if (!context.mounted) return;
+            context.pop();
+          } on QCMaterialPersistenceException catch (error) {
+            if (!context.mounted) return;
+            AppSnackbar.error(context, error.message);
+          }
+        },
+      ),
     );
   }
 }

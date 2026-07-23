@@ -293,7 +293,7 @@ class QCPekerjaanFormScreen extends StatelessWidget {
     return AppCard(
       padding: const EdgeInsets.all(20),
       child: AppInput(
-        label: 'Catatan QA Staff (Opsional)',
+        label: 'Catatan Staff Warehouse (Opsional)',
         hintText: 'Tuliskan catatan tambahan mengenai proses pengerjaan...',
         controller: p.staffNoteController,
         maxLines: 3,

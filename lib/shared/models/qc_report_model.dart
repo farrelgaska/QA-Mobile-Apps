@@ -1,5 +1,6 @@
 import 'enums.dart';
 import 'qc_checklist_answer_model.dart';
+import 'qc_report_sample_model.dart';
 import 'work_location_model.dart';
 
 class QCReportChecklistResult {
@@ -59,12 +60,10 @@ class StaffIdentity {
   final String nik;
 
   StaffIdentity({required this.name, required this.nik});
-  
+
   Map<String, dynamic> toJson() => {'name': name, 'nik': nik};
-  factory StaffIdentity.fromJson(Map<String, dynamic> json) => StaffIdentity(
-    name: json['name'] ?? '',
-    nik: json['nik'] ?? '',
-  );
+  factory StaffIdentity.fromJson(Map<String, dynamic> json) =>
+      StaffIdentity(name: json['name'] ?? '', nik: json['nik'] ?? '');
 }
 
 class ReportLocation {
@@ -86,7 +85,7 @@ class ReportLocation {
     'area': area,
     'detail_location': detailLocation,
   };
-  
+
   factory ReportLocation.fromJson(Map<String, dynamic> json) => ReportLocation(
     siteId: json['site_id'] ?? '',
     siteName: json['site_name'] ?? '',
@@ -107,7 +106,7 @@ class AdminReview {
     'reviewed_at': reviewedAt,
     'conclusion': conclusion,
   };
-  
+
   factory AdminReview.fromJson(Map<String, dynamic> json) => AdminReview(
     adminNote: json['admin_note'],
     reviewedAt: json['reviewed_at'],
@@ -128,9 +127,11 @@ class QCReportModel {
   final DateTime submittedAt;
   final AdminReview adminReview;
   final List<String> generalPhotos;
+  final int sampleCount;
+  final List<QCReportSample> samples;
   final int revisionNumber;
   final List<QCReportModel> revisionHistory;
-  
+
   // Template & form references
   final String formCode;
   final String templateId;
@@ -149,9 +150,11 @@ class QCReportModel {
     DateTime? submittedAt,
     AdminReview? adminReview,
     List<String>? generalPhotos,
+    int sampleCount = 1,
+    List<QCReportSample>? samples,
     this.revisionNumber = 1,
     this.revisionHistory = const [],
-    
+
     // Legacy / optional parameters for backwards compatibility
     String? checkedByName,
     String? checkedByNik,
@@ -168,35 +171,47 @@ class QCReportModel {
     this.formCode = '',
     this.templateId = '',
     this.finalConclusion,
-  })  : staff = staff ?? StaffIdentity(
-          name: checkedByName ?? 'Yanuar Luthfi',
-          nik: checkedByNik ?? createdByNik ?? 'NIK-908271',
-        ),
-        location = location ?? ReportLocation(
-          siteId: siteId ?? 'site-1',
-          siteName: siteName ?? 'Gudang Material Utama',
-          area: area ?? 'Sektor Utama',
-          detailLocation: detailLocation ?? '',
-        ),
-        generalInfo = generalInfo ?? {},
-        checklistItems = checklistItems ?? checklistAnswers ?? 
-            (checklistResults?.map((res) => QCChecklistAnswer(
-              itemId: res.itemId,
-              value: res.resultValue,
-              status: _mapChecklistStatusToQCResultStatus(res.status),
-              photoPaths: res.photos,
-              paramName: res.paramName,
-              standardText: res.standard,
-              unit: res.unit,
-              inputType: res.inputType,
-              adminNote: adminNote,
-            )).toList() ?? []),
-        submittedAt = submittedAt ?? date ?? DateTime.now(),
-        adminReview = adminReview ?? AdminReview(
-          adminNote: adminNote,
-          conclusion: finalConclusion,
-        ),
-        generalPhotos = generalPhotos ?? photos ?? [];
+  }) : staff =
+           staff ??
+           StaffIdentity(
+             name: checkedByName ?? 'Yanuar Luthfi',
+             nik: checkedByNik ?? createdByNik ?? 'NIK-908271',
+           ),
+       location =
+           location ??
+           ReportLocation(
+             siteId: siteId ?? 'site-1',
+             siteName: siteName ?? 'Gudang Material Utama',
+             area: area ?? 'Sektor Utama',
+             detailLocation: detailLocation ?? '',
+           ),
+       generalInfo = generalInfo ?? {},
+       checklistItems =
+           checklistItems ??
+           checklistAnswers ??
+           (checklistResults
+                   ?.map(
+                     (res) => QCChecklistAnswer(
+                       itemId: res.itemId,
+                       value: res.resultValue,
+                       status: _mapChecklistStatusToQCResultStatus(res.status),
+                       photoPaths: res.photos,
+                       paramName: res.paramName,
+                       standardText: res.standard,
+                       unit: res.unit,
+                       inputType: res.inputType,
+                       adminNote: adminNote,
+                     ),
+                   )
+                   .toList() ??
+               []),
+       submittedAt = submittedAt ?? date ?? DateTime.now(),
+       adminReview =
+           adminReview ??
+           AdminReview(adminNote: adminNote, conclusion: finalConclusion),
+       generalPhotos = generalPhotos ?? photos ?? [],
+       sampleCount = sampleCount > 0 ? sampleCount : 1,
+       samples = samples ?? const [];
 
   // Legacy getters for backward compatibility
   String get checkedByName => staff.name;
@@ -210,7 +225,7 @@ class QCReportModel {
   List<QCChecklistAnswer> get checklistAnswers => checklistItems;
   List<String> get photos => generalPhotos;
   String? get adminNote => adminReview.adminNote;
-  
+
   WorkLocation get workLocation => WorkLocation(
     siteName: location.siteName,
     area: location.area,
@@ -218,20 +233,26 @@ class QCReportModel {
     isCustom: location.siteId == 'custom-site',
   );
 
-  List<QCReportChecklistResult> get checklistResults => checklistItems.map((item) => QCReportChecklistResult(
-    itemId: item.itemId,
-    paramName: item.paramName,
-    standard: item.standardText,
-    inputType: item.inputType,
-    unit: item.unit,
-    resultValue: item.value?.toString() ?? '',
-    status: _mapQCResultStatusToChecklistStatus(item.status),
-    issueNote: item.issueNote ?? '',
-    photos: item.photoPaths,
-    adminNote: item.adminNote,
-  )).toList();
+  List<QCReportChecklistResult> get checklistResults => checklistItems
+      .map(
+        (item) => QCReportChecklistResult(
+          itemId: item.itemId,
+          paramName: item.paramName,
+          standard: item.standardText,
+          inputType: item.inputType,
+          unit: item.unit,
+          resultValue: item.value?.toString() ?? '',
+          status: _mapQCResultStatusToChecklistStatus(item.status),
+          issueNote: item.issueNote ?? '',
+          photos: item.photoPaths,
+          adminNote: item.adminNote,
+        ),
+      )
+      .toList();
 
-  static ChecklistStatus _mapQCResultStatusToChecklistStatus(QCResultStatus status) {
+  static ChecklistStatus _mapQCResultStatusToChecklistStatus(
+    QCResultStatus status,
+  ) {
     switch (status) {
       case QCResultStatus.pass:
         return ChecklistStatus.lulus;
@@ -244,7 +265,9 @@ class QCReportModel {
     }
   }
 
-  static QCResultStatus _mapChecklistStatusToQCResultStatus(ChecklistStatus status) {
+  static QCResultStatus _mapChecklistStatusToQCResultStatus(
+    ChecklistStatus status,
+  ) {
     switch (status) {
       case ChecklistStatus.lulus:
         return QCResultStatus.pass;
@@ -270,6 +293,8 @@ class QCReportModel {
     DateTime? submittedAt,
     AdminReview? adminReview,
     List<String>? generalPhotos,
+    int? sampleCount,
+    List<QCReportSample>? samples,
     int? revisionNumber,
     List<QCReportModel>? revisionHistory,
     String? formCode,
@@ -289,6 +314,8 @@ class QCReportModel {
       submittedAt: submittedAt ?? this.submittedAt,
       adminReview: adminReview ?? this.adminReview,
       generalPhotos: generalPhotos ?? this.generalPhotos,
+      sampleCount: sampleCount ?? this.sampleCount,
+      samples: samples ?? this.samples,
       revisionNumber: revisionNumber ?? this.revisionNumber,
       revisionHistory: revisionHistory ?? this.revisionHistory,
       formCode: formCode ?? this.formCode,
@@ -313,6 +340,8 @@ class QCReportModel {
       'submitted_at': submittedAt.toIso8601String(),
       'admin_review': adminReview.toJson(),
       'general_photos': generalPhotos,
+      'sample_count': sampleCount,
+      'samples': samples.map((sample) => sample.toJson()).toList(),
       'revision_number': revisionNumber,
       'revision_history': revisionHistory.map((h) => h.toJson()).toList(),
     };
@@ -323,12 +352,13 @@ class QCReportModel {
     final statusStr = json['status']?.toString().toUpperCase();
     if (statusStr == 'SUBMITTED') {
       parsedStatus = QCReportStatus.SUBMITTED;
-    } else if (statusStr == 'NEEDS_FOLLOW_UP' || statusStr == 'NEED_FOLLOW_UP') {
+    } else if (statusStr == 'NEEDS_FOLLOW_UP' ||
+        statusStr == 'NEED_FOLLOW_UP') {
       parsedStatus = QCReportStatus.NEEDS_FOLLOW_UP;
     } else if (statusStr == 'APPROVED') {
       parsedStatus = QCReportStatus.APPROVED;
     }
-    
+
     return QCReportModel(
       id: json['id'] ?? '',
       title: json['title'] ?? '',
@@ -341,11 +371,19 @@ class QCReportModel {
           .map((i) => QCChecklistAnswer.fromJson(i))
           .toList(),
       staffNote: json['staff_note'] ?? '',
-      submittedAt: json['submitted_at'] != null 
-          ? DateTime.parse(json['submitted_at']) 
+      submittedAt: json['submitted_at'] != null
+          ? DateTime.parse(json['submitted_at'])
           : DateTime.now(),
       adminReview: AdminReview.fromJson(json['admin_review'] ?? {}),
       generalPhotos: List<String>.from(json['general_photos'] ?? []),
+      sampleCount: _positiveInt(json['sample_count']) ?? 1,
+      samples: (json['samples'] as List? ?? const [])
+          .whereType<Map>()
+          .map(
+            (sample) =>
+                QCReportSample.fromJson(Map<String, dynamic>.from(sample)),
+          )
+          .toList(growable: false),
       revisionNumber: json['revision_number'] ?? 1,
       revisionHistory: (json['revision_history'] as List? ?? [])
           .map((h) => QCReportModel.fromJson(h))
@@ -353,5 +391,10 @@ class QCReportModel {
       formCode: json['form_code'] ?? '',
       templateId: json['template_id'] ?? '',
     );
+  }
+
+  static int? _positiveInt(dynamic value) {
+    final parsed = value is int ? value : int.tryParse(value?.toString() ?? '');
+    return parsed != null && parsed > 0 ? parsed : null;
   }
 }

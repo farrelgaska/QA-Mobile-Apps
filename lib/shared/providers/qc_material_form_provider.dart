@@ -9,6 +9,7 @@ import '../../core/dummy/dummy_sites.dart';
 import '../../core/services/api_service.dart';
 import '../../shared/models/enums.dart';
 import '../../shared/models/qc_report_model.dart'; // QCReportModel, AdminReview, StaffIdentity, ReportLocation
+import '../../shared/models/qc_report_sample_model.dart';
 import '../../shared/models/qc_checklist_answer_model.dart';
 import '../../shared/models/qc_material_template_model.dart';
 import '../../shared/models/work_location_model.dart';
@@ -62,6 +63,48 @@ class QCMaterialPersistenceException implements Exception {
   const QCMaterialPersistenceException(this.message);
 }
 
+class QCMaterialSampleState {
+  final String id;
+  final int sampleNumber;
+  QCSampleInspectionStatus inspectionStatus;
+  final List<QCChecklistAnswer> answers;
+  final TextEditingController notesController;
+  final List<String> photoPaths;
+  final DateTime createdAt;
+  DateTime updatedAt;
+  final List<List<XFile>> localItemPhotos;
+  final List<List<Uint8List>> localItemPhotoBytes;
+
+  QCMaterialSampleState({
+    required this.id,
+    required this.sampleNumber,
+    required this.inspectionStatus,
+    required this.answers,
+    required String notes,
+    required this.photoPaths,
+    required this.createdAt,
+    required this.updatedAt,
+  }) : notesController = TextEditingController(text: notes),
+       localItemPhotos = List.generate(answers.length, (_) => <XFile>[]),
+       localItemPhotoBytes = List.generate(
+         answers.length,
+         (_) => <Uint8List>[],
+       );
+
+  bool get hasContent =>
+      notesController.text.trim().isNotEmpty ||
+      photoPaths.isNotEmpty ||
+      answers.any(
+        (answer) => answer.value?.toString().trim().isNotEmpty == true,
+      ) ||
+      answers.any((answer) => answer.photoPaths.isNotEmpty) ||
+      localItemPhotos.any((photos) => photos.isNotEmpty);
+
+  void dispose() {
+    notesController.dispose();
+  }
+}
+
 class QCMaterialFormProvider extends ChangeNotifier {
   // Dependencies
   final DummyState _state = DummyState();
@@ -70,8 +113,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
   final QCMaterialPersistenceApi _api;
   final QCPhotoProcessor _photoProcessor;
   final Map<XFile, String> _uploadedObjectPaths = {};
-  final Set<int> _photoCapturesInProgress = <int>{};
+  final Set<String> _photoCapturesInProgress = <String>{};
   bool _isPersisting = false;
+  bool _isNavigating = false;
   bool _isDisposed = false;
   late String _reportId;
 
@@ -91,6 +135,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
   /// Public getters for UI consumption
   bool get isReady => _isInit;
   bool get isPersisting => _isPersisting;
+  bool get isNavigating => _isNavigating;
   String get reportId => _reportId;
   QCMaterialTemplate get template => _template;
 
@@ -103,6 +148,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
   final TextEditingController arrivalVolumeController = TextEditingController();
   final TextEditingController samplingVolumeController =
       TextEditingController();
+  final TextEditingController sampleCountController = TextEditingController(
+    text: '1',
+  );
   final TextEditingController brandNameController = TextEditingController();
   final TextEditingController warehouseLocationController =
       TextEditingController();
@@ -153,10 +201,26 @@ class QCMaterialFormProvider extends ChangeNotifier {
     return null;
   }
 
-  // Checklist answers
-  final List<QCChecklistAnswer> answers = [];
-  final List<List<XFile>> localItemPhotos = [];
-  final List<List<Uint8List>> localItemPhotoBytes = [];
+  // Ordered sample state. Legacy checklist getters expose the active sample.
+  final List<QCMaterialSampleState> samples = [];
+  int _sampleCount = 1;
+  int _currentStep = 0;
+
+  int get sampleCount => _sampleCount;
+  int get currentStep => _currentStep;
+  int get totalSteps => _sampleCount + 1;
+  bool get isGeneralStep => _currentStep == 0;
+  bool get isFirstStep => _currentStep == 0;
+  bool get isFinalStep => _currentStep == totalSteps - 1;
+  int? get currentSampleIndex => isGeneralStep ? null : _currentStep - 1;
+  QCMaterialSampleState? get currentSample =>
+      isGeneralStep ? null : samples[currentSampleIndex!];
+  List<QCChecklistAnswer> get answers =>
+      currentSample?.answers ?? samples.first.answers;
+  List<List<XFile>> get localItemPhotos =>
+      currentSample?.localItemPhotos ?? samples.first.localItemPhotos;
+  List<List<Uint8List>> get localItemPhotoBytes =>
+      currentSample?.localItemPhotoBytes ?? samples.first.localItemPhotoBytes;
 
   // Revision state
   bool isRevisionMode = false;
@@ -196,6 +260,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
       arrivalVolumeController.text = report.generalInfo['arrivalVolume'] ?? '';
       samplingVolumeController.text =
           report.generalInfo['samplingVolume'] ?? '';
+      sampleCountController.text = report.sampleCount.toString();
       brandNameController.text = report.generalInfo['brandName'] ?? '';
       warehouseLocationController.text =
           report.generalInfo['warehouseLocation'] ?? '';
@@ -222,39 +287,42 @@ class QCMaterialFormProvider extends ChangeNotifier {
         }
       }
 
-      // Populate checklist items
-      answers.clear();
-      for (var item in _template.checklistItems) {
-        final matchingAnswer = report.checklistItems.firstWhere(
-          (ans) => ans.itemId == item.id,
-          orElse: () => QCChecklistAnswer(
-            itemId: item.id,
-            value: '',
-            status: QCResultStatus.notFilled,
-            photoPaths: [],
-            paramName: item.label,
-            standardText: item.standardText,
-            unit: item.unit,
-            inputType: item.inputType == QCInputType.number
-                ? 'number'
-                : item.inputType == QCInputType.choice
-                ? 'choice'
-                : 'text',
-          ),
-        );
-
-        // Recalculate warning message / status locally
-        final valRes = QCValidationHelper.validateChecklistAnswer(
-          item: item,
-          value: matchingAnswer.value?.toString() ?? '',
-        );
-        answers.add(
-          matchingAnswer.copyWith(
-            warningMessage: valRes.warningMessage,
-            status: valRes.status,
+      samples.clear();
+      if (report.samples.isNotEmpty) {
+        for (final sample in report.samples) {
+          samples.add(
+            QCMaterialSampleState(
+              id: sample.id,
+              sampleNumber: sample.sampleNumber,
+              inspectionStatus: sample.inspectionStatus,
+              answers: _answersFromSnapshot(sample.checklistAnswers),
+              notes: sample.notes,
+              photoPaths: List<String>.from(sample.photoPaths),
+              createdAt: sample.createdAt,
+              updatedAt: sample.updatedAt,
+            ),
+          );
+        }
+        _sampleCount = max(report.sampleCount, samples.length);
+      } else {
+        _sampleCount = report.sampleCount > 0 ? report.sampleCount : 1;
+        final legacyAnswers = _answersFromSnapshot(report.checklistItems);
+        samples.add(
+          _newSampleState(
+            1,
+            answers: legacyAnswers,
+            inspectionStatus:
+                legacyAnswers.any(
+                  (answer) =>
+                      answer.value?.toString().trim().isNotEmpty == true,
+                )
+                ? QCSampleInspectionStatus.inProgress
+                : QCSampleInspectionStatus.notStarted,
           ),
         );
       }
+      _appendMissingSamples();
+      _currentStep = _restoredStep(report);
     } else {
       // Prepopulate default template fields
       materialIdController.text = _template.id;
@@ -266,37 +334,106 @@ class QCMaterialFormProvider extends ChangeNotifier {
       qaExpiryDateController.text = '2028-12-31';
       tkdnCertDateController.text = '2026-01-15';
       selectedSite = _state.currentSite;
+      sampleCountController.text = '1';
 
-      // Initialize answers list
-      for (var item in _template.checklistItems) {
-        answers.add(
-          QCChecklistAnswer(
-            itemId: item.id,
-            value: '',
-            status: QCResultStatus.notFilled,
-            photoPaths: [],
-            paramName: item.label,
-            standardText: item.standardText,
-            unit: item.unit,
-            inputType: item.inputType == QCInputType.number
-                ? 'number'
-                : item.inputType == QCInputType.choice
-                ? 'choice'
-                : 'text',
-          ),
-        );
-      }
+      _sampleCount = 1;
+      _currentStep = 0;
+      samples
+        ..clear()
+        ..add(_newSampleState(1));
     }
-
-    localItemPhotos
-      ..clear()
-      ..addAll(List.generate(answers.length, (_) => <XFile>[]));
-    localItemPhotoBytes
-      ..clear()
-      ..addAll(List.generate(answers.length, (_) => <Uint8List>[]));
 
     _isInit = true;
     notifyListeners();
+  }
+
+  QCMaterialSampleState _newSampleState(
+    int sampleNumber, {
+    List<QCChecklistAnswer>? answers,
+    QCSampleInspectionStatus inspectionStatus =
+        QCSampleInspectionStatus.notStarted,
+  }) {
+    final now = DateTime.now();
+    return QCMaterialSampleState(
+      id: '$_reportId-sample-$sampleNumber',
+      sampleNumber: sampleNumber,
+      inspectionStatus: inspectionStatus,
+      answers:
+          answers ??
+          _template.checklistItems
+              .map(_emptyAnswerForItem)
+              .toList(growable: false),
+      notes: '',
+      photoPaths: [],
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
+
+  QCChecklistAnswer _emptyAnswerForItem(QCChecklistItem item) {
+    return QCChecklistAnswer(
+      itemId: item.id,
+      value: '',
+      status: QCResultStatus.notFilled,
+      photoPaths: [],
+      paramName: item.label,
+      standardText: item.standardText,
+      unit: item.unit,
+      inputType: _inputTypeValue(item.inputType),
+    );
+  }
+
+  List<QCChecklistAnswer> _answersFromSnapshot(
+    List<QCChecklistAnswer> snapshot,
+  ) {
+    final byItemId = {for (final answer in snapshot) answer.itemId: answer};
+    return _template.checklistItems
+        .map((item) {
+          final matchingAnswer = byItemId[item.id];
+          if (matchingAnswer == null) return _emptyAnswerForItem(item);
+          final value = matchingAnswer.value?.toString() ?? '';
+          final validation = QCValidationHelper.validateChecklistAnswer(
+            item: item,
+            value: value,
+          );
+          return matchingAnswer.copyWith(
+            paramName: item.label,
+            standardText: matchingAnswer.standardText.isEmpty
+                ? item.standardText
+                : matchingAnswer.standardText,
+            unit: matchingAnswer.unit ?? item.unit,
+            inputType: _inputTypeValue(item.inputType),
+            warningMessage: validation.warningMessage,
+            status: validation.status,
+            photoPaths: List<String>.unmodifiable(matchingAnswer.photoPaths),
+          );
+        })
+        .toList(growable: false);
+  }
+
+  String _inputTypeValue(QCInputType inputType) => switch (inputType) {
+    QCInputType.number => 'number',
+    QCInputType.choice => 'choice',
+    QCInputType.booleanCheck => 'boolean',
+    _ => 'text',
+  };
+
+  void _appendMissingSamples() {
+    while (samples.length < _sampleCount) {
+      final nextNumber = samples.isEmpty
+          ? 1
+          : samples.map((sample) => sample.sampleNumber).reduce(max) + 1;
+      samples.add(_newSampleState(nextNumber));
+    }
+  }
+
+  int _restoredStep(QCReportModel report) {
+    final stored = int.tryParse(report.generalInfo['currentStep'] ?? '');
+    if (stored != null && stored >= 0 && stored < totalSteps) return stored;
+    final incompleteIndex = samples.indexWhere(
+      (sample) => sample.inspectionStatus != QCSampleInspectionStatus.completed,
+    );
+    return incompleteIndex >= 0 ? incompleteIndex + 1 : totalSteps - 1;
   }
 
   String _newReportId() {
@@ -308,9 +445,10 @@ class QCMaterialFormProvider extends ChangeNotifier {
     return 'QC-MAT-${DateTime.now().microsecondsSinceEpoch}-$randomPart';
   }
 
-  void updateAnswer(int index, String value) {
+  void updateAnswer(int index, dynamic value) {
     final item = _template.checklistItems[index];
-    final selectedOption = choiceOptionForValue(item.choiceOptions, value);
+    final valueText = value?.toString() ?? '';
+    final selectedOption = choiceOptionForValue(item.choiceOptions, valueText);
     if (item.inputType == QCInputType.choice &&
         selectedOption?.outcome == 'PASS') {
       answers[index].issueNote = '';
@@ -318,15 +456,18 @@ class QCMaterialFormProvider extends ChangeNotifier {
     answers[index].value = value;
     final valRes = QCValidationHelper.validateChecklistAnswer(
       item: item,
-      value: value,
+      value: valueText,
     );
     answers[index].warningMessage = valRes.warningMessage;
     answers[index].status = valRes.status;
+    _markCurrentSampleInProgress();
     notifyListeners();
   }
 
   Future<QCMaterialPhotoAddResult> addPhoto(int index) async {
-    if (!_photoCapturesInProgress.add(index)) {
+    final activeSample = currentSample ?? samples.first;
+    final captureKey = '${activeSample.id}:$index';
+    if (!_photoCapturesInProgress.add(captureKey)) {
       return QCMaterialPhotoAddResult.cancelled;
     }
     try {
@@ -355,10 +496,11 @@ class QCMaterialFormProvider extends ChangeNotifier {
       }
       localItemPhotos[index].add(processed.file);
       localItemPhotoBytes[index].add(processed.bytes);
+      _markCurrentSampleInProgress();
       notifyListeners();
       return QCMaterialPhotoAddResult.added;
     } finally {
-      _photoCapturesInProgress.remove(index);
+      _photoCapturesInProgress.remove(captureKey);
     }
   }
 
@@ -378,12 +520,33 @@ class QCMaterialFormProvider extends ChangeNotifier {
       _uploadedObjectPaths.remove(removed);
       unawaited(_photoProcessor.deleteGeneratedFile(removed));
     }
+    _markCurrentSampleInProgress();
     notifyListeners();
   }
 
   void updateIssueNote(int index, String value) {
     answers[index].issueNote = value;
+    _markCurrentSampleInProgress();
     notifyListeners();
+  }
+
+  void updateSampleNotes(String value) {
+    final sample = currentSample;
+    if (sample == null) return;
+    sample.updatedAt = DateTime.now();
+    if (value.trim().isNotEmpty &&
+        sample.inspectionStatus == QCSampleInspectionStatus.notStarted) {
+      sample.inspectionStatus = QCSampleInspectionStatus.inProgress;
+    }
+    notifyListeners();
+  }
+
+  void _markCurrentSampleInProgress() {
+    final sample = currentSample ?? samples.first;
+    sample.updatedAt = DateTime.now();
+    if (sample.inspectionStatus == QCSampleInspectionStatus.notStarted) {
+      sample.inspectionStatus = QCSampleInspectionStatus.inProgress;
+    }
   }
 
   bool get hasAnyDraftContent {
@@ -391,17 +554,16 @@ class QCMaterialFormProvider extends ChangeNotifier {
         doNumberController.text.trim().isNotEmpty ||
         vendorNameController.text.trim().isNotEmpty ||
         staffNoteController.text.trim().isNotEmpty ||
-        answers.any((a) => a.value.toString().trim().isNotEmpty) ||
-        answers.any((a) => a.photoPaths.isNotEmpty) ||
-        localItemPhotos.any((photos) => photos.isNotEmpty);
+        samples.any((sample) => sample.hasContent);
   }
 
-  String? validateForm() {
+  String? validateSample(int sampleIndex) {
+    final sample = samples[sampleIndex];
     for (int i = 0; i < _template.checklistItems.length; i++) {
       final item = _template.checklistItems[i];
-      final valStr = answers[i].value.toString().trim();
-      final issue = answers[i].issueNote?.trim() ?? '';
-      final photos = answers[i].photoPaths;
+      final valStr = sample.answers[i].value?.toString().trim() ?? '';
+      final issue = sample.answers[i].issueNote?.trim() ?? '';
+      final photos = sample.answers[i].photoPaths;
 
       if (item.required && valStr.isEmpty) {
         if (item.inputType == QCInputType.number) {
@@ -423,7 +585,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
         }
       }
 
-      if (item.requiredPhoto && photos.isEmpty && localItemPhotos[i].isEmpty) {
+      if (item.requiredPhoto &&
+          photos.isEmpty &&
+          sample.localItemPhotos[i].isEmpty) {
         return 'Form ${i + 1} - ${item.label}: tambahkan dokumentasi foto terlebih dahulu';
       }
 
@@ -437,11 +601,102 @@ class QCMaterialFormProvider extends ChangeNotifier {
     return null;
   }
 
+  String? validateCurrentStep() {
+    if (isGeneralStep) {
+      return validateLocation() ?? _synchronizeSampleCount();
+    }
+    return validateSample(currentSampleIndex!);
+  }
+
+  String? validateForm() {
+    final generalError = validateLocation();
+    if (generalError != null) return generalError;
+    for (var index = 0; index < samples.length; index++) {
+      final error = validateSample(index);
+      if (error != null) return 'Sampel ${index + 1}: $error';
+    }
+    return null;
+  }
+
+  String? _synchronizeSampleCount() {
+    final rawValue = sampleCountController.text.trim();
+    final requestedCount = int.tryParse(rawValue);
+    if (requestedCount == null || requestedCount <= 0) {
+      return 'Jumlah sampel harus berupa bilangan bulat positif.';
+    }
+    if (requestedCount < samples.length) {
+      final removedSamples = samples.skip(requestedCount);
+      if (removedSamples.any((sample) => sample.hasContent)) {
+        return 'Jumlah sampel tidak dapat dikurangi karena data sampel sudah diisi.';
+      }
+      for (final sample in removedSamples) {
+        _disposeSampleState(sample);
+      }
+      samples.removeRange(requestedCount, samples.length);
+    }
+    _sampleCount = requestedCount;
+    _appendMissingSamples();
+    if (_currentStep >= totalSteps) _currentStep = totalSteps - 1;
+    return null;
+  }
+
+  void _disposeSampleState(QCMaterialSampleState sample) {
+    for (final photos in sample.localItemPhotos) {
+      for (final photo in photos) {
+        unawaited(_photoProcessor.deleteGeneratedFile(photo));
+      }
+    }
+    sample.dispose();
+  }
+
+  Future<String?> nextStep() async {
+    if (_isNavigating || isFinalStep) return null;
+    _isNavigating = true;
+    notifyListeners();
+    try {
+      final validationError = validateCurrentStep();
+      if (validationError != null) return validationError;
+      if (!isGeneralStep) {
+        final sample = currentSample!;
+        sample.inspectionStatus = QCSampleInspectionStatus.completed;
+        sample.updatedAt = DateTime.now();
+      }
+      await Future<void>.delayed(Duration.zero);
+      if (_currentStep < totalSteps - 1) _currentStep++;
+      return null;
+    } finally {
+      _isNavigating = false;
+      if (!_isDisposed) notifyListeners();
+    }
+  }
+
+  Future<void> previousStep() async {
+    if (_isNavigating || isFirstStep) return;
+    _isNavigating = true;
+    notifyListeners();
+    try {
+      await Future<void>.delayed(Duration.zero);
+      if (_currentStep > 0) _currentStep--;
+    } finally {
+      _isNavigating = false;
+      if (!_isDisposed) notifyListeners();
+    }
+  }
+
+  void completeCurrentSample() {
+    final sample = currentSample;
+    if (sample == null) return;
+    sample.inspectionStatus = QCSampleInspectionStatus.completed;
+    sample.updatedAt = DateTime.now();
+    notifyListeners();
+  }
+
   List<QCChecklistAnswer> _snapshotAnswersByItemId(
+    QCMaterialSampleState sample,
     List<List<String>> persistedPhotos,
   ) {
     final answersByItemId = {
-      for (final answer in answers) answer.itemId: answer,
+      for (final answer in sample.answers) answer.itemId: answer,
     };
     final photosByItemId = <String, List<String>>{};
     for (var i = 0; i < _template.checklistItems.length; i++) {
@@ -458,28 +713,17 @@ class QCMaterialFormProvider extends ChangeNotifier {
               ),
             );
           }
-          return QCChecklistAnswer(
-            itemId: item.id,
-            value: '',
-            status: QCResultStatus.notFilled,
-            photoPaths: [],
-            paramName: item.label,
-            standardText: item.standardText,
-            unit: item.unit,
-            inputType: item.inputType == QCInputType.number
-                ? 'number'
-                : item.inputType == QCInputType.choice
-                ? 'choice'
-                : item.inputType == QCInputType.booleanCheck
-                ? 'boolean'
-                : 'text',
-          );
+          return _emptyAnswerForItem(item);
         })
         .toList(growable: false);
   }
 
   Future<void> persistReport(QCReportStatus status) async {
     if (_isPersisting) return;
+    final sampleCountError = _synchronizeSampleCount();
+    if (sampleCountError != null) {
+      throw QCMaterialPersistenceException(sampleCountError);
+    }
     _isPersisting = true;
     notifyListeners();
 
@@ -503,7 +747,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
   Future<void> _persistReport(
     QCReportStatus status,
-    List<List<String>> persistedPhotos,
+    List<List<List<String>>> persistedPhotos,
   ) async {
     final workLoc = WorkLocation(
       siteName: isCustomLocation
@@ -533,8 +777,37 @@ class QCMaterialFormProvider extends ChangeNotifier {
       'tkdnNumber': tkdnNumberController.text.trim(),
       'tkdnCertDate': tkdnCertDateController.text.trim(),
       'tkdnValue': tkdnValueController.text.trim(),
+      'currentStep': _currentStep.toString(),
     };
-    final answerSnapshot = _snapshotAnswersByItemId(persistedPhotos);
+    final sampleSnapshots = List<QCReportSample>.generate(samples.length, (
+      index,
+    ) {
+      final sample = samples[index];
+      if (sample.photoPaths.any(
+        (photo) => !_isCanonicalObjectPath(photo) && !_isHttpUrl(photo),
+      )) {
+        throw const QCMaterialPersistenceException(
+          'Laporan memiliki referensi foto sampel yang tidak valid.',
+        );
+      }
+      final canonicalSamplePhotos = sample.photoPaths
+          .where(_isCanonicalObjectPath)
+          .toList(growable: false);
+      return QCReportSample(
+        id: sample.id,
+        sampleNumber: sample.sampleNumber,
+        inspectionStatus: sample.inspectionStatus,
+        checklistAnswers: _snapshotAnswersByItemId(
+          sample,
+          persistedPhotos[index],
+        ),
+        notes: sample.notesController.text,
+        photoPaths: canonicalSamplePhotos,
+        createdAt: sample.createdAt,
+        updatedAt: sample.updatedAt,
+      );
+    });
+    final answerSnapshot = sampleSnapshots.first.checklistAnswers;
 
     if (_originalReport != null) {
       final updatedHistory = List<QCReportModel>.from(
@@ -564,6 +837,8 @@ class QCMaterialFormProvider extends ChangeNotifier {
         formCode: _originalReport!.formCode,
         templateId: _originalReport!.templateId,
         generalInfo: genInfo,
+        sampleCount: _sampleCount,
+        samples: sampleSnapshots,
         revisionNumber:
             _originalReport!.revisionNumber + (isRevisionMode ? 1 : 0),
         revisionHistory: updatedHistory,
@@ -597,6 +872,8 @@ class QCMaterialFormProvider extends ChangeNotifier {
         formCode: _template.code,
         templateId: _template.id,
         generalInfo: genInfo,
+        sampleCount: _sampleCount,
+        samples: sampleSnapshots,
         finalConclusion: status == QCReportStatus.DRAFT
             ? 'Belum Lengkap'
             : 'Pending',
@@ -613,75 +890,94 @@ class QCMaterialFormProvider extends ChangeNotifier {
     }
   }
 
-  Future<List<List<String>>> _uploadPendingPhotos() async {
-    final answersByItemId = {
-      for (final answer in answers) answer.itemId: answer,
-    };
-    final persistedPhotos = _template.checklistItems
-        .map(
-          (item) => List<String>.from(
-            answersByItemId[item.id]?.photoPaths ?? const <String>[],
-          ),
-        )
-        .toList(growable: false);
+  Future<List<List<List<String>>>> _uploadPendingPhotos() async {
+    final persistedBySample = <List<List<String>>>[];
+    for (final sample in samples) {
+      final answersByItemId = {
+        for (final answer in sample.answers) answer.itemId: answer,
+      };
+      final persistedPhotos = _template.checklistItems
+          .map(
+            (item) => List<String>.from(
+              answersByItemId[item.id]?.photoPaths ?? const <String>[],
+            ),
+          )
+          .toList(growable: false);
 
-    for (var i = 0; i < persistedPhotos.length; i++) {
-      final photos = persistedPhotos[i];
-      if (photos.any(
-        (photo) => !_isCanonicalObjectPath(photo) && !_isHttpUrl(photo),
-      )) {
-        throw const QCMaterialPersistenceException(
-          'Laporan memiliki referensi foto yang tidak valid.',
-        );
-      }
-      persistedPhotos[i] = photos.where(_isCanonicalObjectPath).toList();
-    }
-
-    for (var itemIndex = 0; itemIndex < localItemPhotos.length; itemIndex++) {
-      final itemId = _template.checklistItems[itemIndex].id;
-      for (final photo in localItemPhotos[itemIndex]) {
-        var objectPath = _uploadedObjectPaths[photo];
-        if (objectPath == null) {
-          final bytes = await photo.readAsBytes();
-          if (exceedsQCPhotoSizeLimit(bytes)) {
-            throw const QCMaterialPersistenceException(qcPhotoTooLargeMessage);
-          }
-          final uploaded = await _api.uploadQCEvidence(
-            file: photo,
-            reportId: _reportId,
-            itemId: itemId,
+      for (var itemIndex = 0; itemIndex < persistedPhotos.length; itemIndex++) {
+        final photos = persistedPhotos[itemIndex];
+        if (photos.any(
+          (photo) => !_isCanonicalObjectPath(photo) && !_isHttpUrl(photo),
+        )) {
+          throw const QCMaterialPersistenceException(
+            'Laporan memiliki referensi foto yang tidak valid.',
           );
-          objectPath = uploaded.objectPath;
-          if (!_isCanonicalObjectPath(objectPath)) {
-            throw const QCMaterialPersistenceException(
-              'Server mengembalikan referensi foto yang tidak valid.',
-            );
-          }
-          _uploadedObjectPaths[photo] = objectPath;
         }
-        persistedPhotos[itemIndex].add(objectPath);
+        persistedPhotos[itemIndex] = photos
+            .where(_isCanonicalObjectPath)
+            .toList();
+
+        final itemId = _template.checklistItems[itemIndex].id;
+        for (final photo in sample.localItemPhotos[itemIndex]) {
+          var objectPath = _uploadedObjectPaths[photo];
+          if (objectPath == null) {
+            final bytes = await photo.readAsBytes();
+            if (exceedsQCPhotoSizeLimit(bytes)) {
+              throw const QCMaterialPersistenceException(
+                qcPhotoTooLargeMessage,
+              );
+            }
+            final uploaded = await _api.uploadQCEvidence(
+              file: photo,
+              reportId: _reportId,
+              itemId: itemId,
+            );
+            objectPath = uploaded.objectPath;
+            if (!_isCanonicalObjectPath(objectPath)) {
+              throw const QCMaterialPersistenceException(
+                'Server mengembalikan referensi foto yang tidak valid.',
+              );
+            }
+            _uploadedObjectPaths[photo] = objectPath;
+          }
+          persistedPhotos[itemIndex].add(objectPath);
+        }
       }
+      persistedBySample.add(persistedPhotos);
     }
-    return persistedPhotos;
+    return persistedBySample;
   }
 
-  void _commitPersistedPhotos(List<List<String>> persistedPhotos) {
-    final photosByItemId = <String, List<String>>{};
-    for (var i = 0; i < _template.checklistItems.length; i++) {
-      photosByItemId[_template.checklistItems[i].id] = persistedPhotos[i];
-      for (final photo in localItemPhotos[i]) {
-        unawaited(_photoProcessor.deleteGeneratedFile(photo));
+  void _commitPersistedPhotos(List<List<List<String>>> persistedBySample) {
+    for (var sampleIndex = 0; sampleIndex < samples.length; sampleIndex++) {
+      final sample = samples[sampleIndex];
+      final persistedPhotos = persistedBySample[sampleIndex];
+      final photosByItemId = <String, List<String>>{};
+      for (
+        var itemIndex = 0;
+        itemIndex < _template.checklistItems.length;
+        itemIndex++
+      ) {
+        photosByItemId[_template.checklistItems[itemIndex].id] =
+            persistedPhotos[itemIndex];
+        for (final photo in sample.localItemPhotos[itemIndex]) {
+          unawaited(_photoProcessor.deleteGeneratedFile(photo));
+        }
+        sample.localItemPhotos[itemIndex].clear();
+        sample.localItemPhotoBytes[itemIndex].clear();
       }
-      localItemPhotos[i].clear();
-      localItemPhotoBytes[i].clear();
-    }
-    for (var i = 0; i < answers.length; i++) {
-      final answer = answers[i];
-      answers[i] = answer.copyWith(
-        photoPaths: List<String>.from(
-          photosByItemId[answer.itemId] ?? const <String>[],
-        ),
-      );
+      for (
+        var answerIndex = 0;
+        answerIndex < sample.answers.length;
+        answerIndex++
+      ) {
+        final answer = sample.answers[answerIndex];
+        sample.answers[answerIndex] = answer.copyWith(
+          photoPaths: List<String>.from(
+            photosByItemId[answer.itemId] ?? const <String>[],
+          ),
+        );
+      }
     }
     _uploadedObjectPaths.clear();
   }
@@ -698,10 +994,8 @@ class QCMaterialFormProvider extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
-    for (final photos in localItemPhotos) {
-      for (final photo in photos) {
-        unawaited(_photoProcessor.deleteGeneratedFile(photo));
-      }
+    for (final sample in samples) {
+      _disposeSampleState(sample);
     }
     _isPersisting = false;
     poNumberController.dispose();
@@ -711,6 +1005,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
     materialIdController.dispose();
     arrivalVolumeController.dispose();
     samplingVolumeController.dispose();
+    sampleCountController.dispose();
     brandNameController.dispose();
     warehouseLocationController.dispose();
     stelVersionController.dispose();

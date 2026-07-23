@@ -2,7 +2,7 @@
 
 QA Mobile Apps is an integrated Quality Assurance system designed to manage **QC Material** and **QC Pekerjaan** workflows.
 
-The system consists of a Flutter application for QA Staff, a React-based Admin Dashboard, an Express API, PostgreSQL, and private object storage.
+The system consists of a Flutter application for Staff Warehouse, a React-based Admin Dashboard, an Express API, PostgreSQL, and private object storage.
 
 > **Project status:** Active prototype/demo development. The system is not yet production-ready.
 
@@ -10,7 +10,7 @@ The system consists of a Flutter application for QA Staff, a React-based Admin D
 
 | Application | User | Demo |
 |---|---|---|
-| QA Staff Mobile App | QA Staff | [Open Mobile Demo](https://qa-mobile-app.vercel.app/) |
+| Staff Warehouse Mobile App | Staff Warehouse | [Open Mobile Demo](https://qa-mobile-app.vercel.app/) |
 | Web Admin Dashboard | Administrator | [Open Admin Demo](https://qa-mobile-web.vercel.app/) |
 
 Demo credentials are displayed on each application's login page.
@@ -21,9 +21,9 @@ Demo credentials are displayed on each application's login page.
 
 QA Mobile Apps supports two main actors:
 
-### QA Staff
+### Staff Warehouse
 
-QA Staff use the Flutter application to:
+Staff Warehouse use the Flutter application to:
 
 - View available QC Material and QC Pekerjaan templates.
 - Fill numeric, boolean, choice, and text checklist items.
@@ -35,7 +35,7 @@ QA Staff use the Flutter application to:
 - Monitor inspection summaries through the dashboard.
 - Manage basic profile information.
 
-QA Staff record inspection data but do not determine the final pass or fail result.
+Staff Warehouse record inspection data but do not determine the final pass or fail result.
 
 ### Administrator
 
@@ -43,7 +43,7 @@ Administrators use the React Web Dashboard to:
 
 - Monitor Quality Control activity.
 - Manage QC Material and QC Pekerjaan templates.
-- Review reports submitted by QA Staff.
+- Review reports submitted by Staff Warehouse.
 - Inspect checklist answers, notes, and evidence photos.
 - Approve or reject inspection reports.
 - Determine the final inspection result.
@@ -54,7 +54,7 @@ Administrators use the React Web Dashboard to:
 
 ```mermaid
 flowchart LR
-    Mobile["Flutter QA Staff App"]
+    Mobile["Flutter Staff Warehouse App"]
     Admin["React Web Admin"]
     API["Express REST API"]
     Database["Supabase PostgreSQL"]
@@ -74,7 +74,7 @@ The mobile and web applications must not access PostgreSQL tables or private sto
 
 | Layer | Technology |
 |---|---|
-| QA Staff Application | Flutter / Dart |
+| Staff Warehouse Application | Flutter / Dart |
 | Admin Dashboard | React / TypeScript |
 | Backend API | Node.js / Express |
 | Database | Supabase PostgreSQL |
@@ -88,7 +88,7 @@ The mobile and web applications must not access PostgreSQL tables or private sto
 ```text
 QA-APPS-MOBILE/
 ├── apps/
-│   ├── mobile/          # Flutter application for QA Staff
+│   ├── mobile/          # Flutter application for Staff Warehouse
 │   └── web/             # React Admin Dashboard
 ├── mock-api/            # Canonical Express API
 ├── docs/                # Project and integration documentation
@@ -104,9 +104,9 @@ The deprecated backend previously located at `apps/mobile/mock-api` must not be 
 ```text
 Admin creates a template
         ↓
-QA Staff selects the material
+Staff Warehouse selects the material
         ↓
-QA Staff fills checklist items and evidence
+Staff Warehouse fills checklist items and evidence
         ↓
 Report is saved as Draft or Submitted
         ↓
@@ -120,9 +120,9 @@ Admin approves or rejects the report
 ```text
 Admin creates a work template
         ↓
-QA Staff selects the work inspection
+Staff Warehouse selects the work inspection
         ↓
-QA Staff fills checklist items and evidence
+Staff Warehouse fills checklist items and evidence
         ↓
 Report is saved as Draft or Submitted
         ↓
