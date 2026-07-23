@@ -1,7 +1,7 @@
-const int maxQCPhotoSizeBytes = 5 * 1024 * 1024;
+const int maxQCPhotoSizeBytes = 2 * 1024 * 1024;
 
 const String qcPhotoTooLargeMessage =
-    'Ukuran foto melebihi batas maksimal 5 MB. Ambil ulang foto dengan ukuran yang lebih kecil.';
+    'Foto tidak dapat diproses hingga batas 2 MB dengan kualitas yang aman. Silakan ambil ulang foto.';
 
 bool exceedsQCPhotoSizeLimit(List<int> bytes) =>
     bytes.length > maxQCPhotoSizeBytes;

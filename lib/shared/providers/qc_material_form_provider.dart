@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -13,6 +14,7 @@ import '../../shared/models/qc_material_template_model.dart';
 import '../../shared/models/work_location_model.dart';
 import '../../shared/models/site_model.dart';
 import '../../shared/utils/qc_photo_validation.dart';
+import '../../shared/services/qc_photo_processor.dart';
 import '../../core/utils/validators.dart';
 import '../../core/utils/qc_validation_helper.dart';
 import '../../shared/models/template_choice_option.dart';
@@ -66,7 +68,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
   final ImagePicker _imagePicker;
   final Future<XFile?> Function(ImageSource source)? photoPicker;
   final QCMaterialPersistenceApi _api;
+  final QCPhotoProcessor _photoProcessor;
   final Map<XFile, String> _uploadedObjectPaths = {};
+  final Set<int> _photoCapturesInProgress = <int>{};
   bool _isPersisting = false;
   bool _isDisposed = false;
   late String _reportId;
@@ -75,8 +79,10 @@ class QCMaterialFormProvider extends ChangeNotifier {
     ImagePicker? imagePicker,
     this.photoPicker,
     QCMaterialPersistenceApi? api,
+    QCPhotoProcessor? photoProcessor,
   }) : _imagePicker = imagePicker ?? ImagePicker(),
-       _api = api ?? _DefaultQCMaterialPersistenceApi();
+       _api = api ?? _DefaultQCMaterialPersistenceApi(),
+       _photoProcessor = photoProcessor ?? BoundedQCPhotoProcessor();
 
   // Template
   late QCMaterialTemplate _template;
@@ -320,19 +326,40 @@ class QCMaterialFormProvider extends ChangeNotifier {
   }
 
   Future<QCMaterialPhotoAddResult> addPhoto(int index) async {
-    final selectedPhoto =
-        await (photoPicker?.call(ImageSource.camera) ??
-            _imagePicker.pickImage(source: ImageSource.camera));
-    if (selectedPhoto == null) return QCMaterialPhotoAddResult.cancelled;
-
-    final bytes = await selectedPhoto.readAsBytes();
-    if (exceedsQCPhotoSizeLimit(bytes)) {
-      return QCMaterialPhotoAddResult.fileTooLarge;
+    if (!_photoCapturesInProgress.add(index)) {
+      return QCMaterialPhotoAddResult.cancelled;
     }
-    localItemPhotos[index].add(selectedPhoto);
-    localItemPhotoBytes[index].add(bytes);
-    notifyListeners();
-    return QCMaterialPhotoAddResult.added;
+    try {
+      final selectedPhoto =
+          await (photoPicker?.call(ImageSource.camera) ??
+              _imagePicker.pickImage(source: ImageSource.camera));
+      if (selectedPhoto == null) return QCMaterialPhotoAddResult.cancelled;
+
+      final QCProcessedPhoto processed;
+      try {
+        processed = await _photoProcessor.process(selectedPhoto);
+      } on QCPhotoProcessingException {
+        return QCMaterialPhotoAddResult.fileTooLarge;
+      }
+      if (_isDisposed) {
+        if (processed.isGenerated) {
+          await _photoProcessor.deleteGeneratedFile(processed.file);
+        }
+        return QCMaterialPhotoAddResult.cancelled;
+      }
+      if (exceedsQCPhotoSizeLimit(processed.bytes)) {
+        if (processed.isGenerated) {
+          await _photoProcessor.deleteGeneratedFile(processed.file);
+        }
+        return QCMaterialPhotoAddResult.fileTooLarge;
+      }
+      localItemPhotos[index].add(processed.file);
+      localItemPhotoBytes[index].add(processed.bytes);
+      notifyListeners();
+      return QCMaterialPhotoAddResult.added;
+    } finally {
+      _photoCapturesInProgress.remove(index);
+    }
   }
 
   void removePhoto(int index, int photoIdx) {
@@ -349,6 +376,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
       final removed = localItemPhotos[index].removeAt(localIndex);
       localItemPhotoBytes[index].removeAt(localIndex);
       _uploadedObjectPaths.remove(removed);
+      unawaited(_photoProcessor.deleteGeneratedFile(removed));
     }
     notifyListeners();
   }
@@ -641,6 +669,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
     final photosByItemId = <String, List<String>>{};
     for (var i = 0; i < _template.checklistItems.length; i++) {
       photosByItemId[_template.checklistItems[i].id] = persistedPhotos[i];
+      for (final photo in localItemPhotos[i]) {
+        unawaited(_photoProcessor.deleteGeneratedFile(photo));
+      }
       localItemPhotos[i].clear();
       localItemPhotoBytes[i].clear();
     }
@@ -667,6 +698,11 @@ class QCMaterialFormProvider extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
+    for (final photos in localItemPhotos) {
+      for (final photo in photos) {
+        unawaited(_photoProcessor.deleteGeneratedFile(photo));
+      }
+    }
     _isPersisting = false;
     poNumberController.dispose();
     poDateController.dispose();
