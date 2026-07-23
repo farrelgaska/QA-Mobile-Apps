@@ -2,6 +2,8 @@ const { randomUUID } = require('crypto');
 const { SIGNED_URL_EXPIRY_SECONDS } = require('../storage/qc-evidence-storage');
 
 const MAX_SIGNED_URL_PATHS = 50;
+const MAX_QC_EVIDENCE_SIZE_BYTES = 2 * 1024 * 1024;
+const QC_EVIDENCE_TOO_LARGE_MESSAGE = 'Ukuran gambar maksimal 2 MB.';
 const MIME_EXTENSIONS = Object.freeze({
   'image/jpeg': 'jpg',
   'image/png': 'png',
@@ -47,6 +49,9 @@ const createUploadController = ({ getStorage }) => ({
     try {
       if (!req.file) throw requestError('file is required');
       if (req.file.size === 0) throw requestError('file must not be empty');
+      if (req.file.size > MAX_QC_EVIDENCE_SIZE_BYTES) {
+        throw requestError(QC_EVIDENCE_TOO_LARGE_MESSAGE, 413);
+      }
 
       const detectedType = await detectImageType(req.file.buffer);
       if (!detectedType || !Object.hasOwn(MIME_EXTENSIONS, detectedType.mime)) {
@@ -109,6 +114,8 @@ const createUploadController = ({ getStorage }) => ({
 
 module.exports = {
   MAX_SIGNED_URL_PATHS,
+  MAX_QC_EVIDENCE_SIZE_BYTES,
+  QC_EVIDENCE_TOO_LARGE_MESSAGE,
   MIME_EXTENSIONS,
   SIGNABLE_PATH_PATTERN,
   createUploadController,

@@ -17,6 +17,12 @@ const PNG_BYTES = Buffer.from(
   'base64'
 );
 
+const jpegWithSize = size => {
+  const bytes = Buffer.alloc(size);
+  JPEG_BYTES.copy(bytes);
+  return bytes;
+};
+
 const createStorageMock = () => ({
   uploads: [],
   signedUrlRequests: [],
@@ -96,6 +102,46 @@ test('uploads QC evidence successfully', async () => {
   });
 });
 
+test('accepts a QC evidence image smaller than 2 MB', async () => {
+  const storage = createStorageMock();
+  await withServer(storage, async baseUrl => {
+    const bytes = jpegWithSize(MAX_FILE_SIZE - 1);
+    const response = await fetch(`${baseUrl}/uploads/qc-evidence`, {
+      method: 'POST',
+      body: uploadForm({ bytes })
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 201);
+    assert.equal(body.size, MAX_FILE_SIZE - 1);
+    assert.equal(storage.uploads.length, 1);
+  });
+});
+
+test('accepts a QC evidence image exactly 2 MB and preserves its canonical path', async () => {
+  const storage = createStorageMock();
+  await withServer(storage, async baseUrl => {
+    const response = await fetch(`${baseUrl}/uploads/qc-evidence`, {
+      method: 'POST',
+      body: uploadForm({
+        bytes: jpegWithSize(MAX_FILE_SIZE),
+        category: 'checklist',
+        itemId: 'item-2mb'
+      })
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 201);
+    assert.equal(body.size, MAX_FILE_SIZE);
+    assert.match(
+      body.object_path,
+      /^reports\/QC-REP-001\/checklist\/item-2mb\/[0-9a-f-]{36}\.jpg$/
+    );
+    assert.equal(storage.uploads.length, 1);
+    assert.equal(storage.uploads[0].objectPath, body.object_path);
+  });
+});
+
 test('rejects an upload with no file', async () => {
   const storage = createStorageMock();
   await withServer(storage, async baseUrl => {
@@ -168,16 +214,17 @@ test('accepts a valid real PNG signature', async () => {
   });
 });
 
-test('rejects a file larger than 10 MB', async () => {
+test('rejects a QC evidence image larger than 2 MB before Storage upload', async () => {
   const storage = createStorageMock();
   await withServer(storage, async baseUrl => {
     const response = await fetch(`${baseUrl}/uploads/qc-evidence`, {
       method: 'POST',
-      body: uploadForm({ bytes: Buffer.alloc(MAX_FILE_SIZE + 1) })
+      body: uploadForm({ bytes: jpegWithSize(MAX_FILE_SIZE + 1) })
     });
 
     assert.equal(response.status, 413);
-    assert.deepEqual(await response.json(), { error: 'file must not exceed 10 MB' });
+    assert.notEqual(response.status, 500);
+    assert.deepEqual(await response.json(), { error: 'Ukuran gambar maksimal 2 MB.' });
     assert.equal(storage.uploads.length, 0);
   });
 });
