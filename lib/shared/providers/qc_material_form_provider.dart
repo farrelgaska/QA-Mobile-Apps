@@ -23,6 +23,28 @@ import '../../shared/models/template_choice_option.dart';
 
 enum QCMaterialPhotoAddResult { added, cancelled, fileTooLarge }
 
+enum QCMaterialGeneralField {
+  poNumber,
+  poDate,
+  doNumber,
+  vendorName,
+  materialId,
+  arrivalVolume,
+  samplingVolume,
+  sampleCount,
+  brandName,
+  warehouseLocation,
+  stelVersion,
+  qaExpiryDate,
+  tkdnNumber,
+  tkdnCertDate,
+  tkdnValue,
+  workLocation,
+  customLocationName,
+  customLocationArea,
+  customLocationSegment,
+}
+
 abstract class QCMaterialPersistenceApi {
   Future<QCEvidenceUploadResult> uploadQCEvidence({
     required XFile file,
@@ -126,6 +148,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
   bool _isNavigating = false;
   bool _isDisposed = false;
   late String _reportId;
+  final Map<QCMaterialGeneralField, String> _generalFieldErrors = {};
 
   QCMaterialFormProvider({
     ImagePicker? imagePicker,
@@ -144,6 +167,10 @@ class QCMaterialFormProvider extends ChangeNotifier {
   bool get isReady => _isInit;
   bool get isPersisting => _isPersisting;
   bool get isNavigating => _isNavigating;
+  Map<QCMaterialGeneralField, String> get generalFieldErrors =>
+      Map.unmodifiable(_generalFieldErrors);
+  QCMaterialGeneralField? get firstInvalidGeneralField =>
+      _generalFieldErrors.keys.firstOrNull;
   bool get hasProcessingPhotos => samples.any(
     (sample) => sample.processingItemPhotos.any((photos) => photos.isNotEmpty),
   );
@@ -183,11 +210,13 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
   void setSelectedSite(SiteModel site) {
     selectedSite = site;
+    _generalFieldErrors.remove(QCMaterialGeneralField.workLocation);
     notifyListeners();
   }
 
   void setIsCustomLocation(bool val) {
     isCustomLocation = val;
+    _clearLocationErrors();
     if (isCustomLocation) {
       selectedSite = null;
     } else {
@@ -199,10 +228,30 @@ class QCMaterialFormProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  String? generalFieldError(QCMaterialGeneralField field) =>
+      _generalFieldErrors[field];
+
+  void clearGeneralFieldError(QCMaterialGeneralField field) {
+    if (_generalFieldErrors.remove(field) != null) notifyListeners();
+  }
+
+  void _clearLocationErrors() {
+    _generalFieldErrors.remove(QCMaterialGeneralField.workLocation);
+    _generalFieldErrors.remove(QCMaterialGeneralField.customLocationName);
+    _generalFieldErrors.remove(QCMaterialGeneralField.customLocationArea);
+    _generalFieldErrors.remove(QCMaterialGeneralField.customLocationSegment);
+  }
+
   String? validateLocation() {
     if (isCustomLocation) {
       if (customLocNameController.text.trim().isEmpty) {
         return 'Isi lokasi custom terlebih dahulu.';
+      }
+      if (customLocAreaController.text.trim().isEmpty) {
+        return 'Isi area atau zona lokasi custom terlebih dahulu.';
+      }
+      if (customLocSegmentController.text.trim().isEmpty) {
+        return 'Isi titik atau segmen lokasi custom terlebih dahulu.';
       }
       return null;
     }
@@ -210,6 +259,136 @@ class QCMaterialFormProvider extends ChangeNotifier {
       return 'Pilih lokasi kerja terlebih dahulu.';
     }
     return null;
+  }
+
+  String? validateGeneralInformation() {
+    _generalFieldErrors.clear();
+
+    final requiredFields = <QCMaterialGeneralField, (String, String)>{
+      QCMaterialGeneralField.poNumber: (
+        poNumberController.text,
+        'Nomor PO',
+      ),
+      QCMaterialGeneralField.poDate: (poDateController.text, 'Tanggal PO'),
+      QCMaterialGeneralField.doNumber: (
+        doNumberController.text,
+        'Nomor DO / Surat Jalan',
+      ),
+      QCMaterialGeneralField.vendorName: (
+        vendorNameController.text,
+        'Nama Mitra Pabrikasi / Vendor',
+      ),
+      QCMaterialGeneralField.materialId: (
+        materialIdController.text,
+        'ID Material',
+      ),
+      QCMaterialGeneralField.arrivalVolume: (
+        arrivalVolumeController.text,
+        'Volume Datang',
+      ),
+      QCMaterialGeneralField.samplingVolume: (
+        samplingVolumeController.text,
+        'Volume Sampling',
+      ),
+      QCMaterialGeneralField.sampleCount: (
+        sampleCountController.text,
+        'Jumlah Sampel',
+      ),
+      QCMaterialGeneralField.brandName: (
+        brandNameController.text,
+        'Merk Material',
+      ),
+      QCMaterialGeneralField.warehouseLocation: (
+        warehouseLocationController.text,
+        'Lokasi Warehouse Penerima',
+      ),
+      QCMaterialGeneralField.stelVersion: (
+        stelVersionController.text,
+        'Nomor QA/STEL/Versi',
+      ),
+      QCMaterialGeneralField.qaExpiryDate: (
+        qaExpiryDateController.text,
+        'Masa Berlaku QA',
+      ),
+      QCMaterialGeneralField.tkdnNumber: (
+        tkdnNumberController.text,
+        'Nomor Sertifikat TKDN',
+      ),
+      QCMaterialGeneralField.tkdnCertDate: (
+        tkdnCertDateController.text,
+        'Tanggal Sertifikat TKDN',
+      ),
+      QCMaterialGeneralField.tkdnValue: (
+        tkdnValueController.text,
+        'Nilai TKDN',
+      ),
+    };
+
+    for (final entry in requiredFields.entries) {
+      if (entry.value.$1.trim().isEmpty) {
+        _generalFieldErrors[entry.key] = '${entry.value.$2} wajib diisi.';
+      }
+    }
+
+    _validateGeneralNumber(
+      QCMaterialGeneralField.arrivalVolume,
+      arrivalVolumeController.text,
+      'Volume Datang',
+    );
+    _validateGeneralNumber(
+      QCMaterialGeneralField.samplingVolume,
+      samplingVolumeController.text,
+      'Volume Sampling',
+    );
+    _validateGeneralNumber(
+      QCMaterialGeneralField.tkdnValue,
+      tkdnValueController.text,
+      'Nilai TKDN',
+    );
+
+    final sampleCountValue = sampleCountController.text.trim();
+    final requestedCount = int.tryParse(sampleCountValue);
+    if (sampleCountValue.isNotEmpty &&
+        (requestedCount == null || requestedCount <= 0)) {
+      _generalFieldErrors[QCMaterialGeneralField.sampleCount] =
+          'Jumlah sampel harus berupa bilangan bulat positif.';
+    }
+
+    if (isCustomLocation) {
+      if (customLocNameController.text.trim().isEmpty) {
+        _generalFieldErrors[QCMaterialGeneralField.customLocationName] =
+            'Nama lokasi wajib diisi.';
+      }
+      if (customLocAreaController.text.trim().isEmpty) {
+        _generalFieldErrors[QCMaterialGeneralField.customLocationArea] =
+            'Area atau zona wajib diisi.';
+      }
+      if (customLocSegmentController.text.trim().isEmpty) {
+        _generalFieldErrors[QCMaterialGeneralField.customLocationSegment] =
+            'Titik atau segmen wajib diisi.';
+      }
+    } else if (selectedSite == null) {
+      _generalFieldErrors[QCMaterialGeneralField.workLocation] =
+          'Pilih lokasi kerja terlebih dahulu.';
+    }
+
+    return _generalFieldErrors.values.firstOrNull;
+  }
+
+  void _validateGeneralNumber(
+    QCMaterialGeneralField field,
+    String rawValue,
+    String label,
+  ) {
+    if (rawValue.trim().isEmpty) return;
+    if (!QCValidators.isValidNumber(rawValue)) {
+      _generalFieldErrors[field] = '$label harus berupa angka yang valid.';
+      return;
+    }
+    final value = double.tryParse(rawValue.trim().replaceAll(',', '.'));
+    if (value != null && value < 0) {
+      _generalFieldErrors[field] = '$label tidak boleh negatif.';
+    }
   }
 
   // Ordered sample state. Legacy checklist getters expose the active sample.
@@ -672,7 +851,14 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
   String? validateCurrentStep() {
     if (isGeneralStep) {
-      return validateLocation() ?? _synchronizeSampleCount();
+      final generalError = validateGeneralInformation();
+      if (generalError != null) return generalError;
+      final sampleCountError = _synchronizeSampleCount();
+      if (sampleCountError != null) {
+        _generalFieldErrors[QCMaterialGeneralField.sampleCount] =
+            sampleCountError;
+      }
+      return sampleCountError;
     }
     return validateSample(currentSampleIndex!);
   }

@@ -9,6 +9,7 @@ import 'package:mobile/shared/models/qc_checklist_answer_model.dart';
 import 'package:mobile/shared/models/qc_material_template_model.dart';
 import 'package:mobile/shared/models/qc_report_model.dart';
 import 'package:mobile/shared/providers/qc_material_form_provider.dart';
+import 'package:provider/provider.dart';
 
 class _FakePersistenceApi implements QCMaterialPersistenceApi {
   QCReportModel? postedReport;
@@ -83,7 +84,132 @@ QCMaterialTemplate _template({bool required = false}) => QCMaterialTemplate(
   ],
 );
 
+void _fillValidGeneralInformation(
+  QCMaterialFormProvider provider, {
+  String sampleCount = '1',
+}) {
+  provider.poNumberController.text = 'PO-100';
+  provider.poDateController.text = '2026-07-01';
+  provider.doNumberController.text = 'DO-100';
+  provider.vendorNameController.text = 'Vendor A';
+  provider.materialIdController.text = 'MAT-MULTI-STEP';
+  provider.arrivalVolumeController.text = '100';
+  provider.samplingVolumeController.text = '5';
+  provider.sampleCountController.text = sampleCount;
+  provider.brandNameController.text = 'Brand A';
+  provider.warehouseLocationController.text = 'Gudang A';
+  provider.stelVersionController.text = 'STEL-01';
+  provider.qaExpiryDateController.text = '2028-12-31';
+  provider.tkdnNumberController.text = 'TKDN-100';
+  provider.tkdnCertDateController.text = '2026-01-15';
+  provider.tkdnValueController.text = '42.5';
+}
+
+Map<QCMaterialGeneralField, TextEditingController> _requiredControllers(
+  QCMaterialFormProvider provider,
+) => {
+  QCMaterialGeneralField.poNumber: provider.poNumberController,
+  QCMaterialGeneralField.poDate: provider.poDateController,
+  QCMaterialGeneralField.doNumber: provider.doNumberController,
+  QCMaterialGeneralField.vendorName: provider.vendorNameController,
+  QCMaterialGeneralField.materialId: provider.materialIdController,
+  QCMaterialGeneralField.arrivalVolume: provider.arrivalVolumeController,
+  QCMaterialGeneralField.samplingVolume: provider.samplingVolumeController,
+  QCMaterialGeneralField.sampleCount: provider.sampleCountController,
+  QCMaterialGeneralField.brandName: provider.brandNameController,
+  QCMaterialGeneralField.warehouseLocation:
+      provider.warehouseLocationController,
+  QCMaterialGeneralField.stelVersion: provider.stelVersionController,
+  QCMaterialGeneralField.qaExpiryDate: provider.qaExpiryDateController,
+  QCMaterialGeneralField.tkdnNumber: provider.tkdnNumberController,
+  QCMaterialGeneralField.tkdnCertDate: provider.tkdnCertDateController,
+  QCMaterialGeneralField.tkdnValue: provider.tkdnValueController,
+};
+
 void main() {
+  test('empty Step 1 cannot proceed or resize sample state', () async {
+    final provider = QCMaterialFormProvider()
+      ..init('MAT-MULTI-STEP', template: _template());
+    addTearDown(provider.dispose);
+    provider.sampleCountController.text = '3';
+
+    final error = await provider.nextStep();
+
+    expect(error, 'Nomor PO wajib diisi.');
+    expect(provider.currentStep, 0);
+    expect(provider.samples, hasLength(1));
+    expect(provider.sampleCount, 1);
+    expect(
+      provider.generalFieldError(QCMaterialGeneralField.poNumber),
+      'Nomor PO wajib diisi.',
+    );
+  });
+
+  test('every required general field blocks Step 1 navigation', () async {
+    final provider = QCMaterialFormProvider()
+      ..init('MAT-MULTI-STEP', template: _template());
+    addTearDown(provider.dispose);
+
+    for (final entry in _requiredControllers(provider).entries) {
+      _fillValidGeneralInformation(provider);
+      entry.value.clear();
+
+      expect(await provider.nextStep(), isNotNull, reason: entry.key.name);
+      expect(provider.currentStep, 0, reason: entry.key.name);
+      expect(
+        provider.generalFieldErrors,
+        contains(entry.key),
+        reason: entry.key.name,
+      );
+      expect(
+        provider.vendorNameController.text,
+        entry.key == QCMaterialGeneralField.vendorName ? '' : 'Vendor A',
+      );
+    }
+  });
+
+  test('invalid numeric fields and sample count block navigation', () async {
+    final provider = QCMaterialFormProvider()
+      ..init('MAT-MULTI-STEP', template: _template());
+    addTearDown(provider.dispose);
+
+    for (final value in ['0', '-1', '1.5', 'abc']) {
+      _fillValidGeneralInformation(provider, sampleCount: value);
+      expect(await provider.nextStep(), isNotNull, reason: value);
+      expect(provider.currentStep, 0);
+      expect(provider.samples, hasLength(1));
+    }
+
+    _fillValidGeneralInformation(provider);
+    provider.arrivalVolumeController.text = 'banyak';
+    expect(await provider.nextStep(), contains('angka yang valid'));
+    expect(provider.currentStep, 0);
+
+    _fillValidGeneralInformation(provider);
+    provider.tkdnValueController.text = '-1';
+    expect(await provider.nextStep(), contains('tidak boleh negatif'));
+    expect(provider.currentStep, 0);
+  });
+
+  test('all required custom location fields block navigation', () async {
+    final provider = QCMaterialFormProvider()
+      ..init('MAT-MULTI-STEP', template: _template());
+    addTearDown(provider.dispose);
+    _fillValidGeneralInformation(provider);
+    provider.setIsCustomLocation(true);
+
+    expect(await provider.nextStep(), isNotNull);
+    expect(
+      provider.generalFieldErrors.keys,
+      containsAll([
+        QCMaterialGeneralField.customLocationName,
+        QCMaterialGeneralField.customLocationArea,
+        QCMaterialGeneralField.customLocationSegment,
+      ]),
+    );
+    expect(provider.currentStep, 0);
+  });
+
   test(
     'general information survives forward and backward navigation',
     () async {
@@ -91,9 +217,7 @@ void main() {
         ..init('MAT-MULTI-STEP', template: _template());
       addTearDown(provider.dispose);
 
-      provider.poNumberController.text = 'PO-100';
-      provider.vendorNameController.text = 'Vendor A';
-      provider.sampleCountController.text = '2';
+      _fillValidGeneralInformation(provider, sampleCount: '2');
 
       expect(await provider.nextStep(), isNull);
       expect(provider.currentStep, 1);
@@ -116,7 +240,7 @@ void main() {
       final provider = QCMaterialFormProvider()
         ..init('MAT-MULTI-STEP', template: _template());
       addTearDown(provider.dispose);
-      provider.sampleCountController.text = '2';
+      _fillValidGeneralInformation(provider, sampleCount: '2');
       await provider.nextStep();
 
       provider.updateAnswer(0, 12.5);
@@ -188,8 +312,8 @@ void main() {
         ..addAll(originalReports);
     });
 
+    _fillValidGeneralInformation(provider, sampleCount: '2');
     provider.poNumberController.text = 'PO-DRAFT';
-    provider.sampleCountController.text = '2';
     await provider.nextStep();
     provider.updateAnswer(0, 11.25);
     provider.updateAnswer(1, true);
@@ -287,7 +411,7 @@ void main() {
     final provider = QCMaterialFormProvider()
       ..init('MAT-MULTI-STEP', template: _template(required: true));
     addTearDown(provider.dispose);
-    provider.sampleCountController.text = '2';
+    _fillValidGeneralInformation(provider, sampleCount: '2');
     await provider.nextStep();
 
     provider.updateAnswer(0, '10');
@@ -303,7 +427,7 @@ void main() {
     final provider = QCMaterialFormProvider()
       ..init('MAT-MULTI-STEP', template: _template());
     addTearDown(provider.dispose);
-    provider.sampleCountController.text = '2';
+    _fillValidGeneralInformation(provider, sampleCount: '2');
 
     final first = provider.nextStep();
     final repeated = provider.nextStep();
@@ -311,6 +435,43 @@ void main() {
 
     expect(provider.currentStep, 1);
     expect(provider.samples, hasLength(2));
+  });
+
+  test('incomplete Step 1 can still be saved as a draft', () async {
+    final api = _FakePersistenceApi();
+    final provider = QCMaterialFormProvider(api: api)
+      ..init('MAT-MULTI-STEP', template: _template());
+    addTearDown(provider.dispose);
+    provider.poNumberController.text = 'PO-INCOMPLETE';
+
+    await provider.persistReport(QCReportStatus.DRAFT);
+
+    expect(api.postedReport, isNotNull);
+    expect(api.postedReport!.status, QCReportStatus.DRAFT);
+    expect(api.postedReport!.generalInfo['poNumber'], 'PO-INCOMPLETE');
+    expect(provider.currentStep, 0);
+  });
+
+  testWidgets('empty Step 1 stays visible and shows field errors', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: QCMaterialFormScreen(
+          materialId: 'MAT-MULTI-STEP',
+          template: _template(),
+        ),
+      ),
+    );
+
+    final nextButton = find.byKey(const Key('qc_material_next_button'));
+    await tester.ensureVisible(nextButton);
+    await tester.tap(nextButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Informasi Umum Pengadaan'), findsOneWidget);
+    expect(find.text('Nomor PO wajib diisi.'), findsWidgets);
+    expect(find.byKey(const Key('qc_material_submit_button')), findsNothing);
   });
 
   testWidgets('submit action is built only on the final sample step', (
@@ -329,6 +490,11 @@ void main() {
     expect(find.byKey(const Key('qc_material_submit_button')), findsNothing);
 
     final nextButton = find.byKey(const Key('qc_material_next_button'));
+    final provider = Provider.of<QCMaterialFormProvider>(
+      tester.element(nextButton),
+      listen: false,
+    );
+    _fillValidGeneralInformation(provider);
     await tester.ensureVisible(nextButton);
     await tester.tap(nextButton);
     await tester.pumpAndSettle();

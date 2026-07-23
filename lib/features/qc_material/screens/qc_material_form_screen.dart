@@ -53,6 +53,8 @@ class QCMaterialFormScreen extends StatelessWidget {
             );
           }
           final tpl = provider.template;
+          final generalFieldContexts =
+              <QCMaterialGeneralField, BuildContext>{};
           return Scaffold(
             backgroundColor: AppColors.background,
             body: SafeArea(
@@ -72,9 +74,9 @@ class QCMaterialFormScreen extends StatelessWidget {
                     _buildProgressSection(provider),
                     const SizedBox(height: 24),
                     if (provider.isGeneralStep) ...[
-                      _buildGeneralInfoCard(provider),
+                      _buildGeneralInfoCard(provider, generalFieldContexts),
                       const SizedBox(height: 20),
-                      _buildLocationSection(provider),
+                      _buildLocationSection(provider, generalFieldContexts),
                       const SizedBox(height: 20),
                       _buildStaffNoteCard(provider),
                     ] else ...[
@@ -84,7 +86,11 @@ class QCMaterialFormScreen extends StatelessWidget {
                       _buildSampleNoteCard(provider),
                     ],
                     const SizedBox(height: 28),
-                    _buildActionButtons(context, provider),
+                    _buildActionButtons(
+                      context,
+                      provider,
+                      generalFieldContexts,
+                    ),
                     const SizedBox(height: 36),
                   ],
                 ),
@@ -162,7 +168,10 @@ class QCMaterialFormScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildGeneralInfoCard(QCMaterialFormProvider p) {
+  Widget _buildGeneralInfoCard(
+    QCMaterialFormProvider p,
+    Map<QCMaterialGeneralField, BuildContext> fieldContexts,
+  ) {
     return AppCard(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -177,35 +186,50 @@ class QCMaterialFormScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          AppInput(
+          _buildGeneralInput(
+            field: QCMaterialGeneralField.poNumber,
+            provider: p,
+            fieldContexts: fieldContexts,
             label: 'Nomor PO',
             hintText: 'Masukkan nomor Purchase Order',
             controller: p.poNumberController,
             prefixIcon: Icons.receipt_outlined,
           ),
           const SizedBox(height: 12),
-          AppInput(
+          _buildGeneralInput(
+            field: QCMaterialGeneralField.poDate,
+            provider: p,
+            fieldContexts: fieldContexts,
             label: 'Tanggal PO',
             hintText: 'YYYY-MM-DD',
             controller: p.poDateController,
             prefixIcon: Icons.calendar_today_outlined,
           ),
           const SizedBox(height: 12),
-          AppInput(
+          _buildGeneralInput(
+            field: QCMaterialGeneralField.doNumber,
+            provider: p,
+            fieldContexts: fieldContexts,
             label: 'Nomor DO / Surat Jalan',
             hintText: 'Masukkan nomor Delivery Order',
             controller: p.doNumberController,
             prefixIcon: Icons.local_shipping_outlined,
           ),
           const SizedBox(height: 12),
-          AppInput(
+          _buildGeneralInput(
+            field: QCMaterialGeneralField.vendorName,
+            provider: p,
+            fieldContexts: fieldContexts,
             label: 'Nama Mitra Pabrikasi / Vendor',
             hintText: 'Masukkan nama vendor logam/tiang',
             controller: p.vendorNameController,
             prefixIcon: Icons.business_center_outlined,
           ),
           const SizedBox(height: 12),
-          AppInput(
+          _buildGeneralInput(
+            field: QCMaterialGeneralField.materialId,
+            provider: p,
+            fieldContexts: fieldContexts,
             label: 'ID Material',
             hintText: 'Masukkan kode ID material',
             controller: p.materialIdController,
@@ -215,7 +239,10 @@ class QCMaterialFormScreen extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: AppInput(
+                child: _buildGeneralInput(
+                  field: QCMaterialGeneralField.arrivalVolume,
+                  provider: p,
+                  fieldContexts: fieldContexts,
                   label: 'Volume Datang',
                   hintText: 'Contoh: 100',
                   controller: p.arrivalVolumeController,
@@ -224,7 +251,10 @@ class QCMaterialFormScreen extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: AppInput(
+                child: _buildGeneralInput(
+                  field: QCMaterialGeneralField.samplingVolume,
+                  provider: p,
+                  fieldContexts: fieldContexts,
                   label: 'Volume Sampling',
                   hintText: 'Contoh: 5',
                   controller: p.samplingVolumeController,
@@ -234,7 +264,10 @@ class QCMaterialFormScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          AppInput(
+          _buildGeneralInput(
+            field: QCMaterialGeneralField.sampleCount,
+            provider: p,
+            fieldContexts: fieldContexts,
             key: const Key('qc_material_sample_count'),
             label: 'Jumlah Sampel',
             hintText: 'Contoh: 5',
@@ -244,34 +277,49 @@ class QCMaterialFormScreen extends StatelessWidget {
             prefixIcon: Icons.format_list_numbered,
           ),
           const SizedBox(height: 12),
-          AppInput(
+          _buildGeneralInput(
+            field: QCMaterialGeneralField.brandName,
+            provider: p,
+            fieldContexts: fieldContexts,
             label: 'Merk Material',
             hintText: 'Masukkan nama merk tiang',
             controller: p.brandNameController,
             prefixIcon: Icons.copyright_outlined,
           ),
           const SizedBox(height: 12),
-          AppInput(
+          _buildGeneralInput(
+            field: QCMaterialGeneralField.warehouseLocation,
+            provider: p,
+            fieldContexts: fieldContexts,
             label: 'Lokasi Warehouse Penerima',
             hintText: 'Contoh: Gudang Cikarang A',
             controller: p.warehouseLocationController,
             prefixIcon: Icons.store_outlined,
           ),
           const SizedBox(height: 12),
-          AppInput(
+          _buildGeneralInput(
+            field: QCMaterialGeneralField.stelVersion,
+            provider: p,
+            fieldContexts: fieldContexts,
             label: 'Nomor QA/STEL/Versi',
             controller: p.stelVersionController,
             prefixIcon: Icons.verified_user_outlined,
           ),
           const SizedBox(height: 12),
-          AppInput(
+          _buildGeneralInput(
+            field: QCMaterialGeneralField.qaExpiryDate,
+            provider: p,
+            fieldContexts: fieldContexts,
             label: 'Masa Berlaku QA',
             hintText: 'YYYY-MM-DD',
             controller: p.qaExpiryDateController,
             prefixIcon: Icons.date_range_outlined,
           ),
           const SizedBox(height: 12),
-          AppInput(
+          _buildGeneralInput(
+            field: QCMaterialGeneralField.tkdnNumber,
+            provider: p,
+            fieldContexts: fieldContexts,
             label: 'Nomor Sertifikat TKDN',
             controller: p.tkdnNumberController,
             prefixIcon: Icons.shield_outlined,
@@ -280,7 +328,10 @@ class QCMaterialFormScreen extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: AppInput(
+                child: _buildGeneralInput(
+                  field: QCMaterialGeneralField.tkdnCertDate,
+                  provider: p,
+                  fieldContexts: fieldContexts,
                   label: 'Tgl Sertifikat TKDN',
                   controller: p.tkdnCertDateController,
                   hintText: 'YYYY-MM-DD',
@@ -288,7 +339,10 @@ class QCMaterialFormScreen extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: AppInput(
+                child: _buildGeneralInput(
+                  field: QCMaterialGeneralField.tkdnValue,
+                  provider: p,
+                  fieldContexts: fieldContexts,
                   label: 'Nilai TKDN (%)',
                   controller: p.tkdnValueController,
                   hintText: 'Contoh: 42.5',
@@ -304,16 +358,78 @@ class QCMaterialFormScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLocationSection(QCMaterialFormProvider p) {
-    return WorkLocationSelector(
-      selectedSite: p.selectedSite,
-      isCustom: p.isCustomLocation,
-      nameController: p.customLocNameController,
-      areaController: p.customLocAreaController,
-      segmentController: p.customLocSegmentController,
-      noteController: p.customLocNoteController,
-      onSiteChanged: (site) => p.setSelectedSite(site),
-      onModeChanged: (custom) => p.setIsCustomLocation(custom),
+  Widget _buildGeneralInput({
+    Key? key,
+    required QCMaterialGeneralField field,
+    required QCMaterialFormProvider provider,
+    required Map<QCMaterialGeneralField, BuildContext> fieldContexts,
+    required String label,
+    required TextEditingController controller,
+    String? hintText,
+    String? helperText,
+    TextInputType? keyboardType,
+    IconData? prefixIcon,
+  }) {
+    return Builder(
+      builder: (context) {
+        fieldContexts[field] = context;
+        return AppInput(
+          key: key,
+          label: label,
+          controller: controller,
+          hintText: hintText,
+          helperText: helperText,
+          keyboardType: keyboardType,
+          prefixIcon: prefixIcon,
+          errorText: provider.generalFieldError(field),
+          onChanged: (_) => provider.clearGeneralFieldError(field),
+        );
+      },
+    );
+  }
+
+  Widget _buildLocationSection(
+    QCMaterialFormProvider p,
+    Map<QCMaterialGeneralField, BuildContext> fieldContexts,
+  ) {
+    return Builder(
+      builder: (context) {
+        fieldContexts[QCMaterialGeneralField.workLocation] = context;
+        fieldContexts[QCMaterialGeneralField.customLocationName] = context;
+        fieldContexts[QCMaterialGeneralField.customLocationArea] = context;
+        fieldContexts[QCMaterialGeneralField.customLocationSegment] = context;
+        return WorkLocationSelector(
+          selectedSite: p.selectedSite,
+          isCustom: p.isCustomLocation,
+          nameController: p.customLocNameController,
+          areaController: p.customLocAreaController,
+          segmentController: p.customLocSegmentController,
+          noteController: p.customLocNoteController,
+          onSiteChanged: (site) => p.setSelectedSite(site),
+          onModeChanged: (custom) => p.setIsCustomLocation(custom),
+          locationErrorText: p.generalFieldError(
+            QCMaterialGeneralField.workLocation,
+          ),
+          nameErrorText: p.generalFieldError(
+            QCMaterialGeneralField.customLocationName,
+          ),
+          areaErrorText: p.generalFieldError(
+            QCMaterialGeneralField.customLocationArea,
+          ),
+          segmentErrorText: p.generalFieldError(
+            QCMaterialGeneralField.customLocationSegment,
+          ),
+          onNameChanged: (_) => p.clearGeneralFieldError(
+            QCMaterialGeneralField.customLocationName,
+          ),
+          onAreaChanged: (_) => p.clearGeneralFieldError(
+            QCMaterialGeneralField.customLocationArea,
+          ),
+          onSegmentChanged: (_) => p.clearGeneralFieldError(
+            QCMaterialGeneralField.customLocationSegment,
+          ),
+        );
+      },
     );
   }
 
@@ -521,7 +637,11 @@ class QCMaterialFormScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, QCMaterialFormProvider p) {
+  Widget _buildActionButtons(
+    BuildContext context,
+    QCMaterialFormProvider p,
+    Map<QCMaterialGeneralField, BuildContext> generalFieldContexts,
+  ) {
     final navigationDisabled = p.isPersisting || p.isNavigating;
     return Column(
       children: [
@@ -560,6 +680,20 @@ class QCMaterialFormScreen extends StatelessWidget {
                           : () async {
                               final error = await p.nextStep();
                               if (!context.mounted || error == null) return;
+                              final invalidField =
+                                  p.firstInvalidGeneralField;
+                              final invalidContext =
+                                  generalFieldContexts[invalidField];
+                              if (invalidContext != null &&
+                                  invalidContext.mounted) {
+                                await Scrollable.ensureVisible(
+                                  invalidContext,
+                                  alignment: 0.1,
+                                  duration: const Duration(milliseconds: 250),
+                                  curve: Curves.easeOut,
+                                );
+                              }
+                              if (!context.mounted) return;
                               AppSnackbar.error(context, error);
                             },
                     ),
