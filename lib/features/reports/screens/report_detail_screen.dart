@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/dummy/dummy_state.dart';
 import '../../../core/dummy/dummy_qc_material_templates.dart';
+import '../../../core/dummy/dummy_state.dart';
 import '../../../shared/models/enums.dart';
+import '../../../shared/models/qc_checklist_answer_model.dart';
+import '../../../shared/models/qc_material_evaluation_model.dart';
 import '../../../shared/models/qc_material_template_model.dart';
 import '../../../shared/models/qc_report_model.dart';
+import '../../../shared/models/qc_report_sample_model.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/photo_grid.dart';
@@ -148,7 +151,11 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                  const Icon(
+                    Icons.error_outline,
+                    color: AppColors.rejectedText,
+                    size: 48,
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     _errorMessage!,
@@ -162,19 +169,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   SizedBox(
                     width: 120,
                     height: 38,
-                    child: ElevatedButton(
+                    child: AppButton(
+                      text: 'Coba Lagi',
+                      variant: AppButtonVariant.secondary,
                       onPressed: _fetchDetail,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        'Coba Lagi',
-                        style: TextStyle(fontSize: 13),
-                      ),
                     ),
                   ),
                 ],
@@ -206,8 +204,20 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         report.status == QCReportStatus.DRAFT ||
         report.status == QCReportStatus.NEEDS_FOLLOW_UP;
 
-    // Build unified render items list
     final renderItems = resolveReportDetailItems(report);
+
+    final decision = QCMaterialSamplingDecision.fromGeneralInfo(
+      report.generalInfo,
+    );
+    final isStopped =
+        decision?.type == QCMaterialSamplingDecisionType.stop ||
+        report.generalInfo[QCMaterialSamplingDecision.decisionKey] == 'STOP';
+    final stopReason =
+        decision?.stopReason ??
+        report.generalInfo[QCMaterialSamplingDecision.stopReasonKey];
+
+    final isMultiSampleMaterial =
+        report.type == QCType.material && report.samples.isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -223,6 +233,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 subtitle: report.id,
                 actions: [StatusBadge(status: report.status)],
               ),
+              const SizedBox(height: 16),
 
               // Banner Catatan Admin (Perlu Perbaikan)
               if (report.status == QCReportStatus.NEEDS_FOLLOW_UP &&
@@ -232,7 +243,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   padding: const EdgeInsets.all(16),
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
-                    color: AppColors.rejectedBg, // Merah pastel
+                    color: AppColors.rejectedBg,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppColors.rejectedText, width: 1),
                   ),
@@ -266,6 +277,55 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                           height: 1.4,
                         ),
                       ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // STOP Decision Banner (if sampling stopped)
+              if (report.type == QCType.material && isStopped) ...[
+                Container(
+                  key: const Key('qc_material_stop_decision_banner'),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: AppColors.rejectedBg,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.rejectedText, width: 1),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: AppColors.rejectedText,
+                            size: 20,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Pemeriksaan Dihentikan',
+                            style: TextStyle(
+                              color: AppColors.rejectedText,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (stopReason != null && stopReason.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Alasan Penghentian: $stopReason',
+                          style: const TextStyle(
+                            color: AppColors.textMain,
+                            fontSize: 13,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -312,218 +372,35 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               const SizedBox(height: 24),
 
               // Checklist Results Section
-              const Text(
-                'Hasil Checklist Parameter',
-                style: TextStyle(
-                  color: AppColors.textMain,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              ...renderItems.map((result) {
-                final hasIssue =
-                    result.status == ChecklistStatus.tidakSesuai ||
-                    result.status == ChecklistStatus.perluTindakLanjut ||
-                    result.status == QCResultStatus.fail ||
-                    result.status == QCResultStatus.needFollowUp;
-
-                // An item needs follow-up if:
-                //  a) The report is NEEDS_FOLLOW_UP AND
-                //  b) The admin left a note on this item (admin_evaluation == FAIL from the shared contract)
-                // Staff never sees PASS/FAIL labels — we only show the Admin's note.
-                final bool itemNeedsFollowUp =
-                    report.status == QCReportStatus.NEEDS_FOLLOW_UP &&
-                    (result.adminNote != null &&
-                        result.adminNote!.trim().isNotEmpty);
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: AppCard(
-                    padding: const EdgeInsets.all(16),
-                    color: itemNeedsFollowUp ? const Color(0xFFFFF5F5) : null,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                result.label,
-                                style: const TextStyle(
-                                  color: AppColors.textMain,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Standar: ${result.standard}',
-                          style: const TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 11,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Divider(color: AppColors.borderSoft, height: 1),
-                        const SizedBox(height: 12),
-
-                        // Inputted value
-                        Row(
-                          children: [
-                            const Text(
-                              'Hasil Input:',
-                              style: TextStyle(
-                                color: AppColors.textMuted,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              result.value.isEmpty
-                                  ? '-'
-                                  : '${result.value} ${result.unit ?? ""}',
-                              style: const TextStyle(
-                                color: AppColors.textMain,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        if (result.warningMessage != null &&
-                            result.warningMessage!.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.warning,
-                                color: AppColors.rejectedText,
-                                size: 12,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                result.warningMessage!,
-                                style: const TextStyle(
-                                  color: AppColors.rejectedText,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-
-                        // Issue note if any
-                        if (hasIssue && result.issueNote.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: AppColors.rejectedBg,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Detail Masalah:',
-                                  style: TextStyle(
-                                    color: AppColors.rejectedText,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  result.issueNote,
-                                  style: const TextStyle(
-                                    color: AppColors.textMain,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-
-                        // Photos if any
-                        if (result.photos.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Foto Bukti Fisik:',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          PhotoGrid(photos: result.photos),
-                        ],
-
-                        // Admin Note specific to this item
-                        if (itemNeedsFollowUp &&
-                            result.adminNote != null &&
-                            result.adminNote!.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: AppColors.rejectedBg,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: AppColors.rejectedText,
-                                width: 0.5,
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Row(
-                                  children: [
-                                    Icon(
-                                      Icons.info_outline,
-                                      color: AppColors.rejectedText,
-                                      size: 14,
-                                    ),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'Catatan Evaluasi Admin:',
-                                      style: TextStyle(
-                                        color: AppColors.rejectedText,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  result.adminNote!,
-                                  style: const TextStyle(
-                                    color: AppColors.rejectedText,
-                                    fontSize: 12,
-                                    height: 1.3,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+              if (isMultiSampleMaterial) ...[
+                const Text(
+                  'Hasil Pengujian Per Sampel',
+                  style: TextStyle(
+                    color: AppColors.textMain,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
-                );
-              }),
+                ),
+                const SizedBox(height: 16),
+
+                ...report.samples.map(
+                  (sample) => _buildMaterialSampleSection(report, sample),
+                ),
+              ] else ...[
+                const Text(
+                  'Hasil Checklist Parameter',
+                  style: TextStyle(
+                    color: AppColors.textMain,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                ...renderItems.map(
+                  (result) => _buildSingleChecklistCard(report, result),
+                ),
+              ],
 
               // Staff general note card
               if (report.staffNote.isNotEmpty) ...[
@@ -566,11 +443,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                     final isRevision =
                         report.status == QCReportStatus.NEEDS_FOLLOW_UP;
                     if (report.type == QCType.material) {
-                      // Use report's own templateId/formCode — avoids fragile title matching
                       final tid = report.templateId.isNotEmpty
                           ? report.templateId
-                          : 'tiang_besi_7m_3_segmen'; // fallback for legacy data
-                      // Look up the cached template so the form can use its exact checklist structure.
+                          : 'tiang_besi_7m_3_segmen';
                       final QCMaterialTemplate? cachedTemplate =
                           DummyState().templateCache[tid] ??
                           dummyQCMaterialTemplates
@@ -598,6 +473,458 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMaterialSampleSection(
+    QCReportModel report,
+    QCReportSample sample,
+  ) {
+    return Container(
+      key: Key('sample_section_${sample.sampleNumber}'),
+      margin: const EdgeInsets.only(bottom: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Sampel ${sample.sampleNumber}',
+                style: const TextStyle(
+                  color: AppColors.textMain,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              if (sample.inspectionStatus == QCSampleInspectionStatus.completed)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.approvedBg,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'Selesai',
+                    style: TextStyle(
+                      color: AppColors.approvedText,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...sample.checklistAnswers.map(
+            (answer) => _buildChecklistAnswerCard(report, answer),
+          ),
+          if (sample.notes.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            AppCard(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Catatan Sampel:',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    sample.notes,
+                    style: const TextStyle(
+                      color: AppColors.textMain,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (sample.photoPaths.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Foto Sampel:',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            PhotoGrid(photos: sample.photoPaths),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChecklistAnswerCard(
+    QCReportModel report,
+    QCChecklistAnswer answer,
+  ) {
+    final bool itemNeedsFollowUp =
+        report.status == QCReportStatus.NEEDS_FOLLOW_UP &&
+        (answer.adminNote != null && answer.adminNote!.trim().isNotEmpty);
+    final hasIssue = answer.issueNote != null && answer.issueNote!.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: AppCard(
+        padding: const EdgeInsets.all(16),
+        color: itemNeedsFollowUp ? const Color(0xFFFFF5F5) : null,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              answer.paramName,
+              style: const TextStyle(
+                color: AppColors.textMain,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Standar: ${answer.standardText}',
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+            ),
+            const SizedBox(height: 12),
+            const Divider(color: AppColors.borderSoft, height: 1),
+            const SizedBox(height: 12),
+
+            Row(
+              children: [
+                const Text(
+                  'Hasil Input:',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  (answer.value?.toString().isEmpty ?? true)
+                      ? '-'
+                      : '${answer.value} ${answer.unit ?? ""}'.trim(),
+                  style: const TextStyle(
+                    color: AppColors.textMain,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+
+            if (answer.warningMessage != null &&
+                answer.warningMessage!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.warning,
+                    color: AppColors.rejectedText,
+                    size: 12,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    answer.warningMessage!,
+                    style: const TextStyle(
+                      color: AppColors.rejectedText,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            if (hasIssue && answer.issueNote!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.rejectedBg,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Detail Masalah:',
+                      style: TextStyle(
+                        color: AppColors.rejectedText,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      answer.issueNote!,
+                      style: const TextStyle(
+                        color: AppColors.textMain,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            if (answer.photoPaths.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Text(
+                'Foto Bukti Fisik:',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              PhotoGrid(photos: answer.photoPaths),
+            ],
+
+            if (itemNeedsFollowUp &&
+                answer.adminNote != null &&
+                answer.adminNote!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.rejectedBg,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.rejectedText, width: 0.5),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: AppColors.rejectedText,
+                          size: 14,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'Catatan Evaluasi Admin:',
+                          style: TextStyle(
+                            color: AppColors.rejectedText,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      answer.adminNote!,
+                      style: const TextStyle(
+                        color: AppColors.rejectedText,
+                        fontSize: 12,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSingleChecklistCard(QCReportModel report, RenderItem result) {
+    final hasIssue =
+        result.status == ChecklistStatus.tidakSesuai ||
+        result.status == ChecklistStatus.perluTindakLanjut ||
+        result.status == QCResultStatus.fail ||
+        result.status == QCResultStatus.needFollowUp;
+
+    final bool itemNeedsFollowUp =
+        report.status == QCReportStatus.NEEDS_FOLLOW_UP &&
+        (result.adminNote != null && result.adminNote!.trim().isNotEmpty);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: AppCard(
+        padding: const EdgeInsets.all(16),
+        color: itemNeedsFollowUp ? const Color(0xFFFFF5F5) : null,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    result.label,
+                    style: const TextStyle(
+                      color: AppColors.textMain,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Standar: ${result.standard}',
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+            ),
+            const SizedBox(height: 12),
+            const Divider(color: AppColors.borderSoft, height: 1),
+            const SizedBox(height: 12),
+
+            Row(
+              children: [
+                const Text(
+                  'Hasil Input:',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  result.value.isEmpty
+                      ? '-'
+                      : '${result.value} ${result.unit ?? ""}'.trim(),
+                  style: const TextStyle(
+                    color: AppColors.textMain,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+
+            if (result.warningMessage != null &&
+                result.warningMessage!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.warning,
+                    color: AppColors.rejectedText,
+                    size: 12,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    result.warningMessage!,
+                    style: const TextStyle(
+                      color: AppColors.rejectedText,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            if (hasIssue && result.issueNote.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.rejectedBg,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Detail Masalah:',
+                      style: TextStyle(
+                        color: AppColors.rejectedText,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      result.issueNote,
+                      style: const TextStyle(
+                        color: AppColors.textMain,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            if (result.photos.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Text(
+                'Foto Bukti Fisik:',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              PhotoGrid(photos: result.photos),
+            ],
+
+            if (itemNeedsFollowUp &&
+                result.adminNote != null &&
+                result.adminNote!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.rejectedBg,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.rejectedText, width: 0.5),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: AppColors.rejectedText,
+                          size: 14,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'Catatan Evaluasi Admin:',
+                          style: TextStyle(
+                            color: AppColors.rejectedText,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      result.adminNote!,
+                      style: const TextStyle(
+                        color: AppColors.rejectedText,
+                        fontSize: 12,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
