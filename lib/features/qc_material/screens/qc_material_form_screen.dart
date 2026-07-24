@@ -1078,69 +1078,122 @@ class _SamplingDecisionDialogState extends State<_SamplingDecisionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Peringatan Sampling Material'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Sedikitnya dua sampel yang telah selesai diperiksa tidak sesuai standar. '
-              'Material terindikasi tidak memenuhi standar, dapat dikembalikan '
-              'kepada vendor, dan laporan memerlukan revisi.',
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              key: const Key('qc_material_sampling_stop_reason'),
-              controller: _stopReasonController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: 'Alasan penghentian',
-                hintText: 'Wajib diisi jika pemeriksaan dihentikan',
-                errorText: _stopReasonError,
-                border: const OutlineInputBorder(),
-              ),
-              onChanged: (_) {
-                if (_stopReasonError == null) return;
-                setState(() => _stopReasonError = null);
-              },
-            ),
-          ],
-        ),
+    return Theme(
+      data: Theme.of(context).copyWith(
+        dialogBackgroundColor: AppColors.surface,
       ),
-      actions: [
-        TextButton(
-          key: const Key('qc_material_stop_inspection_button'),
-          onPressed: () {
-            final reason = _stopReasonController.text.trim();
-            if (reason.isEmpty) {
-              setState(
-                () => _stopReasonError = 'Alasan penghentian wajib diisi.',
-              );
-              return;
-            }
-            Navigator.pop(
-              context,
-              _SamplingDecisionResult(
-                QCMaterialSamplingDecisionType.stop,
-                stopReason: reason,
-              ),
-            );
-          },
-          child: const Text('Hentikan Pemeriksaan'),
+      child: AlertDialog(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
         ),
-        FilledButton(
-          key: const Key('qc_material_continue_inspection_button'),
-          onPressed: () => Navigator.pop(
-            context,
-            const _SamplingDecisionResult(
-              QCMaterialSamplingDecisionType.continueInspection,
-            ),
+        title: const Text(
+          'Peringatan Sampling Material',
+          style: TextStyle(
+            color: AppColors.textMain,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
           ),
-          child: const Text('Lanjutkan Pemeriksaan'),
         ),
-      ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Sedikitnya dua sampel yang telah selesai diperiksa tidak sesuai standar. '
+                'Material terindikasi tidak memenuhi standar, dapat dikembalikan '
+                'kepada vendor, dan laporan memerlukan revisi.',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 14,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                key: const Key('qc_material_sampling_stop_reason'),
+                controller: _stopReasonController,
+                maxLines: 3,
+                style: const TextStyle(
+                  color: AppColors.textMain,
+                  fontSize: 14,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'Alasan penghentian',
+                  labelStyle: const TextStyle(color: AppColors.textMuted),
+                  hintText: 'Wajib diisi jika pemeriksaan dihentikan',
+                  hintStyle: const TextStyle(color: AppColors.textSoft),
+                  errorText: _stopReasonError,
+                  errorStyle: const TextStyle(color: AppColors.rejectedText),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.rejectedText),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.rejectedText, width: 1.5),
+                  ),
+                ),
+                onChanged: (_) {
+                  if (_stopReasonError == null) return;
+                  setState(() => _stopReasonError = null);
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            key: const Key('qc_material_stop_inspection_button'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.rejectedText,
+            ),
+            onPressed: () {
+              final reason = _stopReasonController.text.trim();
+              if (reason.isEmpty) {
+                setState(
+                  () => _stopReasonError = 'Alasan penghentian wajib diisi.',
+                );
+                return;
+              }
+              Navigator.pop(
+                context,
+                _SamplingDecisionResult(
+                  QCMaterialSamplingDecisionType.stop,
+                  stopReason: reason,
+                ),
+              );
+            },
+            child: const Text('Hentikan Pemeriksaan'),
+          ),
+          FilledButton(
+            key: const Key('qc_material_continue_inspection_button'),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.surface,
+            ),
+            onPressed: () => Navigator.pop(
+              context,
+              const _SamplingDecisionResult(
+                QCMaterialSamplingDecisionType.continueInspection,
+              ),
+            ),
+            child: const Text('Lanjutkan Pemeriksaan'),
+          ),
+        ],
+      ),
     );
   }
 }
