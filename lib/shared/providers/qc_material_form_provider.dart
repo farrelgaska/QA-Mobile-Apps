@@ -1376,6 +1376,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
           'Laporan gagal disimpan. Periksa koneksi lalu coba lagi.',
         );
       }
+      _originalReport = newReport;
       _state.addReportLocally(newReport);
     }
   }

@@ -958,16 +958,24 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
     }
   }
 
-  void _submit(BuildContext context, QCMaterialFormProvider p) {
+  Future<void> _submit(BuildContext context, QCMaterialFormProvider p) async {
     if (p.hasProcessingPhotos) {
       AppSnackbar.warning(context, qcPhotoProcessingMessage);
       return;
     }
     if (p.isSamplingStopped) {
-      AppSnackbar.warning(
-        context,
-        'Pemeriksaan telah dihentikan. Simpan laporan sebagai draft.',
-      );
+      try {
+        await p.persistReport(QCReportStatus.NEEDS_FOLLOW_UP);
+        if (!context.mounted) return;
+        AppSnackbar.success(
+          context,
+          'Pemeriksaan dihentikan. Laporan berhasil dikirim dengan status Perlu Perbaikan.',
+        );
+        context.pop();
+      } on QCMaterialPersistenceException catch (error) {
+        if (!context.mounted) return;
+        AppSnackbar.error(context, error.message);
+      }
       return;
     }
     final error = p.validateCurrentStep();
@@ -1031,7 +1039,21 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
       return;
     }
     if (result.type == QCMaterialSamplingDecisionType.stop) {
-      _scheduleScrollToTop();
+      try {
+        await provider.persistReport(QCReportStatus.NEEDS_FOLLOW_UP);
+        if (!mounted) return;
+        final currentCtx = context.mounted ? context : this.context;
+        AppSnackbar.success(
+          currentCtx,
+          'Pemeriksaan dihentikan. Laporan berhasil dikirim dengan status Perlu Perbaikan.',
+        );
+        currentCtx.pop();
+      } on QCMaterialPersistenceException catch (error) {
+        if (!mounted) return;
+        final snackCtx = context.mounted ? context : this.context;
+        AppSnackbar.error(snackCtx, error.message);
+        _scheduleScrollToTop();
+      }
       return;
     }
 
