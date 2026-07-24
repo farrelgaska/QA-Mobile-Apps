@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/core/constants/app_colors.dart';
 import 'package:mobile/core/dummy/dummy_state.dart';
 import 'package:mobile/features/reports/screens/report_detail_screen.dart';
 import 'package:mobile/shared/models/enums.dart';
@@ -429,6 +430,28 @@ void main() {
       expect(searchField, findsOneWidget);
       expect(searchButton, findsOneWidget);
       expect(searchError, findsNothing);
+
+      // Verify search field style, hint, and label colors are readable dark colors (not white or transparent)
+      final searchFieldWidget = tester.widget<TextField>(searchField);
+      expect(searchFieldWidget.style?.color, equals(AppColors.textMain));
+      expect(searchFieldWidget.style?.color, isNot(equals(Colors.white)));
+      expect(searchFieldWidget.style?.color, isNot(equals(Colors.transparent)));
+      expect(
+        searchFieldWidget.decoration?.hintStyle?.color,
+        equals(AppColors.textMuted),
+      );
+      expect(
+        searchFieldWidget.decoration?.hintStyle?.color,
+        isNot(equals(Colors.white)),
+      );
+      expect(
+        searchFieldWidget.decoration?.hintStyle?.color,
+        isNot(equals(Colors.transparent)),
+      );
+      expect(
+        searchFieldWidget.decoration?.labelStyle?.color,
+        equals(AppColors.textMuted),
+      );
 
       // 1. Empty query should not scroll or show error
       await tester.tap(searchButton);

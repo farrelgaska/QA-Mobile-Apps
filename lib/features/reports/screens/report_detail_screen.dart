@@ -462,13 +462,21 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                             child: TextField(
                               key: const Key('qc_material_sample_search_field'),
                               controller: _sampleSearchController,
+                              style: const TextStyle(color: AppColors.textMain),
                               textInputAction: TextInputAction.search,
                               onSubmitted: (_) => _performSampleSearch(report),
                               decoration: InputDecoration(
                                 labelText: 'Cari Sampel',
+                                labelStyle: const TextStyle(
+                                  color: AppColors.textMuted,
+                                ),
                                 hintText: 'Contoh: Sampel 3',
-                                hintStyle: const TextStyle(color: Colors.grey),
+                                hintStyle: const TextStyle(
+                                  color: AppColors.textMuted,
+                                ),
                                 isDense: true,
+                                fillColor: Colors.white,
+                                filled: true,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
