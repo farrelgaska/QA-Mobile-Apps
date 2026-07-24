@@ -1155,10 +1155,11 @@ class _SamplingDecisionDialogState extends State<_SamplingDecisionDialog> {
           ),
         ),
         actions: [
-          TextButton(
+          FilledButton(
             key: const Key('qc_material_stop_inspection_button'),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.rejectedText,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.rejectedText,
+              foregroundColor: AppColors.surface,
             ),
             onPressed: () {
               final reason = _stopReasonController.text.trim();
