@@ -467,6 +467,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                               decoration: InputDecoration(
                                 labelText: 'Cari Sampel',
                                 hintText: 'Contoh: Sampel 3',
+                                hintStyle: const TextStyle(color: Colors.grey),
                                 isDense: true,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
