@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
@@ -73,6 +74,12 @@ class ReportDetailScreen extends StatefulWidget {
 
 class _ReportDetailScreenState extends State<ReportDetailScreen> {
   final _adminNoteController = TextEditingController();
+  final _sampleSearchController = TextEditingController();
+  final Map<int, GlobalKey> _sampleSectionKeys = {};
+  String? _sampleSearchError;
+  int? _highlightedSampleNumber;
+  Timer? _highlightTimer;
+
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -104,7 +111,78 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   @override
   void dispose() {
     _adminNoteController.dispose();
+    _sampleSearchController.dispose();
+    _highlightTimer?.cancel();
     super.dispose();
+  }
+
+  GlobalKey _keyForSample(int sampleNumber) {
+    return _sampleSectionKeys.putIfAbsent(
+      sampleNumber,
+      () => GlobalKey(debugLabel: 'sample_section_$sampleNumber'),
+    );
+  }
+
+  void _performSampleSearch(QCReportModel report) {
+    final rawInput = _sampleSearchController.text.trim();
+    if (rawInput.isEmpty) {
+      setState(() {
+        _sampleSearchError = null;
+      });
+      return;
+    }
+
+    final cleanInput = rawInput.toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    final sampleNumberMatch = RegExp(r'\d+').firstMatch(cleanInput);
+    final targetNumber = sampleNumberMatch != null
+        ? int.tryParse(sampleNumberMatch.group(0)!)
+        : null;
+
+    final matchingSample = report.samples.cast<QCReportSample?>().firstWhere((
+      sample,
+    ) {
+      if (sample == null) return false;
+      final label = 'sampel ${sample.sampleNumber}';
+      final labelCompact = 'sampel${sample.sampleNumber}';
+      final numStr = '${sample.sampleNumber}';
+
+      return cleanInput == label ||
+          cleanInput == labelCompact ||
+          cleanInput == numStr ||
+          (targetNumber != null && sample.sampleNumber == targetNumber);
+    }, orElse: () => null);
+
+    if (matchingSample == null) {
+      setState(() {
+        _sampleSearchError = 'Sampel tidak ditemukan';
+      });
+      return;
+    }
+
+    setState(() {
+      _sampleSearchError = null;
+      _highlightedSampleNumber = matchingSample.sampleNumber;
+    });
+
+    _highlightTimer?.cancel();
+    _highlightTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _highlightedSampleNumber = null;
+        });
+      }
+    });
+
+    final targetKey = _sampleSectionKeys[matchingSample.sampleNumber];
+    final targetContext = targetKey?.currentContext;
+    if (targetContext != null) {
+      Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+        alignment: 0.05,
+      );
+    }
   }
 
   String _formatDate(DateTime dt) {
@@ -371,6 +449,64 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               ),
               const SizedBox(height: 24),
 
+              // Sample Search Field (only for QC Material reports with persisted samples)
+              if (isMultiSampleMaterial) ...[
+                AppCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              key: const Key('qc_material_sample_search_field'),
+                              controller: _sampleSearchController,
+                              textInputAction: TextInputAction.search,
+                              onSubmitted: (_) => _performSampleSearch(report),
+                              decoration: InputDecoration(
+                                labelText: 'Cari Sampel',
+                                hintText: 'Contoh: Sampel 3',
+                                isDense: true,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            key: const Key('qc_material_sample_search_button'),
+                            icon: const Icon(
+                              Icons.search,
+                              color: AppColors.primary,
+                            ),
+                            onPressed: () => _performSampleSearch(report),
+                          ),
+                        ],
+                      ),
+                      if (_sampleSearchError != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          _sampleSearchError!,
+                          key: const Key('qc_material_sample_search_error'),
+                          style: const TextStyle(
+                            color: AppColors.rejectedText,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+
               // Checklist Results Section
               if (isMultiSampleMaterial) ...[
                 const Text(
@@ -482,89 +618,105 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     QCReportModel report,
     QCReportSample sample,
   ) {
+    final scrollKey = _keyForSample(sample.sampleNumber);
+    final isHighlighted = _highlightedSampleNumber == sample.sampleNumber;
+
     return Container(
       key: Key('sample_section_${sample.sampleNumber}'),
       margin: const EdgeInsets.only(bottom: 24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Sampel ${sample.sampleNumber}',
-                style: const TextStyle(
-                  color: AppColors.textMain,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+      child: AnimatedContainer(
+        key: scrollKey,
+        duration: const Duration(milliseconds: 300),
+        padding: isHighlighted ? const EdgeInsets.all(12) : EdgeInsets.zero,
+        decoration: BoxDecoration(
+          color: isHighlighted ? AppColors.approvedBg : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: isHighlighted
+              ? Border.all(color: AppColors.approvedText, width: 2)
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Sampel ${sample.sampleNumber}',
+                  style: const TextStyle(
+                    color: AppColors.textMain,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
-              ),
-              if (sample.inspectionStatus == QCSampleInspectionStatus.completed)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.approvedBg,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    'Selesai',
-                    style: TextStyle(
-                      color: AppColors.approvedText,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                if (sample.inspectionStatus ==
+                    QCSampleInspectionStatus.completed)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.approvedBg,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      'Selesai',
+                      style: TextStyle(
+                        color: AppColors.approvedText,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...sample.checklistAnswers.map(
+              (answer) => _buildChecklistAnswerCard(report, answer),
+            ),
+            if (sample.notes.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              AppCard(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Catatan Sampel:',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      sample.notes,
+                      style: const TextStyle(
+                        color: AppColors.textMain,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
             ],
-          ),
-          const SizedBox(height: 12),
-          ...sample.checklistAnswers.map(
-            (answer) => _buildChecklistAnswerCard(report, answer),
-          ),
-          if (sample.notes.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            AppCard(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Catatan Sampel:',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    sample.notes,
-                    style: const TextStyle(
-                      color: AppColors.textMain,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
+            if (sample.photoPaths.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Foto Sampel:',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
+              const SizedBox(height: 4),
+              PhotoGrid(photos: sample.photoPaths),
+            ],
           ],
-          if (sample.photoPaths.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            const Text(
-              'Foto Sampel:',
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            PhotoGrid(photos: sample.photoPaths),
-          ],
-        ],
+        ),
       ),
     );
   }

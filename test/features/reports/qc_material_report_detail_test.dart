@@ -291,6 +291,10 @@ void main() {
       expect(find.text('Redaman Fiber'), findsOneWidget);
       expect(find.text('0.32'), findsOneWidget);
       expect(find.text('Sampel 1'), findsNothing);
+      expect(
+        find.byKey(const Key('qc_material_sample_search_field')),
+        findsNothing,
+      );
     },
   );
 
@@ -338,5 +342,139 @@ void main() {
       find.byKey(const Key('qc_material_stop_decision_banner')),
       findsNothing,
     );
+    expect(
+      find.byKey(const Key('qc_material_sample_search_field')),
+      findsNothing,
+    );
   });
+
+  // ── Sample Search & Scroll Tests ─────────────────────────────────────────
+
+  testWidgets(
+    'sample search field appears and handles exact, lowercase, missing, and empty queries',
+    (tester) async {
+      final state = DummyState();
+      final originalReports = List<QCReportModel>.from(state.reports);
+      addTearDown(() {
+        state.reports
+          ..clear()
+          ..addAll(originalReports);
+      });
+
+      final multiReport = QCReportModel(
+        id: 'QC-MAT-SEARCH-06',
+        title: 'Pengujian Kabel Optik Multi Sampel',
+        type: QCType.material,
+        status: QCReportStatus.SUBMITTED,
+        staffNote: '',
+        sampleCount: 3,
+        samples: [
+          sample(
+            sampleNumber: 1,
+            answers: [
+              answer(
+                itemId: 'a1',
+                paramName: 'Param 1',
+                standard: '10',
+                value: '10',
+              ),
+            ],
+          ),
+          sample(
+            sampleNumber: 2,
+            answers: [
+              answer(
+                itemId: 'a2',
+                paramName: 'Param 2',
+                standard: '20',
+                value: '20',
+              ),
+            ],
+          ),
+          sample(
+            sampleNumber: 3,
+            answers: [
+              answer(
+                itemId: 'a3',
+                paramName: 'Param 3',
+                standard: '30',
+                value: '30',
+              ),
+            ],
+          ),
+        ],
+      );
+
+      state.reports
+        ..clear()
+        ..add(multiReport);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: ReportDetailScreen(reportId: 'QC-MAT-SEARCH-06'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final searchField = find.byKey(
+        const Key('qc_material_sample_search_field'),
+      );
+      final searchButton = find.byKey(
+        const Key('qc_material_sample_search_button'),
+      );
+      final searchError = find.byKey(
+        const Key('qc_material_sample_search_error'),
+      );
+
+      expect(searchField, findsOneWidget);
+      expect(searchButton, findsOneWidget);
+      expect(searchError, findsNothing);
+
+      // 1. Empty query should not scroll or show error
+      await tester.tap(searchButton);
+      await tester.pumpAndSettle();
+      expect(searchError, findsNothing);
+
+      // 2. Missing sample query shows "Sampel tidak ditemukan" and does not create sample
+      await tester.enterText(searchField, 'Sampel 99');
+      await tester.tap(searchButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sampel tidak ditemukan'), findsOneWidget);
+      expect(
+        find.byKey(const Key('sample_section_99')),
+        findsNothing,
+      ); // Never creates missing sample section
+
+      // 3. Lowercase & trimmed query " sampel 2 " finds Sampel 2 and clears error
+      await tester.enterText(searchField, ' sampel 2 ');
+      await tester.tap(searchButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sampel tidak ditemukan'), findsNothing);
+      expect(find.byKey(const Key('sample_section_2')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('sample_section_2')),
+          matching: find.text('Sampel 2'),
+        ),
+        findsOneWidget,
+      );
+
+      // 4. Keyboard search submission for "Sampel 3" finds Sampel 3
+      await tester.enterText(searchField, 'Sampel 3');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sampel tidak ditemukan'), findsNothing);
+      expect(find.byKey(const Key('sample_section_3')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('sample_section_3')),
+          matching: find.text('Sampel 3'),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 }
