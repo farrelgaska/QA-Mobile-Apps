@@ -151,7 +151,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
   bool _isDisposed = false;
   late String _reportId;
   final Map<QCMaterialGeneralField, String> _generalFieldErrors = {};
-  QCMaterialReviewRequest? _reviewRequest;
+  QCMaterialSamplingDecision? _samplingDecision;
 
   static const _sampleStatusesKey = 'qcSampleEvaluationStatuses';
   static const _failedSampleCountKey = 'qcFailedSampleCount';
@@ -183,14 +183,12 @@ class QCMaterialFormProvider extends ChangeNotifier {
   );
   String get reportId => _reportId;
   QCMaterialTemplate get template => _template;
-  QCMaterialReviewRequest? get reviewRequest => _reviewRequest;
-  bool get reviewRequested => _reviewRequest != null;
-  DateTime? get reviewRequestedAt => _reviewRequest?.requestedAt;
-  List<String> get reviewRequestedFailedSampleIds =>
-      _reviewRequest?.failedSampleIds ?? const [];
-  List<int> get reviewRequestedFailedSampleNumbers =>
-      _reviewRequest?.failedSampleNumbers ?? const [];
+  QCMaterialSamplingDecision? get samplingDecision => _samplingDecision;
+  bool get hasSamplingDecision => _samplingDecision != null;
+  bool get isSamplingStopped =>
+      _samplingDecision?.type == QCMaterialSamplingDecisionType.stop;
 
+  /// All samples whose evaluation status is OUT_OF_STANDARD.
   List<QCMaterialSampleState> get outOfStandardSamples => samples
       .where(
         (sample) =>
@@ -199,7 +197,24 @@ class QCMaterialFormProvider extends ChangeNotifier {
       )
       .toList(growable: false);
   int get failedSampleCount => outOfStandardSamples.length;
-  bool get isReviewRequestEligible => failedSampleCount >= 2;
+
+  /// Completed samples whose evaluation status is OUT_OF_STANDARD.
+  List<QCMaterialSampleState> get failedCompletedSamples => samples
+      .where(
+        (sample) =>
+            sample.inspectionStatus == QCSampleInspectionStatus.completed &&
+            sampleEvaluationStatus(sample) ==
+                QCSampleEvaluationStatus.outOfStandard,
+      )
+      .toList(growable: false);
+  int get failedCompletedCount => failedCompletedSamples.length;
+
+  /// True when at least 2 completed samples are out-of-standard and no
+  /// decision has been recorded yet. Does not depend on total sample count.
+  bool get isSamplingDecisionRequired =>
+      !hasSamplingDecision && failedCompletedCount >= 2;
+  bool get isSamplingWarningActive =>
+      isSamplingDecisionRequired || hasSamplingDecision;
   QCSampleEvaluationStatus get currentSampleEvaluationStatus {
     final sample = currentSample;
     return sample == null
@@ -507,7 +522,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
       }
 
       samples.clear();
-      _reviewRequest = QCMaterialReviewRequest.fromGeneralInfo(
+      _samplingDecision = QCMaterialSamplingDecision.fromGeneralInfo(
         report.generalInfo,
       );
       if (report.samples.isNotEmpty) {
@@ -546,7 +561,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
       _appendMissingSamples();
       _currentStep = _restoredStep(report);
     } else {
-      _reviewRequest = null;
+      _samplingDecision = null;
       // Prepopulate default template fields
       materialIdController.text = _template.id;
       stelVersionController.text = _template.code == 'TA-FR-048-010-01'
@@ -612,11 +627,29 @@ class QCMaterialFormProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool requestReview({DateTime? requestedAt}) {
-    if (!isReviewRequestEligible || reviewRequested) return false;
-    final failedSamples = outOfStandardSamples;
-    _reviewRequest = QCMaterialReviewRequest(
-      requestedAt: requestedAt ?? DateTime.now(),
+  String? recordSamplingDecision({
+    required QCMaterialSamplingDecisionType decision,
+    String? stopReason,
+    DateTime? decidedAt,
+  }) {
+    if (hasSamplingDecision) {
+      return 'Keputusan sampling sudah dicatat.';
+    }
+    if (!isSamplingDecisionRequired) {
+      return 'Keputusan sampling belum diperlukan.';
+    }
+    final normalizedReason = stopReason?.trim() ?? '';
+    if (decision == QCMaterialSamplingDecisionType.stop &&
+        normalizedReason.isEmpty) {
+      return 'Alasan penghentian wajib diisi.';
+    }
+    final failedSamples = failedCompletedSamples;
+    _samplingDecision = QCMaterialSamplingDecision(
+      type: decision,
+      decidedAt: decidedAt ?? DateTime.now(),
+      stopReason: decision == QCMaterialSamplingDecisionType.stop
+          ? normalizedReason
+          : null,
       failedSampleIds: List.unmodifiable(
         failedSamples.map((sample) => sample.id),
       ),
@@ -625,7 +658,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
       ),
     );
     notifyListeners();
-    return true;
+    return null;
   }
 
   QCMaterialSampleState _newSampleState(
@@ -710,11 +743,28 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
   int _restoredStep(QCReportModel report) {
     final stored = int.tryParse(report.generalInfo['currentStep'] ?? '');
-    if (stored != null && stored >= 0 && stored < totalSteps) return stored;
+    if (stored != null && stored >= 0 && stored < totalSteps) {
+      // When stopped, do not allow navigating beyond the last completed sample.
+      return isSamplingStopped ? min(stored, _lastAllowedStep) : stored;
+    }
     final incompleteIndex = samples.indexWhere(
       (sample) => sample.inspectionStatus != QCSampleInspectionStatus.completed,
     );
-    return incompleteIndex >= 0 ? incompleteIndex + 1 : totalSteps - 1;
+    final restored = incompleteIndex >= 0
+        ? incompleteIndex + 1
+        : totalSteps - 1;
+    return isSamplingStopped ? min(restored, _lastAllowedStep) : restored;
+  }
+
+  /// The last sample step index the user may navigate to while stopped.
+  /// Equals the index of the last completed sample, or step 1 if none.
+  int get _lastAllowedStep {
+    for (var i = samples.length - 1; i >= 0; i--) {
+      if (samples[i].inspectionStatus == QCSampleInspectionStatus.completed) {
+        return i + 1;
+      }
+    }
+    return 1;
   }
 
   String _newReportId() {
@@ -1077,6 +1127,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
   Future<String?> nextStep() async {
     if (_isNavigating || isFinalStep) return null;
+    if (isSamplingStopped && _currentStep >= _lastAllowedStep) {
+      return 'Pemeriksaan telah dihentikan. Sampel tambahan tidak dapat dibuka.';
+    }
     _isNavigating = true;
     notifyListeners();
     try {
@@ -1086,6 +1139,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
         final sample = currentSample!;
         sample.inspectionStatus = QCSampleInspectionStatus.completed;
         sample.updatedAt = DateTime.now();
+        if (isSamplingDecisionRequired) return null;
       }
       await Future<void>.delayed(Duration.zero);
       if (_currentStep < totalSteps - 1) _currentStep++;
@@ -1212,10 +1266,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
           sample.id: sampleEvaluationStatus(sample).apiValue,
       }),
       _failedSampleCountKey: failedSampleCount.toString(),
-      _reviewEligibleKey: isReviewRequestEligible.toString(),
-      QCMaterialReviewRequest.requestedKey: reviewRequested.toString(),
+      _reviewEligibleKey: isSamplingWarningActive.toString(),
     };
-    _reviewRequest?.writeToGeneralInfo(genInfo);
+    _samplingDecision?.writeToGeneralInfo(genInfo);
     final sampleSnapshots = List<QCReportSample>.generate(samples.length, (
       index,
     ) {

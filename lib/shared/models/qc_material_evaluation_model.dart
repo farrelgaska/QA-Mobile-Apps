@@ -24,6 +24,97 @@ QCSampleEvaluationStatus qcSampleEvaluationStatusFromValue(dynamic value) {
   };
 }
 
+enum QCMaterialSamplingDecisionType { stop, continueInspection }
+
+extension QCMaterialSamplingDecisionTypeValue
+    on QCMaterialSamplingDecisionType {
+  String get apiValue => switch (this) {
+    QCMaterialSamplingDecisionType.stop => 'STOP',
+    QCMaterialSamplingDecisionType.continueInspection => 'CONTINUE',
+  };
+}
+
+class QCMaterialSamplingDecision {
+  static const decisionKey = 'qcSamplingDecision';
+  static const decidedAtKey = 'qcSamplingDecisionAt';
+  static const stopReasonKey = 'qcSamplingStopReason';
+  static const failedSampleIdsKey = 'qcSamplingFailedSampleIds';
+  static const failedSampleNumbersKey = 'qcSamplingFailedSampleNumbers';
+
+  final QCMaterialSamplingDecisionType type;
+  final DateTime decidedAt;
+  final String? stopReason;
+  final List<String> failedSampleIds;
+  final List<int> failedSampleNumbers;
+
+  const QCMaterialSamplingDecision({
+    required this.type,
+    required this.decidedAt,
+    required this.failedSampleIds,
+    required this.failedSampleNumbers,
+    this.stopReason,
+  });
+
+  void writeToGeneralInfo(Map<String, String> generalInfo) {
+    generalInfo[decisionKey] = type.apiValue;
+    generalInfo[decidedAtKey] = decidedAt.toIso8601String();
+    generalInfo[stopReasonKey] = stopReason ?? '';
+    generalInfo[failedSampleIdsKey] = jsonEncode(failedSampleIds);
+    generalInfo[failedSampleNumbersKey] = jsonEncode(failedSampleNumbers);
+  }
+
+  static QCMaterialSamplingDecision? fromGeneralInfo(
+    Map<String, String> generalInfo,
+  ) {
+    final type = switch (generalInfo[decisionKey]?.toUpperCase()) {
+      'STOP' => QCMaterialSamplingDecisionType.stop,
+      'CONTINUE' => QCMaterialSamplingDecisionType.continueInspection,
+      _ => null,
+    };
+    final decidedAt = DateTime.tryParse(generalInfo[decidedAtKey] ?? '');
+    if (type == null || decidedAt == null) return null;
+
+    final stopReason = generalInfo[stopReasonKey]?.trim() ?? '';
+    if (type == QCMaterialSamplingDecisionType.stop && stopReason.isEmpty) {
+      return null;
+    }
+    final ids = _stringList(generalInfo[failedSampleIdsKey]);
+    final numbers = _intList(generalInfo[failedSampleNumbersKey]);
+    if (ids.length < 2 || numbers.length < 2) return null;
+
+    return QCMaterialSamplingDecision(
+      type: type,
+      decidedAt: decidedAt,
+      stopReason: stopReason.isEmpty ? null : stopReason,
+      failedSampleIds: List.unmodifiable(ids),
+      failedSampleNumbers: List.unmodifiable(numbers),
+    );
+  }
+
+  static List<String> _stringList(String? value) {
+    try {
+      return (jsonDecode(value ?? '') as List)
+          .map((entry) => entry.toString())
+          .where((entry) => entry.isNotEmpty)
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  static List<int> _intList(String? value) {
+    try {
+      return (jsonDecode(value ?? '') as List)
+          .map((entry) => entry is int ? entry : int.tryParse('$entry'))
+          .whereType<int>()
+          .where((entry) => entry > 0)
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+}
+
 class QCMaterialReviewRequest {
   static const requestedKey = 'qcReviewRequested';
   static const requestedAtKey = 'qcReviewRequestedAt';
