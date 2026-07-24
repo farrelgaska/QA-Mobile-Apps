@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile/core/dummy/dummy_state.dart';
 import 'package:mobile/core/services/api_service.dart';
+import 'package:mobile/core/utils/status_helper.dart';
 import 'package:mobile/features/qc_material/screens/qc_material_form_screen.dart';
 import 'package:mobile/shared/models/enums.dart';
 import 'package:mobile/shared/models/qc_material_evaluation_model.dart';
@@ -16,14 +17,27 @@ import 'package:provider/provider.dart';
 
 class _FakePersistenceApi implements QCMaterialPersistenceApi {
   QCReportModel? savedReport;
+  int postReportCount = 0;
+  int patchReportCount = 0;
+  int uploadCount = 0;
+  bool shouldFail = false;
 
   @override
   Future<QCEvidenceUploadResult> uploadQCEvidence({
     required XFile file,
     required String reportId,
     required String itemId,
-  }) {
-    throw UnimplementedError('These tests do not upload photos.');
+  }) async {
+    if (shouldFail) {
+      throw const ApiRequestException('Network error during photo upload');
+    }
+    uploadCount++;
+    return QCEvidenceUploadResult(
+      objectPath:
+          'reports/$reportId/checklist/$itemId/00000000-0000-0000-0000-000000000000.jpg',
+      mimeType: 'image/jpeg',
+      size: 1024,
+    );
   }
 
   @override
@@ -31,6 +45,13 @@ class _FakePersistenceApi implements QCMaterialPersistenceApi {
     QCReportModel report, {
     bool throwOnError = false,
   }) async {
+    if (shouldFail) {
+      if (throwOnError) {
+        throw const ApiRequestException('Network error during patchReport');
+      }
+      return false;
+    }
+    patchReportCount++;
     savedReport = QCReportModel.fromJson(report.toJson());
     return true;
   }
@@ -40,6 +61,13 @@ class _FakePersistenceApi implements QCMaterialPersistenceApi {
     QCReportModel report, {
     bool throwOnError = false,
   }) async {
+    if (shouldFail) {
+      if (throwOnError) {
+        throw const ApiRequestException('Network error during postReport');
+      }
+      return false;
+    }
+    postReportCount++;
     savedReport = QCReportModel.fromJson(report.toJson());
     return true;
   }
@@ -421,9 +449,15 @@ void main() {
       isNull,
     );
 
-    await provider.persistReport(QCReportStatus.DRAFT);
+    await provider.persistReport(QCReportStatus.NEEDS_FOLLOW_UP);
     final saved = api.savedReport!;
     expect(saved.generalInfo[QCMaterialSamplingDecision.decisionKey], 'STOP');
+    expect(saved.status, QCReportStatus.NEEDS_FOLLOW_UP);
+    expect(saved.status, isNot(QCReportStatus.DRAFT));
+    expect(
+      StatusHelper.getQCReportStatusLabel(saved.status),
+      'Perlu Tindak Lanjut',
+    );
 
     restored.init(
       saved.templateId,
@@ -441,6 +475,98 @@ void main() {
       restored.samplingDecision!.failedSampleIds,
       provider.samplingDecision!.failedSampleIds,
     );
+  });
+
+  test('STOP without a reason remains blocked', () async {
+    final api = _FakePersistenceApi();
+    final provider = await _providerWithSamples(6, api: api);
+    addTearDown(() => provider.dispose());
+
+    await _completeSample(provider, 0, failed: true);
+    await _completeSample(provider, 1, failed: true);
+
+    expect(
+      provider.recordSamplingDecision(
+        decision: QCMaterialSamplingDecisionType.stop,
+        stopReason: '   ',
+      ),
+      'Alasan penghentian wajib diisi.',
+    );
+    expect(provider.hasSamplingDecision, isFalse);
+    expect(provider.isSamplingStopped, isFalse);
+  });
+
+  test(
+    'STOP with a reason auto-submits as NEEDS_FOLLOW_UP (Perlu Perbaikan), not DRAFT, and retry deduplicates',
+    () async {
+      final state = DummyState();
+      final originalReports = List<QCReportModel>.from(state.reports);
+      final api = _FakePersistenceApi();
+      final provider = await _providerWithSamples(6, api: api);
+      addTearDown(() {
+        provider.dispose();
+        state.reports
+          ..clear()
+          ..addAll(originalReports);
+      });
+
+      await _completeSample(provider, 0, failed: true);
+      await _completeSample(provider, 1, failed: true);
+
+      // Record STOP with valid reason
+      expect(
+        provider.recordSamplingDecision(
+          decision: QCMaterialSamplingDecisionType.stop,
+          stopReason: 'Kerusakan komponen fisik',
+        ),
+        isNull,
+      );
+
+      // 1. First submission fails
+      api.shouldFail = true;
+      await expectLater(
+        provider.persistReport(QCReportStatus.NEEDS_FOLLOW_UP),
+        throwsA(isA<QCMaterialPersistenceException>()),
+      );
+      // Data and STOP state remain preserved and recoverable
+      expect(provider.isSamplingStopped, isTrue);
+      expect(
+        provider.samplingDecision!.stopReason,
+        'Kerusakan komponen fisik',
+      );
+
+      // 2. Retry submission succeeds without duplicate report creation or photo upload
+      api.shouldFail = false;
+      await provider.persistReport(QCReportStatus.NEEDS_FOLLOW_UP);
+      final saved = api.savedReport!;
+      expect(saved.status, QCReportStatus.NEEDS_FOLLOW_UP);
+      expect(saved.status, isNot(QCReportStatus.DRAFT));
+      expect(api.postReportCount, 1);
+
+      // Retry again should patch the existing report rather than calling postReport again
+      await provider.persistReport(QCReportStatus.NEEDS_FOLLOW_UP);
+      expect(api.postReportCount, 1);
+      expect(api.patchReportCount, 1);
+    },
+  );
+
+  test('CONTINUE decision records state but does not auto-submit', () async {
+    final api = _FakePersistenceApi();
+    final provider = await _providerWithSamples(6, api: api);
+    addTearDown(() => provider.dispose());
+
+    await _completeSample(provider, 0, failed: true);
+    await _completeSample(provider, 1, failed: true);
+
+    expect(
+      provider.recordSamplingDecision(
+        decision: QCMaterialSamplingDecisionType.continueInspection,
+      ),
+      isNull,
+    );
+    expect(provider.hasSamplingDecision, isTrue);
+    expect(provider.isSamplingStopped, isFalse);
+    expect(api.savedReport, isNull);
   });
 
   test('legacy draft does not synthesize failure or review request', () {
@@ -532,4 +658,69 @@ void main() {
       expect(find.text('Peringatan Sampling Material'), findsNothing);
     },
   );
+
+  testWidgets('UI STOP decision requires reason and submits report', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: QCMaterialFormScreen(
+          materialId: 'MAT-SAMPLE-EVALUATION',
+          template: _template(),
+        ),
+      ),
+    );
+    final nextButton = find.byKey(const Key('qc_material_next_button'));
+    final provider = Provider.of<QCMaterialFormProvider>(
+      tester.element(nextButton),
+      listen: false,
+    );
+    _fillGeneralInformation(provider, sampleCount: 6);
+    await tester.ensureVisible(nextButton);
+    await tester.tap(nextButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    for (var index = 0; index < 2; index++) {
+      provider.samples[index].answers[0].value = '10';
+      provider.samples[index].answers[1].value = 'Baik';
+      provider.setParameterEvaluationStatus(
+        sampleIndex: index,
+        answerIndex: 0,
+        status: QCSampleEvaluationStatus.outOfStandard,
+      );
+      provider.samples[index].inspectionStatus =
+          QCSampleInspectionStatus.completed;
+    }
+    await tester.pump();
+    await tester.ensureVisible(nextButton);
+    await tester.pump();
+    await tester.tap(nextButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('Peringatan Sampling Material'), findsOneWidget);
+
+    // Tapping STOP without entering a reason keeps dialog open and displays error
+    await tester.tap(
+      find.byKey(const Key('qc_material_stop_inspection_button')),
+    );
+    await tester.pump();
+    expect(find.text('Alasan penghentian wajib diisi.'), findsOneWidget);
+    expect(provider.hasSamplingDecision, isFalse);
+
+    // Enter valid stop reason and confirm
+    await tester.enterText(
+      find.byKey(const Key('qc_material_sampling_stop_reason')),
+      'Retak fisik pada dua sampel',
+    );
+    await tester.tap(
+      find.byKey(const Key('qc_material_stop_inspection_button')),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(provider.isSamplingStopped, isTrue);
+    expect(provider.samplingDecision!.stopReason, 'Retak fisik pada dua sampel');
+  });
 }
