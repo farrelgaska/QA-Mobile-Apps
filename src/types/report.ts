@@ -6,6 +6,43 @@ export type StandardResult = 'Lulus' | 'Tidak Lulus' | 'Perlu Review';
 
 export type ChecklistResult = 'PASS' | 'FAIL' | 'NEEDS_REVIEW';
 
+export type ParameterEvaluationStatus =
+  | 'NOT_EVALUATED'
+  | 'WITHIN_STANDARD'
+  | 'OUT_OF_STANDARD';
+
+export type SampleInspectionStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+
+export interface SampleChecklistAnswer {
+  checklist_item_id: string;
+  input_type: 'number' | 'text' | 'choice' | 'boolean';
+  actual_value: string | number | boolean | null;
+  note: string;
+  photo_paths: string[];
+  standard_text: string;
+  standard_value: number | null;
+  unit: string;
+  upper_tolerance: number | null;
+  lower_tolerance: number | null;
+  minimum_value: number | null;
+  maximum_value: number | null;
+  evaluation_status: ParameterEvaluationStatus;
+  /** Admin-only review scoped by sample ID + checklist item ID. */
+  admin_evaluation?: ChecklistResult;
+  admin_note?: string;
+}
+
+export interface ReportSample {
+  id: string;
+  sample_number: number;
+  inspection_status: SampleInspectionStatus;
+  checklist_answers: SampleChecklistAnswer[];
+  notes: string;
+  photo_paths: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ChecklistItem {
   id: string;
   name: string;
@@ -56,6 +93,16 @@ export interface QCReport {
   };
   general_info?: Record<string, string>;
   checklist_items?: SharedChecklistItem[];
+  sample_count?: number;
+  samples?: ReportSample[];
+  /** Canonical object_path -> temporary display URL. Never serialized to PATCH. */
+  evidenceDisplayUrls?: Record<string, string>;
+  review_requested?: boolean;
+  review_requested_at?: string | null;
+  review_requested_by_role?: string | null;
+  review_failed_sample_count?: number | null;
+  review_failed_sample_ids?: string[];
+  review_failed_sample_numbers?: number[];
   submitted_at?: string;
   admin_review?: {
     admin_note?: string;

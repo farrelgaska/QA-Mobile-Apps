@@ -2,12 +2,18 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import type { QCReport, StandardResult } from '../types/report';
 import { mapToSharedReport } from '../utils/status';
 import {
+  sampleAdminReviewItems,
+  updateSampleAdminReview,
+  withEvidenceDisplayUrls,
+} from '../utils/materialReportPresentation';
+import {
   fetchReports,
   approveReportApi,
   requestFollowUpApi,
   resolveQCEvidenceSignedUrls,
   type ApiReport,
   type ApiChecklistItem,
+  type ApiReportSample,
 } from '../services/reportApi';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -23,6 +29,16 @@ interface ReportsContextValue {
   updateChecklistItem: (
     reportId: string,
     itemId: string,
+    result:
+      | 'PASS'
+      | 'FAIL'
+      | 'NEEDS_REVIEW',
+    adminNote: string
+  ) => void;
+  updateSampleChecklistAnswer: (
+    reportId: string,
+    sampleId: string,
+    checklistItemId: string,
     result: 'PASS' | 'FAIL' | 'NEEDS_REVIEW',
     adminNote: string
   ) => void;
@@ -61,10 +77,24 @@ function buildApiChecklistItems(report: QCReport): ApiChecklistItem[] {
   }));
 }
 
+function buildApiSamples(report: QCReport): ApiReportSample[] {
+  return report.samples ?? [];
+}
+
+function reviewItemsForReport(report: QCReport) {
+  return report.type === 'material' && (report.samples?.length ?? 0) > 0
+    ? sampleAdminReviewItems(report)
+    : report.checklistItems;
+}
+
 function collectEvidencePaths(reports: ApiReport[]): string[] {
   return reports.flatMap(report => [
     ...(report.general_photos ?? []),
     ...(report.checklist_items ?? []).flatMap(item => item.item_photos ?? []),
+    ...(report.samples ?? []).flatMap(sample => [
+      ...(sample.photo_paths ?? []),
+      ...(sample.checklist_answers ?? []).flatMap(answer => answer.photo_paths ?? []),
+    ]),
   ]);
 }
 
@@ -72,13 +102,18 @@ function applySignedUrls(
   report: QCReport,
   signedUrls: Readonly<Record<string, string>>
 ): QCReport {
+  const reportWithDisplayUrls = withEvidenceDisplayUrls(report, signedUrls);
   return {
-    ...report,
-    checklistItems: report.checklistItems.map(item => ({
+    ...reportWithDisplayUrls,
+    checklistItems: reportWithDisplayUrls.checklistItems.map(item => ({
       ...item,
       photoUrls: item.photoUrls.map(path => signedUrls[path] ?? path),
     })),
-    photos: (report.general_photos ?? report.photos ?? []).map(
+    photos: (
+      reportWithDisplayUrls.general_photos
+      ?? reportWithDisplayUrls.photos
+      ?? []
+    ).map(
       path => signedUrls[path] ?? path
     ),
   };
@@ -161,37 +196,32 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     // Enforce: every checklist item must be PASS (ignore mobile values)
-    const failItems = report.checklistItems.filter(i => i.result !== 'PASS');
+    const failItems = reviewItemsForReport(report).filter(
+      item => item.result !== 'PASS'
+    );
     if (failItems.length > 0) {
       const failNames = failItems.map(i => i.name).join(', ');
       throw new Error(`Persetujuan diblokir: ${failItems.length} parameter belum PASS (${failNames}).`);
     }
 
     const updatedChecklist = buildApiChecklistItems(report);
-    const reviewedAt = new Date().toISOString();
+    const updatedSamples = buildApiSamples(report);
     const note = adminNote || 'Laporan disetujui. Semua kriteria memenuhi standar teknis.';
 
-    // Optimistic update first
-    const optimistic: QCReport = {
-      ...report,
-      status: 'APPROVED',
-      standardResult: 'Lulus',
-      adminNote: note,
-      admin_review: {
-        admin_note: note,
-        conclusion: 'PASSED',
-        reviewed_at: reviewedAt,
-        reviewed_by: 'Admin',
-      },
-    };
-    applyLocalUpdate(optimistic);
-
-    // Persist to API (best-effort, non-blocking for UI)
+    // Commit the workflow status only after the backend accepts the PATCH.
     try {
-      const updated = await approveReportApi(id, note, 'Admin', updatedChecklist);
+      const updated = await approveReportApi(
+        id,
+        note,
+        'Admin',
+        updatedChecklist,
+        updatedSamples,
+        signedUrlsRef.current
+      );
       applyLocalUpdate(mapToSharedReport(updated));
     } catch (err) {
-      console.warn('[Mock API offline] Approval saved locally only.', err);
+      console.warn('Approval was not persisted.', err);
+      throw err;
     }
   }, [applyLocalUpdate]);
 
@@ -211,7 +241,9 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     // Enforce: at least one FAIL item must exist
-    const failItems = report.checklistItems.filter(i => i.result === 'FAIL');
+    const failItems = reviewItemsForReport(report).filter(
+      item => item.result === 'FAIL'
+    );
     if (failItems.length === 0) {
       throw new Error('Tindak lanjut diblokir: harus ada minimal satu parameter yang ditandai Gagal.');
     }
@@ -224,29 +256,22 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     const updatedChecklist = buildApiChecklistItems(report);
-    const reviewedAt = new Date().toISOString();
+    const updatedSamples = buildApiSamples(report);
 
-    // Optimistic update — conclusion is NOT_PASSED (never PASSED for follow-up)
-    const optimistic: QCReport = {
-      ...report,
-      status: 'NEEDS_FOLLOW_UP',
-      standardResult: 'Tidak Lulus',
-      adminNote,
-      admin_review: {
-        admin_note: adminNote,
-        conclusion: 'NOT_PASSED',
-        reviewed_at: reviewedAt,
-        reviewed_by: 'Admin',
-      },
-    };
-    applyLocalUpdate(optimistic);
-
-    // Persist to API (best-effort)
+    // Commit the workflow status only after the backend accepts the PATCH.
     try {
-      const updated = await requestFollowUpApi(id, adminNote, 'Admin', updatedChecklist);
+      const updated = await requestFollowUpApi(
+        id,
+        adminNote,
+        'Admin',
+        updatedChecklist,
+        updatedSamples,
+        signedUrlsRef.current
+      );
       applyLocalUpdate(mapToSharedReport(updated));
     } catch (err) {
-      console.warn('[Mock API offline] Follow-up request saved locally only.', err);
+      console.warn('Follow-up request was not persisted.', err);
+      throw err;
     }
   }, [applyLocalUpdate]);
 
@@ -255,7 +280,10 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const updateChecklistItem = useCallback((
     reportId: string,
     itemId: string,
-    result: 'PASS' | 'FAIL' | 'NEEDS_REVIEW',
+    result:
+      | 'PASS'
+      | 'FAIL'
+      | 'NEEDS_REVIEW',
     adminNote: string
   ) => {
     const report = reportsRef.current.find(r => r.id === reportId);
@@ -288,6 +316,38 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, [applyLocalUpdate]);
 
+  const updateSampleChecklistAnswer = useCallback((
+    reportId: string,
+    sampleId: string,
+    checklistItemId: string,
+    result: 'PASS' | 'FAIL' | 'NEEDS_REVIEW',
+    adminNote: string
+  ) => {
+    const report = reportsRef.current.find(entry => entry.id === reportId);
+    if (!report) return;
+
+    const samples = updateSampleAdminReview(
+      report.samples ?? [],
+      sampleId,
+      checklistItemId,
+      result,
+      adminNote
+    );
+    const reviewItems = sampleAdminReviewItems({ ...report, samples });
+    let standardResult: StandardResult = 'Lulus';
+    if (reviewItems.some(item => item.result === 'FAIL')) {
+      standardResult = 'Tidak Lulus';
+    } else if (reviewItems.some(item => item.result === 'NEEDS_REVIEW')) {
+      standardResult = 'Perlu Review';
+    }
+
+    applyLocalUpdate({
+      ...report,
+      samples,
+      standardResult,
+    });
+  }, [applyLocalUpdate]);
+
   // ─── Context value ────────────────────────────────────────────────────────
 
   const value: ReportsContextValue = {
@@ -299,6 +359,7 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     approveReport,
     requestRevision,
     updateChecklistItem,
+    updateSampleChecklistAnswer,
   };
 
   return <ReportsContext.Provider value={value}>{children}</ReportsContext.Provider>;

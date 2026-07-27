@@ -4,7 +4,7 @@
  * All functions throw on non-2xx responses so callers can handle errors.
  */
 
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL?.trim() || 'http://localhost:3002')
+const BASE_URL = (import.meta.env?.VITE_API_BASE_URL?.trim() || 'http://localhost:3002')
   .replace(/\/+$/, '');
 
 // ─── Raw API shape (shared report contract) ──────────────────────────────────
@@ -20,6 +20,35 @@ export interface ApiChecklistItem {
   item_photos: string[];
   admin_evaluation: 'PASS' | 'FAIL' | 'NEEDS_REVIEW' | 'PENDING';
   admin_note?: string;
+}
+
+export interface ApiSampleChecklistAnswer {
+  checklist_item_id: string;
+  input_type: 'number' | 'text' | 'choice' | 'boolean';
+  actual_value: string | number | boolean | null;
+  note: string;
+  photo_paths: string[];
+  standard_text: string;
+  standard_value: number | null;
+  unit: string;
+  upper_tolerance: number | null;
+  lower_tolerance: number | null;
+  minimum_value: number | null;
+  maximum_value: number | null;
+  evaluation_status: 'NOT_EVALUATED' | 'WITHIN_STANDARD' | 'OUT_OF_STANDARD';
+  admin_evaluation?: 'PASS' | 'FAIL' | 'NEEDS_REVIEW';
+  admin_note?: string;
+}
+
+export interface ApiReportSample {
+  id: string;
+  sample_number: number;
+  inspection_status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+  checklist_answers: ApiSampleChecklistAnswer[];
+  notes: string;
+  photo_paths: string[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ApiReport {
@@ -38,6 +67,14 @@ export interface ApiReport {
   };
   general_info?: Record<string, string>;
   checklist_items?: ApiChecklistItem[];
+  sample_count?: number;
+  samples?: ApiReportSample[];
+  review_requested?: boolean;
+  review_requested_at?: string | null;
+  review_requested_by_role?: string | null;
+  review_failed_sample_count?: number | null;
+  review_failed_sample_ids?: string[];
+  review_failed_sample_numbers?: number[];
   staff_note?: string;
   submitted_at?: string;
   revision_number?: number;
@@ -135,12 +172,58 @@ export async function patchReport(id: string, patch: Partial<ApiReport>): Promis
 /**
  * Approve a report: sets status → APPROVED and stores admin_review.
  */
+const NON_CANONICAL_EVIDENCE_URL = /^(?:https?:|blob:|data:)/i;
+
+/**
+ * Keep Staff evidence attached to its sample while ensuring temporary display
+ * URLs can never cross the API serialization boundary.
+ */
+export function canonicalizeReviewSamples(
+  samples: readonly ApiReportSample[],
+  displayUrls: Readonly<Record<string, string>> = {}
+): ApiReportSample[] {
+  const canonicalByDisplayUrl = new Map(
+    Object.entries(displayUrls).map(([objectPath, displayUrl]) => [
+      displayUrl,
+      objectPath,
+    ])
+  );
+  const canonicalize = (value: string): string => {
+    const canonical = canonicalByDisplayUrl.get(value) ?? value;
+    if (
+      NON_CANONICAL_EVIDENCE_URL.test(canonical)
+      || canonical.startsWith('/')
+      || canonical.startsWith('asset:')
+      || canonical.startsWith('assets/')
+    ) {
+      throw new Error(
+        `Foto bukti tidak memiliki canonical object_path: ${canonical}`
+      );
+    }
+    return canonical;
+  };
+
+  return samples.map(sample => ({
+    ...sample,
+    photo_paths: sample.photo_paths.map(canonicalize),
+    checklist_answers: sample.checklist_answers.map(answer => ({
+      ...answer,
+      photo_paths: answer.photo_paths.map(canonicalize),
+    })),
+  }));
+}
+
 export async function approveReportApi(
   id: string,
   adminNote: string,
   reviewedBy: string,
-  updatedChecklistItems?: ApiChecklistItem[]
+  updatedChecklistItems?: ApiChecklistItem[],
+  updatedSamples?: ApiReportSample[],
+  evidenceDisplayUrls?: Readonly<Record<string, string>>
 ): Promise<ApiReport> {
+  const canonicalSamples = updatedSamples
+    ? canonicalizeReviewSamples(updatedSamples, evidenceDisplayUrls)
+    : undefined;
   const patch: Partial<ApiReport> = {
     status: 'APPROVED',
     admin_review: {
@@ -150,6 +233,7 @@ export async function approveReportApi(
       reviewed_by: reviewedBy,
     },
     ...(updatedChecklistItems ? { checklist_items: updatedChecklistItems } : {}),
+    ...(canonicalSamples ? { samples: canonicalSamples } : {}),
   };
   return patchReport(id, patch);
 }
@@ -161,8 +245,13 @@ export async function requestFollowUpApi(
   id: string,
   adminNote: string,
   reviewedBy: string,
-  updatedChecklistItems?: ApiChecklistItem[]
+  updatedChecklistItems?: ApiChecklistItem[],
+  updatedSamples?: ApiReportSample[],
+  evidenceDisplayUrls?: Readonly<Record<string, string>>
 ): Promise<ApiReport> {
+  const canonicalSamples = updatedSamples
+    ? canonicalizeReviewSamples(updatedSamples, evidenceDisplayUrls)
+    : undefined;
   const patch: Partial<ApiReport> = {
     status: 'NEEDS_FOLLOW_UP',
     admin_review: {
@@ -172,6 +261,7 @@ export async function requestFollowUpApi(
       reviewed_by: reviewedBy,
     },
     ...(updatedChecklistItems ? { checklist_items: updatedChecklistItems } : {}),
+    ...(canonicalSamples ? { samples: canonicalSamples } : {}),
   };
   return patchReport(id, patch);
 }

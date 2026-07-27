@@ -10,7 +10,13 @@ import { ReportStatusBadge } from '../components/reports/ReportStatusBadge';
 import { StandardResultBadge } from '../components/reports/StandardResultBadge';
 import { ChecklistEvaluationTable } from '../components/reports/ChecklistEvaluationTable';
 import { ImagePreviewModal } from '../components/reports/ImagePreviewModal';
+import { InspectionInformation } from '../components/reports/InspectionInformation';
+import { MaterialSampleEvaluation } from '../components/reports/MaterialSampleEvaluation';
 import { getReportStatusLabel } from '../utils/status';
+import {
+  adminReviewReadiness,
+  sampleAdminReviewItems,
+} from '../utils/materialReportPresentation';
 import {
   Calendar,
   User,
@@ -29,7 +35,14 @@ import {
 export const ReportDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getReport, approveReport, requestRevision, updateChecklistItem, loading: ctxLoading } = useReports();
+  const {
+    getReport,
+    approveReport,
+    requestRevision,
+    updateChecklistItem,
+    updateSampleChecklistAnswer,
+    loading: ctxLoading,
+  } = useReports();
 
   // Live report from context — re-evaluates on every render so UI updates instantly
   const report = id ? getReport(id) : undefined;
@@ -118,21 +131,33 @@ export const ReportDetailPage: React.FC = () => {
     );
   }
 
-  const hasFailures = report.checklistItems.some(i => i.result === 'FAIL');
-  const hasPendingReviews = report.checklistItems.some(i => i.result === 'NEEDS_REVIEW');
+  const adminReviewItems =
+    report.type === 'material' && (report.samples?.length ?? 0) > 0
+      ? sampleAdminReviewItems(report)
+      : report.checklistItems;
+  const reviewReadiness = adminReviewReadiness(
+    adminReviewItems,
+    adminFeedback
+  );
+  const {
+    failedItems: failItems,
+    failedItemsMissingAdminNote: failItemsMissingNote,
+    pendingItems,
+    canApprove,
+    canRequestRevision,
+  } = reviewReadiness;
+  const hasFailures = failItems.length > 0;
+  const hasPendingReviews = pendingItems.length > 0;
   // Admin can evaluate on SUBMITTED reports; NEEDS_FOLLOW_UP handled by re-submit from mobile
   const isEditable = report.status === 'SUBMITTED';
 
   // ── Approval gate ──────────────────────────────────────────────────────────
   // Rule: every item must be PASS (none FAIL, none NEEDS_REVIEW)
-  const notPassItems = report.checklistItems.filter(i => i.result !== 'PASS');
-  const canApprove = notPassItems.length === 0;
+
 
   // ── Follow-up gate ─────────────────────────────────────────────────────────
   // Rule: at least one FAIL item; every FAIL item must have an Admin note
-  const failItems = report.checklistItems.filter(i => i.result === 'FAIL');
-  const failItemsMissingNote = failItems.filter(i => !i.adminNote?.trim());
-  const canRequestRevision = failItems.length > 0 && failItemsMissingNote.length === 0 && !!adminFeedback.trim();
+
 
   // ── Validation messages shown inline ──────────────────────────────────────
   const approvalBlockReasons: string[] = [];
@@ -140,8 +165,7 @@ export const ReportDetailPage: React.FC = () => {
     approvalBlockReasons.push(`${failItems.length} parameter ditandai Gagal — ubah ke Lulus atau minta perbaikan.`);
   }
   if (hasPendingReviews) {
-    const reviewCount = report.checklistItems.filter(i => i.result === 'NEEDS_REVIEW').length;
-    approvalBlockReasons.push(`${reviewCount} parameter belum dievaluasi (masih Perlu Review).`);
+    approvalBlockReasons.push(`${pendingItems.length} parameter belum dievaluasi (masih Perlu Review).`);
   }
 
   const revisionBlockReasons: string[] = [];
@@ -274,19 +298,19 @@ export const ReportDetailPage: React.FC = () => {
                 <div className="grid grid-cols-3 gap-2">
                   <div className="text-center p-2 bg-emerald-50 rounded-lg border border-emerald-100">
                     <div className="text-lg font-extrabold text-emerald-700">
-                      {report.checklistItems.filter(c => c.result === 'PASS').length}
+                      {adminReviewItems.filter(c => c.result === 'PASS').length}
                     </div>
                     <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">Lulus</div>
                   </div>
                   <div className="text-center p-2 bg-rose-50 rounded-lg border border-rose-100">
                     <div className="text-lg font-extrabold text-rose-700">
-                      {report.checklistItems.filter(c => c.result === 'FAIL').length}
+                      {adminReviewItems.filter(c => c.result === 'FAIL').length}
                     </div>
                     <div className="text-[10px] text-rose-600 font-semibold mt-0.5">Gagal</div>
                   </div>
                   <div className="text-center p-2 bg-amber-50 rounded-lg border border-amber-100">
                     <div className="text-lg font-extrabold text-amber-700">
-                      {report.checklistItems.filter(c => c.result === 'NEEDS_REVIEW').length}
+                      {adminReviewItems.filter(c => c.result === 'NEEDS_REVIEW').length}
                     </div>
                     <div className="text-[10px] text-amber-600 font-semibold mt-0.5">Review</div>
                   </div>
@@ -295,53 +319,71 @@ export const ReportDetailPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Photo Gallery */}
-          <Card title="Galeri Foto Lapangan">
-            <CardContent className="pt-3">
-              {report.photos && report.photos.length > 0 ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {report.photos.map((url, i) => (
-                    <button
-                      type="button"
-                      key={i}
-                      onClick={() => setPreviewImage({
-                        url,
-                        alt: `Bukti lapangan ${i + 1}`,
-                      })}
-                      className="group relative aspect-video rounded-lg overflow-hidden border border-gray-100 bg-gray-50 hover:border-[#006B5A] hover:shadow-md transition-all duration-200"
-                      aria-label={`Buka pratinjau bukti lapangan ${i + 1}`}
-                    >
-                      <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
-                        Foto tidak dapat dimuat
-                      </div>
-                      <img
-                        src={url}
-                        alt={`Bukti lapangan ${i + 1}`}
-                        className="relative h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={(event) => {
-                          event.currentTarget.style.display = 'none';
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center">
-                        <span className="opacity-0 group-hover:opacity-100 text-white text-[10px] font-bold bg-black/50 px-2 py-0.5 rounded transition-opacity">
-                          Buka
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-8 text-gray-300 gap-2">
-                  <ImageIcon className="h-10 w-10" />
-                  <p className="text-xs text-gray-400 italic">Tidak ada foto bukti lapangan</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {report.type === 'material' ? (
+            <InspectionInformation report={report} />
+          ) : (
+            <Card title="Galeri Foto Lapangan">
+              <CardContent className="pt-3">
+                {report.photos && report.photos.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {report.photos.map((url, i) => (
+                      <button
+                        type="button"
+                        key={i}
+                        onClick={() => setPreviewImage({
+                          url,
+                          alt: `Bukti lapangan ${i + 1}`,
+                        })}
+                        className="group relative aspect-video rounded-lg overflow-hidden border border-gray-100 bg-gray-50 hover:border-[#006B5A] hover:shadow-md transition-all duration-200"
+                        aria-label={`Buka pratinjau bukti lapangan ${i + 1}`}
+                      >
+                        <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
+                          Foto tidak dapat dimuat
+                        </div>
+                        <img
+                          src={url}
+                          alt={`Bukti lapangan ${i + 1}`}
+                          className="relative h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={(event) => {
+                            event.currentTarget.style.display = 'none';
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center">
+                          <span className="opacity-0 group-hover:opacity-100 text-white text-[10px] font-bold bg-black/50 px-2 py-0.5 rounded transition-opacity">
+                            Buka
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-gray-300 gap-2">
+                    <ImageIcon className="h-10 w-10" />
+                    <p className="text-xs text-gray-400 italic">Tidak ada foto bukti lapangan</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* RIGHT: Checklist + Decision */}
         <div className="lg:col-span-2 space-y-5">
+          <MaterialSampleEvaluation
+            report={report}
+            isEditable={isEditable}
+            onUpdateSampleAnswer={(sampleId, itemId, result, note) =>
+              updateSampleChecklistAnswer(
+                report.id,
+                sampleId,
+                itemId,
+                result,
+                note
+              )
+            }
+          />
+
+          {!(report.type === 'material' && report.samples?.length) && (
           <Card title="Evaluasi Parameter Standar QC">
             <CardContent className="pt-3">
               {isEditable && (
@@ -361,6 +403,7 @@ export const ReportDetailPage: React.FC = () => {
               />
             </CardContent>
           </Card>
+          )}
 
           {/* Decision Card */}
           <Card title="Keputusan Admin">

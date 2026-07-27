@@ -166,6 +166,23 @@ export function mapToSharedReport(report: any): QCReport {
     location,
     general_info: report.general_info || report.generalInfo || {},
     checklist_items,
+    sample_count: report.sample_count ?? report.sampleCount ?? 1,
+    samples: (report.samples ?? []).map((sample: any) => ({
+      ...sample,
+      checklist_answers: (sample.checklist_answers ?? []).map((answer: any) => ({
+        ...answer,
+        admin_evaluation: ['PASS', 'FAIL'].includes(answer.admin_evaluation)
+          ? answer.admin_evaluation
+          : 'NEEDS_REVIEW',
+        admin_note: answer.admin_note ?? '',
+      })),
+    })),
+    review_requested: report.review_requested ?? false,
+    review_requested_at: report.review_requested_at ?? null,
+    review_requested_by_role: report.review_requested_by_role ?? null,
+    review_failed_sample_count: report.review_failed_sample_count ?? null,
+    review_failed_sample_ids: report.review_failed_sample_ids ?? [],
+    review_failed_sample_numbers: report.review_failed_sample_numbers ?? [],
     submitted_at: report.submitted_at || report.submittedAt || report.date || new Date().toISOString(),
     admin_review,
     
