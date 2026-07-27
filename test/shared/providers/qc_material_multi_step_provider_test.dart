@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
@@ -20,6 +22,7 @@ class _FakePersistenceApi implements QCMaterialPersistenceApi {
     required XFile file,
     required String reportId,
     required String itemId,
+    Uint8List? bytes,
   }) {
     throw UnimplementedError('No local upload is used by these tests.');
   }

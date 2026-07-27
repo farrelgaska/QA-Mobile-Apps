@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +27,7 @@ class _FakePersistenceApi implements QCMaterialPersistenceApi {
     required XFile file,
     required String reportId,
     required String itemId,
+    Uint8List? bytes,
   }) async {
     if (shouldFail) {
       throw const ApiRequestException('Network error during photo upload');
@@ -252,20 +254,17 @@ void main() {
 
   // ── Threshold: one failure is tolerated ────────────────────────────────────
 
-  test(
-    'one failed completed sample does not trigger the warning',
-    () async {
-      final provider = await _providerWithSamples(3);
-      addTearDown(provider.dispose);
+  test('one failed completed sample does not trigger the warning', () async {
+    final provider = await _providerWithSamples(3);
+    addTearDown(provider.dispose);
 
-      final err = await _completeSample(provider, 0, failed: true);
-      expect(err, isNull); // advances to next sample normally
+    final err = await _completeSample(provider, 0, failed: true);
+    expect(err, isNull); // advances to next sample normally
 
-      expect(provider.failedCompletedCount, 1);
-      expect(provider.isSamplingDecisionRequired, isFalse);
-      expect(provider.isSamplingWarningActive, isFalse);
-    },
-  );
+    expect(provider.failedCompletedCount, 1);
+    expect(provider.isSamplingDecisionRequired, isFalse);
+    expect(provider.isSamplingWarningActive, isFalse);
+  });
 
   // ── Threshold: second failure triggers immediately ─────────────────────────
 
@@ -454,10 +453,7 @@ void main() {
     expect(saved.status, QCReportStatus.SUBMITTED);
     expect(saved.status, isNot(QCReportStatus.DRAFT));
     expect(saved.adminReview.conclusion, isNull);
-    expect(
-      saved.generalInfo[QCMaterialReviewRequest.requestedKey],
-      'true',
-    );
+    expect(saved.generalInfo[QCMaterialReviewRequest.requestedKey], 'true');
     expect(
       saved.generalInfo[QCMaterialReviewRequest.requestedAtKey],
       decidedAt.toIso8601String(),
@@ -542,10 +538,7 @@ void main() {
       );
       // Data and STOP state remain preserved and recoverable
       expect(provider.isSamplingStopped, isTrue);
-      expect(
-        provider.samplingDecision!.stopReason,
-        'Kerusakan komponen fisik',
-      );
+      expect(provider.samplingDecision!.stopReason, 'Kerusakan komponen fisik');
 
       // 2. Retry submission succeeds without duplicate report creation or photo upload
       api.shouldFail = false;
@@ -553,18 +546,12 @@ void main() {
       final saved = api.savedReport!;
       expect(saved.status, QCReportStatus.SUBMITTED);
       expect(saved.adminReview.conclusion, isNull);
-      expect(
-        saved.generalInfo[QCMaterialReviewRequest.requestedKey],
-        'true',
-      );
+      expect(saved.generalInfo[QCMaterialReviewRequest.requestedKey], 'true');
       expect(
         saved.generalInfo[QCMaterialReviewRequest.failedSampleNumbersKey],
         jsonEncode([1, 2]),
       );
-      expect(
-        saved.generalInfo[QCMaterialSamplingDecision.decisionKey],
-        'STOP',
-      );
+      expect(saved.generalInfo[QCMaterialSamplingDecision.decisionKey], 'STOP');
       expect(
         saved.generalInfo[QCMaterialSamplingDecision.stopReasonKey],
         'Kerusakan komponen fisik',
@@ -750,6 +737,9 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(provider.isSamplingStopped, isTrue);
-    expect(provider.samplingDecision!.stopReason, 'Retak fisik pada dua sampel');
+    expect(
+      provider.samplingDecision!.stopReason,
+      'Retak fisik pada dua sampel',
+    );
   });
 }

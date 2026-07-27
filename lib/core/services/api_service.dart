@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io' show Platform;
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart'
     show debugPrint, kIsWeb, kReleaseMode, visibleForTesting;
 import 'package:http/http.dart' as http;
@@ -310,6 +312,7 @@ class ApiService {
     required XFile file,
     required String reportId,
     required String itemId,
+    Uint8List? bytes,
   }) async {
     final mimeType = _supportedImageMimeType(file);
     if (mimeType == null) {
@@ -319,7 +322,7 @@ class ApiService {
     }
 
     try {
-      final bytes = await file.readAsBytes();
+      final uploadBytes = bytes ?? await file.readAsBytes();
       final request =
           http.MultipartRequest(
               'POST',
@@ -331,7 +334,7 @@ class ApiService {
             ..files.add(
               http.MultipartFile.fromBytes(
                 'file',
-                bytes,
+                uploadBytes,
                 filename: file.name,
                 contentType: MediaType.parse(mimeType),
               ),

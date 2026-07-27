@@ -78,6 +78,7 @@ class _FakeMaterialPersistenceApi implements QCMaterialPersistenceApi {
     required XFile file,
     required String reportId,
     required String itemId,
+    Uint8List? bytes,
   }) async {
     uploads.add(_UploadCall(file, reportId, itemId));
     if (failUpload) {
@@ -254,10 +255,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(provider.processingItemPhotos[0], hasLength(1));
-      expect(
-        provider.processingItemPhotos[0].single.canPreviewSource,
-        isTrue,
-      );
+      expect(provider.processingItemPhotos[0].single.canPreviewSource, isTrue);
       expect(provider.localItemPhotos[0], isEmpty);
       provider.updateAnswer(0, '12');
       expect(provider.answers[0].value, '12');
@@ -305,56 +303,53 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     expect(provider.processingItemPhotos[0], hasLength(1));
-    expect(
-      provider.processingItemPhotos[0].single.canPreviewSource,
-      isFalse,
-    );
+    expect(provider.processingItemPhotos[0].single.canPreviewSource, isFalse);
     expect(
       provider.processingItemPhotos[0].single.processingLabel,
       'Memproses foto…',
     );
 
     processor.completer.completeError(const QCPhotoDecodingException());
-    await expectLater(
-      addFuture,
-      throwsA(isA<QCPhotoDecodingException>()),
-    );
+    await expectLater(addFuture, throwsA(isA<QCPhotoDecodingException>()));
     expect(provider.processingItemPhotos[0], isEmpty);
     expect(provider.localItemPhotos[0], isEmpty);
   });
 
-  test('material ignores a late result after processing preview removal', () async {
-    final captured = _localPng();
-    final processor = _ControlledPhotoProcessor();
-    final template = _draftTemplate();
-    final provider = QCMaterialFormProvider(
-      photoPicker: (_) async => captured,
-      photoProcessor: processor,
-    )..init(template.id, template: template);
-    addTearDown(provider.dispose);
+  test(
+    'material ignores a late result after processing preview removal',
+    () async {
+      final captured = _localPng();
+      final processor = _ControlledPhotoProcessor();
+      final template = _draftTemplate();
+      final provider = QCMaterialFormProvider(
+        photoPicker: (_) async => captured,
+        photoProcessor: processor,
+      )..init(template.id, template: template);
+      addTearDown(provider.dispose);
 
-    final addFuture = provider.addPhoto(0);
-    await Future<void>.delayed(Duration.zero);
-    provider.removePhoto(0, 0);
-    expect(provider.processingItemPhotos[0], isEmpty);
+      final addFuture = provider.addPhoto(0);
+      await Future<void>.delayed(Duration.zero);
+      provider.removePhoto(0, 0);
+      expect(provider.processingItemPhotos[0], isEmpty);
 
-    final generated = XFile.fromData(
-      Uint8List.fromList([4, 3, 2, 1]),
-      name: 'processed.jpg',
-      mimeType: 'image/jpeg',
-    );
-    processor.completer.complete(
-      QCProcessedPhoto(
-        file: generated,
-        bytes: Uint8List.fromList([4, 3, 2, 1]),
-        isGenerated: true,
-      ),
-    );
+      final generated = XFile.fromData(
+        Uint8List.fromList([4, 3, 2, 1]),
+        name: 'processed.jpg',
+        mimeType: 'image/jpeg',
+      );
+      processor.completer.complete(
+        QCProcessedPhoto(
+          file: generated,
+          bytes: Uint8List.fromList([4, 3, 2, 1]),
+          isGenerated: true,
+        ),
+      );
 
-    expect(await addFuture, QCMaterialPhotoAddResult.cancelled);
-    expect(provider.localItemPhotos[0], isEmpty);
-    expect(processor.deletedFiles, [same(generated)]);
-  });
+      expect(await addFuture, QCMaterialPhotoAddResult.cancelled);
+      expect(provider.localItemPhotos[0], isEmpty);
+      expect(processor.deletedFiles, [same(generated)]);
+    },
+  );
 
   test('material ignores and cleans a late result after disposal', () async {
     final captured = _localPng();
@@ -603,94 +598,85 @@ void main() {
     },
   );
 
-  test(
-    'edited draft persists only canonical photo paths in original order',
-    () async {
-      const canonicalFirst =
-          'reports/QC-MAT-URL-FILTER/checklist/number-1/162a1d19-23cf-4950-9671-41e1293d68f2.jpg';
-      const canonicalSecond =
-          'reports/QC-MAT-URL-FILTER/checklist/number-1/262a1d19-23cf-4950-9671-41e1293d68f2.png';
-      const canonicalThird =
-          'reports/QC-MAT-URL-FILTER/checklist/number-1/362a1d19-23cf-4950-9671-41e1293d68f2.webp';
-      const httpsUrl = 'https://example.com/photos/material.jpg';
-      const httpUrl = 'http://example.com/photos/material.png';
-      const signedUrl =
-          'https://project.supabase.co/storage/v1/object/sign/qc-evidence/reports/material.jpg?token=signed-token';
-      final template = _draftTemplate();
-      final api = _FakeMaterialPersistenceApi();
-      final state = DummyState();
-      final originalReports = List<QCReportModel>.from(state.reports);
-      final initialProvider = QCMaterialFormProvider(api: api)
-        ..init(template.id, template: template);
-      final restoredProvider = QCMaterialFormProvider(api: api);
-      final freshProvider = QCMaterialFormProvider(api: api);
+  test('edited draft persists only canonical photo paths in original order', () async {
+    const canonicalFirst =
+        'reports/QC-MAT-URL-FILTER/checklist/number-1/162a1d19-23cf-4950-9671-41e1293d68f2.jpg';
+    const canonicalSecond =
+        'reports/QC-MAT-URL-FILTER/checklist/number-1/262a1d19-23cf-4950-9671-41e1293d68f2.png';
+    const canonicalThird =
+        'reports/QC-MAT-URL-FILTER/checklist/number-1/362a1d19-23cf-4950-9671-41e1293d68f2.webp';
+    const httpsUrl = 'https://example.com/photos/material.jpg';
+    const httpUrl = 'http://example.com/photos/material.png';
+    const signedUrl =
+        'https://project.supabase.co/storage/v1/object/sign/qc-evidence/reports/material.jpg?token=signed-token';
+    final template = _draftTemplate();
+    final api = _FakeMaterialPersistenceApi();
+    final state = DummyState();
+    final originalReports = List<QCReportModel>.from(state.reports);
+    final initialProvider = QCMaterialFormProvider(api: api)
+      ..init(template.id, template: template);
+    final restoredProvider = QCMaterialFormProvider(api: api);
+    final freshProvider = QCMaterialFormProvider(api: api);
 
-      addTearDown(() {
-        initialProvider.dispose();
-        restoredProvider.dispose();
-        freshProvider.dispose();
-        state.reports
-          ..clear()
-          ..addAll(originalReports);
-      });
+    addTearDown(() {
+      initialProvider.dispose();
+      restoredProvider.dispose();
+      freshProvider.dispose();
+      state.reports
+        ..clear()
+        ..addAll(originalReports);
+    });
 
-      initialProvider.answers[0].photoPaths.add(canonicalFirst);
-      await initialProvider.persistReport(QCReportStatus.DRAFT);
-      final saved = state.reports.firstWhere(
-        (report) => report.id == initialProvider.reportId,
-      );
-      saved.checklistItems
-          .firstWhere((answer) => answer.itemId == 'number-1')
-          .photoPaths = List<String>.unmodifiable([
-        canonicalFirst,
-        httpsUrl,
-        canonicalSecond,
-        httpUrl,
-        signedUrl,
-        canonicalThird,
-      ]);
+    initialProvider.answers[0].photoPaths.add(canonicalFirst);
+    await initialProvider.persistReport(QCReportStatus.DRAFT);
+    final saved = state.reports.firstWhere(
+      (report) => report.id == initialProvider.reportId,
+    );
+    saved.checklistItems
+        .firstWhere((answer) => answer.itemId == 'number-1')
+        .photoPaths = List<String>.unmodifiable([
+      canonicalFirst,
+      httpsUrl,
+      canonicalSecond,
+      httpUrl,
+      signedUrl,
+      canonicalThird,
+    ]);
 
-      restoredProvider.init(
-        template.id,
-        editReportId: saved.id,
-        template: template,
-      );
-      await restoredProvider.persistReport(QCReportStatus.DRAFT);
+    restoredProvider.init(
+      template.id,
+      editReportId: saved.id,
+      template: template,
+    );
+    await restoredProvider.persistReport(QCReportStatus.DRAFT);
 
-      final expectedPaths = [
-        canonicalFirst,
-        canonicalSecond,
-        canonicalThird,
-      ];
-      final outgoingRoundTrip = QCReportModel.fromJson(
-        api.patchedReport!.toJson(),
-      );
-      final outgoingPaths = outgoingRoundTrip.checklistItems
-          .firstWhere((answer) => answer.itemId == 'number-1')
-          .photoPaths;
-      expect(outgoingPaths, expectedPaths);
-      expect(outgoingPaths, isNot(contains(httpsUrl)));
-      expect(outgoingPaths, isNot(contains(httpUrl)));
-      expect(outgoingPaths, isNot(contains(signedUrl)));
-      expect(api.uploads, isEmpty);
+    final expectedPaths = [canonicalFirst, canonicalSecond, canonicalThird];
+    final outgoingRoundTrip = QCReportModel.fromJson(
+      api.patchedReport!.toJson(),
+    );
+    final outgoingPaths = outgoingRoundTrip.checklistItems
+        .firstWhere((answer) => answer.itemId == 'number-1')
+        .photoPaths;
+    expect(outgoingPaths, expectedPaths);
+    expect(outgoingPaths, isNot(contains(httpsUrl)));
+    expect(outgoingPaths, isNot(contains(httpUrl)));
+    expect(outgoingPaths, isNot(contains(signedUrl)));
+    expect(api.uploads, isEmpty);
 
-      final updated = state.reports.firstWhere(
-        (report) => report.id == saved.id,
-      );
-      freshProvider.init(
-        template.id,
-        editReportId: updated.id,
-        template: template,
-      );
-      final reopenedPaths = freshProvider.answers
-          .firstWhere((answer) => answer.itemId == 'number-1')
-          .photoPaths;
-      expect(reopenedPaths, expectedPaths);
-      expect(reopenedPaths, isNot(contains(httpsUrl)));
-      expect(reopenedPaths, isNot(contains(httpUrl)));
-      expect(reopenedPaths, isNot(contains(signedUrl)));
-    },
-  );
+    final updated = state.reports.firstWhere((report) => report.id == saved.id);
+    freshProvider.init(
+      template.id,
+      editReportId: updated.id,
+      template: template,
+    );
+    final reopenedPaths = freshProvider.answers
+        .firstWhere((answer) => answer.itemId == 'number-1')
+        .photoPaths;
+    expect(reopenedPaths, expectedPaths);
+    expect(reopenedPaths, isNot(contains(httpsUrl)));
+    expect(reopenedPaths, isNot(contains(httpUrl)));
+    expect(reopenedPaths, isNot(contains(signedUrl)));
+  });
 
   test(
     'removing a restored canonical photo survives edited draft round-trip',
@@ -817,86 +803,81 @@ void main() {
     },
   );
 
-  test(
-    'report failure retries without reuploading the pending photo',
-    () async {
-      final template = _draftTemplate();
-      final api = _FakeMaterialPersistenceApi(
-        failFirstReportPersistence: true,
-      );
-      final localPhoto = _localPng();
-      final previewBytes = await localPhoto.readAsBytes();
-      final state = DummyState();
-      final originalReports = List<QCReportModel>.from(state.reports);
-      final provider = QCMaterialFormProvider(api: api)
-        ..init(template.id, template: template);
+  test('report failure retries without reuploading the pending photo', () async {
+    final template = _draftTemplate();
+    final api = _FakeMaterialPersistenceApi(failFirstReportPersistence: true);
+    final localPhoto = _localPng();
+    final previewBytes = await localPhoto.readAsBytes();
+    final state = DummyState();
+    final originalReports = List<QCReportModel>.from(state.reports);
+    final provider = QCMaterialFormProvider(api: api)
+      ..init(template.id, template: template);
 
-      addTearDown(() {
-        provider.dispose();
-        state.reports
-          ..clear()
-          ..addAll(originalReports);
-      });
+    addTearDown(() {
+      provider.dispose();
+      state.reports
+        ..clear()
+        ..addAll(originalReports);
+    });
 
-      provider.updateAnswer(1, 'Ya');
-      provider.localItemPhotos[1].add(localPhoto);
-      provider.localItemPhotoBytes[1].add(previewBytes);
+    provider.updateAnswer(1, 'Ya');
+    provider.localItemPhotos[1].add(localPhoto);
+    provider.localItemPhotoBytes[1].add(previewBytes);
 
-      await expectLater(
-        provider.persistReport(QCReportStatus.DRAFT),
-        throwsA(
-          isA<QCMaterialPersistenceException>().having(
-            (error) => error.message,
-            'message',
-            'Laporan gagal disimpan. Periksa koneksi lalu coba lagi.',
-          ),
+    await expectLater(
+      provider.persistReport(QCReportStatus.DRAFT),
+      throwsA(
+        isA<QCMaterialPersistenceException>().having(
+          (error) => error.message,
+          'message',
+          'Laporan gagal disimpan. Periksa koneksi lalu coba lagi.',
         ),
-      );
+      ),
+    );
 
-      final expectedObjectPath =
-          'reports/${provider.reportId}/checklist/boolean-1/362a1d19-23cf-4950-9671-41e1293d68f2.png';
-      final firstAttemptPaths = api.reportAttempts.single.checklistItems
-          .firstWhere((answer) => answer.itemId == 'boolean-1')
-          .photoPaths;
-      expect(api.uploads, hasLength(1));
-      expect(api.reportPersistenceAttempts, 1);
-      expect(
-        state.reports.any((report) => report.id == provider.reportId),
-        false,
-      );
-      expect(provider.isPersisting, isFalse);
-      expect(provider.localItemPhotos[1], [same(localPhoto)]);
-      expect(provider.localItemPhotoBytes[1], [previewBytes]);
-      expect(provider.answers[1].photoPaths, isEmpty);
-      expect(firstAttemptPaths, [expectedObjectPath]);
+    final expectedObjectPath =
+        'reports/${provider.reportId}/checklist/boolean-1/362a1d19-23cf-4950-9671-41e1293d68f2.png';
+    final firstAttemptPaths = api.reportAttempts.single.checklistItems
+        .firstWhere((answer) => answer.itemId == 'boolean-1')
+        .photoPaths;
+    expect(api.uploads, hasLength(1));
+    expect(api.reportPersistenceAttempts, 1);
+    expect(
+      state.reports.any((report) => report.id == provider.reportId),
+      false,
+    );
+    expect(provider.isPersisting, isFalse);
+    expect(provider.localItemPhotos[1], [same(localPhoto)]);
+    expect(provider.localItemPhotoBytes[1], [previewBytes]);
+    expect(provider.answers[1].photoPaths, isEmpty);
+    expect(firstAttemptPaths, [expectedObjectPath]);
 
-      await provider.persistReport(QCReportStatus.DRAFT);
+    await provider.persistReport(QCReportStatus.DRAFT);
 
-      final saved = state.reports.firstWhere(
-        (report) => report.id == provider.reportId,
-      );
-      final savedPaths = saved.checklistItems
-          .firstWhere((answer) => answer.itemId == 'boolean-1')
-          .photoPaths;
-      final secondAttemptPaths = api.reportAttempts.last.checklistItems
-          .firstWhere((answer) => answer.itemId == 'boolean-1')
-          .photoPaths;
-      expect(api.uploads, hasLength(1));
-      expect(api.uploads.single.reportId, provider.reportId);
-      expect(api.uploads.single.itemId, 'boolean-1');
-      expect(api.reportPersistenceAttempts, 2);
-      expect(api.reportAttempts.map((report) => report.id), [
-        provider.reportId,
-        provider.reportId,
-      ]);
-      expect(secondAttemptPaths, [expectedObjectPath]);
-      expect(savedPaths, [expectedObjectPath]);
-      expect(
-        savedPaths.where((path) => path == expectedObjectPath),
-        hasLength(1),
-      );
-      expect(provider.localItemPhotos[1], isEmpty);
-      expect(provider.localItemPhotoBytes[1], isEmpty);
-    },
-  );
+    final saved = state.reports.firstWhere(
+      (report) => report.id == provider.reportId,
+    );
+    final savedPaths = saved.checklistItems
+        .firstWhere((answer) => answer.itemId == 'boolean-1')
+        .photoPaths;
+    final secondAttemptPaths = api.reportAttempts.last.checklistItems
+        .firstWhere((answer) => answer.itemId == 'boolean-1')
+        .photoPaths;
+    expect(api.uploads, hasLength(1));
+    expect(api.uploads.single.reportId, provider.reportId);
+    expect(api.uploads.single.itemId, 'boolean-1');
+    expect(api.reportPersistenceAttempts, 2);
+    expect(api.reportAttempts.map((report) => report.id), [
+      provider.reportId,
+      provider.reportId,
+    ]);
+    expect(secondAttemptPaths, [expectedObjectPath]);
+    expect(savedPaths, [expectedObjectPath]);
+    expect(
+      savedPaths.where((path) => path == expectedObjectPath),
+      hasLength(1),
+    );
+    expect(provider.localItemPhotos[1], isEmpty);
+    expect(provider.localItemPhotoBytes[1], isEmpty);
+  });
 }
