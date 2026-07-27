@@ -32,6 +32,23 @@ class DummyState {
     }
   }
 
+  /// Refresh one report from the authoritative detail endpoint and replace any
+  /// stale list snapshot with the same ID.
+  Future<QCReportModel> fetchReportFromApi(
+    String reportId, {
+    ApiService? apiService,
+  }) async {
+    final serverReport = await (apiService ?? ApiService()).fetchReport(
+      reportId,
+      throwOnError: true,
+    );
+    if (serverReport == null) {
+      throw ApiRequestException('Laporan $reportId tidak ditemukan.');
+    }
+    updateReportLocally(serverReport);
+    return serverReport;
+  }
+
   void mergeReportsFromApi(List<QCReportModel> serverReports) {
     final serverMap = {for (var report in serverReports) report.id: report};
     for (final id in serverMap.keys) {

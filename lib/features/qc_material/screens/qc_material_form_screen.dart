@@ -965,11 +965,11 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
     }
     if (p.isSamplingStopped) {
       try {
-        await p.persistReport(QCReportStatus.NEEDS_FOLLOW_UP);
+        await p.persistReport(QCReportStatus.SUBMITTED);
         if (!context.mounted) return;
         AppSnackbar.success(
           context,
-          'Pemeriksaan dihentikan. Laporan berhasil dikirim dengan status Perlu Perbaikan.',
+          'Pemeriksaan dihentikan. Laporan berhasil dikirim untuk review Admin.',
         );
         context.pop();
       } on QCMaterialPersistenceException catch (error) {
@@ -1040,12 +1040,12 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
     }
     if (result.type == QCMaterialSamplingDecisionType.stop) {
       try {
-        await provider.persistReport(QCReportStatus.NEEDS_FOLLOW_UP);
+        await provider.persistReport(QCReportStatus.SUBMITTED);
         if (!mounted) return;
         final currentCtx = context.mounted ? context : this.context;
         AppSnackbar.success(
           currentCtx,
-          'Pemeriksaan dihentikan. Laporan berhasil dikirim dengan status Perlu Perbaikan.',
+          'Pemeriksaan dihentikan. Laporan berhasil dikirim untuk review Admin.',
         );
         currentCtx.pop();
       } on QCMaterialPersistenceException catch (error) {
