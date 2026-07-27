@@ -153,7 +153,9 @@ const mapSampleAnswerRow = row => ({
   lower_tolerance: nullableNumber(row.lower_tolerance),
   minimum_value: nullableNumber(row.minimum_value),
   maximum_value: nullableNumber(row.maximum_value),
-  evaluation_status: row.evaluation_status
+  evaluation_status: row.evaluation_status,
+  admin_evaluation: row.admin_evaluation || 'NEEDS_REVIEW',
+  admin_note: row.admin_note || ''
 });
 
 const mapReportAggregate = (

@@ -162,14 +162,16 @@ class PostgresReportRepository {
           `insert into public.qc_report_sample_answers (
             report_id,sample_id,checklist_item_id,input_type,actual_value,note,
             photo_paths,standard_text,standard_value,unit,upper_tolerance,
-            lower_tolerance,minimum_value,maximum_value,evaluation_status,position
-          ) values ($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+            lower_tolerance,minimum_value,maximum_value,evaluation_status,
+            admin_evaluation,admin_note,position
+          ) values ($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
           [
             report.id, sample.id, answer.checklist_item_id, answer.input_type,
             JSON.stringify(answer.actual_value), answer.note, answer.photo_paths,
             answer.standard_text, answer.standard_value, answer.unit,
             answer.upper_tolerance, answer.lower_tolerance, answer.minimum_value,
-            answer.maximum_value, answer.evaluation_status, answerIndex
+            answer.maximum_value, answer.evaluation_status,
+            answer.admin_evaluation, answer.admin_note, answerIndex
           ]
         );
       }
@@ -228,33 +230,37 @@ class PostgresReportRepository {
   }
 
   async update(id, patch) {
-    return this._transaction(async client => {
-      const current = await this._findById(client, id, true);
-      if (!current) throw notFound(`Report with ID ${id} not found`);
-      const merged = { ...current, ...patch, id };
-      const aliases = [
-        ['templateId', 'template_id'], ['formCode', 'form_code'],
-        ['checklistItems', 'checklist_items'], ['staffNote', 'staff_note'],
-        ['submittedAt', 'submitted_at'], ['adminReview', 'admin_review'],
-        ['generalPhotos', 'general_photos'], ['revisionNumber', 'revision_number'],
-        ['sampleCount', 'sample_count']
-      ];
-      for (const [legacy, canonical] of aliases) {
-        if (patch[legacy] !== undefined && patch[canonical] === undefined) merged[canonical] = patch[legacy];
-      }
-      if (patch.samples !== undefined) {
-        merged.samples = mergeReportSamplePatch(current.samples, patch.samples);
-      }
-      Object.assign(merged, mergeReportReviewRequestPatch(current, patch));
-      const report = canonicalReportInput(merged);
-      await this._writeRoot(client, report, true);
-      await client.query('delete from public.qc_report_attachments where report_id = $1', [id]);
-      await client.query('delete from public.qc_report_admin_reviews where report_id = $1', [id]);
-      await client.query('delete from public.qc_report_samples where report_id = $1', [id]);
-      await client.query('delete from public.qc_report_items where report_id = $1', [id]);
-      await this._writeChildren(client, report);
-      return this._findById(client, id);
-    });
+    try {
+      return await this._transaction(async client => {
+        const current = await this._findById(client, id, true);
+        if (!current) throw notFound(`Report with ID ${id} not found`);
+        const merged = { ...current, ...patch, id };
+        const aliases = [
+          ['templateId', 'template_id'], ['formCode', 'form_code'],
+          ['checklistItems', 'checklist_items'], ['staffNote', 'staff_note'],
+          ['submittedAt', 'submitted_at'], ['adminReview', 'admin_review'],
+          ['generalPhotos', 'general_photos'], ['revisionNumber', 'revision_number'],
+          ['sampleCount', 'sample_count']
+        ];
+        for (const [legacy, canonical] of aliases) {
+          if (patch[legacy] !== undefined && patch[canonical] === undefined) merged[canonical] = patch[legacy];
+        }
+        if (patch.samples !== undefined) {
+          merged.samples = mergeReportSamplePatch(current.samples, patch.samples);
+        }
+        Object.assign(merged, mergeReportReviewRequestPatch(current, patch));
+        const report = canonicalReportInput(merged);
+        await this._writeRoot(client, report, true);
+        await client.query('delete from public.qc_report_attachments where report_id = $1', [id]);
+        await client.query('delete from public.qc_report_admin_reviews where report_id = $1', [id]);
+        await client.query('delete from public.qc_report_samples where report_id = $1', [id]);
+        await client.query('delete from public.qc_report_items where report_id = $1', [id]);
+        await this._writeChildren(client, report);
+        return this._findById(client, id);
+      });
+    } catch (error) {
+      throw translatePostgresError(error, 'Report', id);
+    }
   }
 
   async delete(id) {

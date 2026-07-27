@@ -16,6 +16,51 @@ const {
 } = require('../../src/repositories/postgres/mappers');
 
 const REQUESTED_AT = '2026-07-23T04:00:00.000Z';
+const DECIDED_AT = '2026-07-23T03:59:00.000Z';
+
+const mobileSamplingGeneralInfo = (overrides = {}) => ({
+  poNumber: 'PO-2026-017',
+  qcSampleStatuses: '{"sample-1":"OUT_OF_STANDARD","sample-2":"OUT_OF_STANDARD"}',
+  qcFailedSampleCount: '2',
+  qcReviewRequestEligible: 'true',
+  qcSamplingDecision: 'STOP',
+  qcSamplingDecisionAt: DECIDED_AT,
+  qcSamplingStopReason: 'Retak fisik pada dua sampel',
+  qcSamplingFailedSampleIds: '["sample-1","sample-2"]',
+  qcSamplingFailedSampleNumbers: '[1,2]',
+  qcReviewRequested: 'true',
+  qcReviewRequestedAt: REQUESTED_AT,
+  qcReviewFailedSampleIds: '["sample-1","sample-2"]',
+  qcReviewFailedSampleNumbers: '[1,2]',
+  ...overrides
+});
+
+const sample = (id, sampleNumber, actualValue) => ({
+  id,
+  sample_number: sampleNumber,
+  inspection_status: 'COMPLETED',
+  checklist_answers: [{
+    checklist_item_id: 'dimension',
+    input_type: 'number',
+    actual_value: actualValue,
+    note: `measurement-${sampleNumber}`,
+    photo_paths: [],
+    standard_text: '10 mm +/- 5%',
+    standard_value: 10,
+    unit: 'mm',
+    upper_tolerance: 5,
+    lower_tolerance: -5,
+    minimum_value: 9.5,
+    maximum_value: 10.5,
+    evaluation_status: 'OUT_OF_STANDARD',
+    admin_evaluation: 'NEEDS_REVIEW',
+    admin_note: ''
+  }],
+  notes: `sample-note-${sampleNumber}`,
+  photo_paths: [],
+  created_at: '2026-07-23T03:00:00.000Z',
+  updated_at: '2026-07-23T03:30:00.000Z'
+});
 
 const reviewRequest = (overrides = {}) => ({
   review_requested: true,
@@ -169,6 +214,64 @@ test('JSON repository persists and reloads the complete review request snapshot'
   );
 });
 
+test('create preserves the submitted mobile STOP decision and complete sample metadata', t => {
+  const { filePath, repository } = repositoryFixture(t);
+  const generalInfo = mobileSamplingGeneralInfo();
+  const samples = [
+    sample('sample-1', 1, 8.9),
+    sample('sample-2', 2, 9.1)
+  ];
+
+  repository.create(report({
+    general_info: generalInfo,
+    samples
+  }));
+
+  const restored = new JsonReportRepository(filePath).findById('QC-REVIEW-1');
+  assert.deepEqual(restored.general_info, generalInfo);
+  assert.deepEqual(restored.samples, samples);
+  assert.deepEqual(
+    Object.fromEntries(Object.keys(reviewRequest()).map(key => [key, restored[key]])),
+    reviewRequest()
+  );
+});
+
+test('update re-submit preserves the mobile decision and all existing sample answers', t => {
+  const { filePath, repository } = repositoryFixture(t);
+  const samples = [
+    sample('sample-1', 1, 8.9),
+    sample('sample-2', 2, 9.1)
+  ];
+  repository.create(report({
+    status: 'DRAFT',
+    general_info: {
+      poNumber: 'PO-2026-017',
+      qcFailedSampleCount: '0',
+      qcReviewRequestEligible: 'false'
+    },
+    samples
+  }));
+  const resubmittedGeneralInfo = mobileSamplingGeneralInfo({
+    currentStep: '3'
+  });
+
+  repository.update('QC-REVIEW-1', {
+    status: 'SUBMITTED',
+    submitted_at: '2026-07-23T04:01:00.000Z',
+    general_info: resubmittedGeneralInfo,
+    samples
+  });
+
+  const restored = new JsonReportRepository(filePath).findById('QC-REVIEW-1');
+  assert.equal(restored.status, 'SUBMITTED');
+  assert.deepEqual(restored.general_info, resubmittedGeneralInfo);
+  assert.deepEqual(restored.samples, samples);
+  assert.deepEqual(
+    Object.fromEntries(Object.keys(reviewRequest()).map(key => [key, restored[key]])),
+    reviewRequest()
+  );
+});
+
 test('unrelated patches preserve an existing immutable review request', t => {
   const { repository } = repositoryFixture(t);
   repository.create(report(reviewRequest()));
@@ -250,16 +353,27 @@ test('JSON and PostgreSQL canonical mappings produce equivalent review fields', 
 
 test('PostgreSQL root writes include the complete review request snapshot', async () => {
   const pool = new RecordingPool();
-  await new PostgresReportRepository(pool).create(report(reviewRequest()));
+  const generalInfo = mobileSamplingGeneralInfo();
+  await new PostgresReportRepository(pool).create(report({
+    general_info: generalInfo,
+    ...reviewRequest()
+  }));
   const rootWrite = pool.queries.find(query =>
     query.text.includes('insert into public.qc_reports'));
 
+  assert.equal(rootWrite.parameters[5], 'SUBMITTED');
+  assert.deepEqual(rootWrite.parameters[12], generalInfo);
   assert.equal(rootWrite.parameters[18], true);
   assert.equal(rootWrite.parameters[19], REQUESTED_AT);
   assert.equal(rootWrite.parameters[20], 'STAFF_WAREHOUSE');
   assert.equal(rootWrite.parameters[21], 2);
   assert.deepEqual(rootWrite.parameters[22], ['sample-1', 'sample-2']);
   assert.deepEqual(rootWrite.parameters[23], [1, 2]);
+  assert.equal(
+    pool.queries.some(query =>
+      query.text.includes('insert into public.qc_report_admin_reviews')),
+    false
+  );
 });
 
 test('creating a review request does not infer an admin decision or report status', t => {
@@ -269,6 +383,50 @@ test('creating a review request does not infer an admin decision or report statu
   assert.equal(created.admin_review, undefined);
   assert.equal('review_status' in created, false);
   assert.equal('decision' in created, false);
+});
+
+test('Staff Warehouse STOP submission is valid as SUBMITTED without a final conclusion', () => {
+  const input = report({
+    general_info: mobileSamplingGeneralInfo(),
+    samples: [
+      sample('sample-1', 1, 8.9),
+      sample('sample-2', 2, 9.1)
+    ],
+    ...reviewRequest(),
+    admin_review: null
+  });
+
+  const result = reportSchema.safeParse(input);
+  assert.equal(result.success, true);
+  assert.equal(result.data.status, 'SUBMITTED');
+  assert.equal(result.data.admin_review, null);
+  assert.equal(result.data.review_requested, true);
+  assert.deepEqual(result.data.general_info, mobileSamplingGeneralInfo());
+});
+
+test('final workflow statuses still require a supported Admin conclusion', () => {
+  for (const status of ['NEEDS_FOLLOW_UP', 'APPROVED']) {
+    const invalid = reportSchema.safeParse(report({
+      status,
+      admin_review: null
+    }));
+    assert.equal(invalid.success, false);
+    assert.match(
+      invalid.error.issues.map(issue => issue.message).join('; '),
+      /requires an explicit final conclusion/
+    );
+
+    const valid = reportSchema.safeParse(report({
+      status,
+      admin_review: {
+        admin_note: 'Admin decision',
+        conclusion: status === 'APPROVED' ? 'PASSED' : 'NOT_PASSED',
+        reviewed_at: REQUESTED_AT,
+        reviewed_by: 'Admin One'
+      }
+    }));
+    assert.equal(valid.success, true);
+  }
 });
 
 test('malformed review requests return the existing structured HTTP 400 response', async t => {

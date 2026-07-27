@@ -53,3 +53,44 @@ test('aggregate DELETE endpoints return 204 once and 404 for missing IDs', async
     console.error = originalConsoleError;
   }
 });
+
+test('known final-conclusion domain violations return HTTP 422', async t => {
+  repositories.reportRepository.create = async () => {
+    const error = new Error(
+      'Report QC-INVALID-FINAL with status NEEDS_FOLLOW_UP requires an explicit final conclusion'
+    );
+    error.statusCode = 422;
+    throw error;
+  };
+
+  const server = app.listen(0);
+  t.after(() => server.close());
+  await new Promise(resolve => server.once('listening', resolve));
+  const originalConsoleError = console.error;
+  console.error = () => {};
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:${server.address().port}/reports`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          id: 'QC-INVALID-FINAL',
+          type: 'MATERIAL',
+          title: 'Invalid final state',
+          status: 'NEEDS_FOLLOW_UP',
+          staff: { name: 'Warehouse Staff', nik: 'WH-1' },
+          location: {},
+          checklist_items: []
+        })
+      }
+    );
+
+    assert.equal(response.status, 422);
+    assert.deepEqual(await response.json(), {
+      error: 'Report QC-INVALID-FINAL with status NEEDS_FOLLOW_UP requires an explicit final conclusion'
+    });
+  } finally {
+    console.error = originalConsoleError;
+  }
+});

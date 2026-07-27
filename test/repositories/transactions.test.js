@@ -41,6 +41,43 @@ class DeletePool {
   async connect() { return this.client; }
 }
 
+class DeferredConclusionViolationPool {
+  constructor() {
+    this.commands = [];
+    this.stagedReportIds = new Set();
+    this.committedReportIds = new Set();
+    this.client = {
+      query: async (text, parameters = []) => {
+        const command = text.trim().split(/\s+/).slice(0, 4).join(' ');
+        this.commands.push(command);
+        if (command === 'BEGIN') {
+          this.stagedReportIds.clear();
+          return { rows: [], rowCount: 0 };
+        }
+        if (text.includes('insert into public.qc_reports')) {
+          this.stagedReportIds.add(parameters[0]);
+          return { rows: [], rowCount: 1 };
+        }
+        if (command === 'COMMIT') {
+          const error = new Error(
+            'Report QC-INVALID-FINAL with status NEEDS_FOLLOW_UP requires an explicit final conclusion'
+          );
+          error.code = '23514';
+          throw error;
+        }
+        if (command === 'ROLLBACK') {
+          this.stagedReportIds.clear();
+          return { rows: [], rowCount: 0 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+      release: () => {}
+    };
+  }
+
+  async connect() { return this.client; }
+}
+
 test('template aggregate write rolls back when an item write fails', async () => {
   const pool = new FailingPool('insert into public.qc_template_items');
   const repository = new PostgresTemplateRepository(pool);
@@ -106,6 +143,30 @@ test('genuine canonical admin review continues to persist', async () => {
     true
   );
   assert.equal(pool.commands.at(-1), 'COMMIT');
+});
+
+test('deferred final-conclusion violations return 422 and roll back every report row', async () => {
+  const pool = new DeferredConclusionViolationPool();
+  const repository = new PostgresReportRepository(pool);
+
+  await assert.rejects(
+    repository.create({
+      id: 'QC-INVALID-FINAL',
+      type: 'MATERIAL',
+      title: 'Invalid final state',
+      status: 'NEEDS_FOLLOW_UP',
+      staff: { name: 'Warehouse Staff', nik: 'WH-1' },
+      location: {},
+      checklist_items: []
+    }),
+    error => error.statusCode === 422 &&
+      error.message.includes('requires an explicit final conclusion')
+  );
+
+  assert.equal(pool.commands.includes('COMMIT'), true);
+  assert.equal(pool.commands.at(-1), 'ROLLBACK');
+  assert.equal(pool.stagedReportIds.size, 0);
+  assert.equal(pool.committedReportIds.size, 0);
 });
 
 test('successful aggregate transaction commits and releases its client', async () => {

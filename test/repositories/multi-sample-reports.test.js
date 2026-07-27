@@ -181,6 +181,58 @@ test('draft save and restore preserves answers, standards, evaluations, notes, a
   );
 });
 
+test('current mobile wire notes and statuses survive normalization and API persistence', t => {
+  const { filePath, repository } = repositoryFixture(t);
+  const input = multiSampleReport();
+  input.samples[0].notes = 'Catatan sampel dari Mobile';
+  input.samples[0].inspection_status = 'COMPLETED';
+  input.samples[0].checklist_answers[0].note = 'Dimensi melebihi batas';
+  input.samples[0].checklist_answers[0].evaluation_status = 'OUT_OF_STANDARD';
+  input.samples[0].checklist_answers[1].note = 'Tanda terlihat jelas';
+  input.samples[0].checklist_answers[1].evaluation_status = 'WITHIN_STANDARD';
+
+  repository.create(input);
+  const apiResponse = new JsonReportRepository(filePath).findById(REPORT_ID);
+  const sampleResponse = apiResponse.samples[0];
+
+  assert.equal(sampleResponse.notes, 'Catatan sampel dari Mobile');
+  assert.equal(sampleResponse.inspection_status, 'COMPLETED');
+  assert.equal(
+    sampleResponse.checklist_answers[0].note,
+    'Dimensi melebihi batas'
+  );
+  assert.equal(
+    sampleResponse.checklist_answers[0].evaluation_status,
+    'OUT_OF_STANDARD'
+  );
+  assert.equal(
+    sampleResponse.checklist_answers[1].note,
+    'Tanda terlihat jelas'
+  );
+  assert.equal(
+    sampleResponse.checklist_answers[1].evaluation_status,
+    'WITHIN_STANDARD'
+  );
+});
+
+test('legacy sample answers without note or evaluation receive additive defaults', t => {
+  const { repository } = repositoryFixture(t);
+  const input = multiSampleReport();
+  delete input.samples[0].checklist_answers[0].note;
+  delete input.samples[0].checklist_answers[0].evaluation_status;
+  delete input.samples[0].notes;
+  delete input.samples[0].inspection_status;
+
+  const restored = repository.create(input);
+  assert.equal(restored.samples[0].notes, '');
+  assert.equal(restored.samples[0].inspection_status, 'NOT_STARTED');
+  assert.equal(restored.samples[0].checklist_answers[0].note, '');
+  assert.equal(
+    restored.samples[0].checklist_answers[0].evaluation_status,
+    'NOT_EVALUATED'
+  );
+});
+
 test('PostgreSQL aggregate writes ordered sample and answer records', async () => {
   const pool = new RecordingPool();
   await new PostgresReportRepository(pool).create(multiSampleReport());

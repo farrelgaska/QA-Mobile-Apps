@@ -92,7 +92,9 @@ const sampleChecklistAnswerSchema = z.object({
   lower_tolerance: z.number().finite().nullable().optional().default(null),
   minimum_value: z.number().finite().nullable().optional().default(null),
   maximum_value: z.number().finite().nullable().optional().default(null),
-  evaluation_status: z.enum(PARAMETER_EVALUATION_STATUSES).default('NOT_EVALUATED')
+  evaluation_status: z.enum(PARAMETER_EVALUATION_STATUSES).default('NOT_EVALUATED'),
+  admin_evaluation: z.enum(['PASS', 'FAIL', 'NEEDS_REVIEW']).default('NEEDS_REVIEW'),
+  admin_note: z.string().nullable().optional().default('')
 }).superRefine((answer, ctx) => {
   if (answer.minimum_value !== null &&
       answer.maximum_value !== null &&
