@@ -52,6 +52,7 @@ abstract class QCMaterialPersistenceApi {
     required XFile file,
     required String reportId,
     required String itemId,
+    Uint8List? bytes,
   });
 
   Future<bool> postReport(QCReportModel report, {bool throwOnError = false});
@@ -67,10 +68,12 @@ class _DefaultQCMaterialPersistenceApi implements QCMaterialPersistenceApi {
     required XFile file,
     required String reportId,
     required String itemId,
+    Uint8List? bytes,
   }) => _apiService.uploadQCEvidence(
     file: file,
     reportId: reportId,
     itemId: itemId,
+    bytes: bytes,
   );
 
   @override
@@ -86,6 +89,18 @@ class QCMaterialPersistenceException implements Exception {
   final String message;
 
   const QCMaterialPersistenceException(this.message);
+}
+
+class _PendingPhotoUpload {
+  final XFile file;
+  final Uint8List bytes;
+  final String itemId;
+
+  const _PendingPhotoUpload({
+    required this.file,
+    required this.bytes,
+    required this.itemId,
+  });
 }
 
 class QCMaterialSampleState {
@@ -137,6 +152,8 @@ class QCMaterialSampleState {
 }
 
 class QCMaterialFormProvider extends ChangeNotifier {
+  static const int _maximumConcurrentPhotoUploads = 3;
+
   // Dependencies
   final DummyState _state = DummyState();
   final ImagePicker _imagePicker;
@@ -1388,6 +1405,11 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
   Future<List<List<List<String>>>> _uploadPendingPhotos() async {
     final persistedBySample = <List<List<String>>>[];
+    final localObjectPathsBySample = <List<List<String?>>>[];
+    final uploadJobIndicesBySample = <List<List<int?>>>[];
+    final uploadJobs = <_PendingPhotoUpload>[];
+    final uploadJobIndexByPhoto = <XFile, int>{};
+
     for (final sample in samples) {
       final answersByItemId = {
         for (final answer in sample.answers) answer.itemId: answer,
@@ -1399,6 +1421,8 @@ class QCMaterialFormProvider extends ChangeNotifier {
             ),
           )
           .toList(growable: false);
+      final localObjectPaths = <List<String?>>[];
+      final uploadJobIndices = <List<int?>>[];
 
       for (var itemIndex = 0; itemIndex < persistedPhotos.length; itemIndex++) {
         final photos = persistedPhotos[itemIndex];
@@ -1414,32 +1438,127 @@ class QCMaterialFormProvider extends ChangeNotifier {
             .toList();
 
         final itemId = _template.checklistItems[itemIndex].id;
-        for (final photo in sample.localItemPhotos[itemIndex]) {
-          var objectPath = _uploadedObjectPaths[photo];
-          if (objectPath == null) {
-            final bytes = await photo.readAsBytes();
-            if (exceedsQCPhotoSizeLimit(bytes)) {
-              throw const QCMaterialPersistenceException(
-                qcPhotoTooLargeMessage,
-              );
-            }
-            final uploaded = await _api.uploadQCEvidence(
-              file: photo,
-              reportId: _reportId,
-              itemId: itemId,
-            );
-            objectPath = uploaded.objectPath;
-            if (!_isCanonicalObjectPath(objectPath)) {
-              throw const QCMaterialPersistenceException(
-                'Server mengembalikan referensi foto yang tidak valid.',
-              );
-            }
-            _uploadedObjectPaths[photo] = objectPath;
-          }
-          persistedPhotos[itemIndex].add(objectPath);
+        final localPhotos = sample.localItemPhotos[itemIndex];
+        final retainedBytes = sample.localItemPhotoBytes[itemIndex];
+        if (localPhotos.length != retainedBytes.length) {
+          throw const QCMaterialPersistenceException(
+            'Foto atau laporan gagal disimpan. Silakan coba lagi.',
+          );
         }
+
+        final localObjectPathSlots = List<String?>.filled(
+          localPhotos.length,
+          null,
+        );
+        final uploadJobIndexSlots = List<int?>.filled(localPhotos.length, null);
+        for (
+          var photoIndex = 0;
+          photoIndex < localPhotos.length;
+          photoIndex++
+        ) {
+          final photo = localPhotos[photoIndex];
+          final bytes = retainedBytes[photoIndex];
+          if (exceedsQCPhotoSizeLimit(bytes)) {
+            throw const QCMaterialPersistenceException(qcPhotoTooLargeMessage);
+          }
+
+          final cachedObjectPath = _uploadedObjectPaths[photo];
+          if (cachedObjectPath != null) {
+            localObjectPathSlots[photoIndex] = cachedObjectPath;
+            continue;
+          }
+
+          var uploadJobIndex = uploadJobIndexByPhoto[photo];
+          if (uploadJobIndex == null) {
+            uploadJobIndex = uploadJobs.length;
+            uploadJobIndexByPhoto[photo] = uploadJobIndex;
+            uploadJobs.add(
+              _PendingPhotoUpload(file: photo, bytes: bytes, itemId: itemId),
+            );
+          }
+          uploadJobIndexSlots[photoIndex] = uploadJobIndex;
+        }
+        localObjectPaths.add(localObjectPathSlots);
+        uploadJobIndices.add(uploadJobIndexSlots);
       }
       persistedBySample.add(persistedPhotos);
+      localObjectPathsBySample.add(localObjectPaths);
+      uploadJobIndicesBySample.add(uploadJobIndices);
+    }
+
+    final uploadedObjectPaths = List<String?>.filled(uploadJobs.length, null);
+    var nextUploadJobIndex = 0;
+    Object? firstUploadError;
+    StackTrace? firstUploadStackTrace;
+
+    Future<void> uploadWorker() async {
+      while (firstUploadError == null) {
+        final uploadJobIndex = nextUploadJobIndex;
+        if (uploadJobIndex >= uploadJobs.length) return;
+        nextUploadJobIndex++;
+
+        final job = uploadJobs[uploadJobIndex];
+        try {
+          final uploaded = await _api.uploadQCEvidence(
+            file: job.file,
+            reportId: _reportId,
+            itemId: job.itemId,
+            bytes: job.bytes,
+          );
+          final objectPath = uploaded.objectPath;
+          if (!_isCanonicalObjectPath(objectPath)) {
+            throw const QCMaterialPersistenceException(
+              'Server mengembalikan referensi foto yang tidak valid.',
+            );
+          }
+          uploadedObjectPaths[uploadJobIndex] = objectPath;
+          _uploadedObjectPaths[job.file] = objectPath;
+        } catch (error, stackTrace) {
+          firstUploadError ??= error;
+          firstUploadStackTrace ??= stackTrace;
+        }
+      }
+    }
+
+    await Future.wait(
+      List.generate(
+        min(_maximumConcurrentPhotoUploads, uploadJobs.length),
+        (_) => uploadWorker(),
+      ),
+    );
+    if (firstUploadError != null) {
+      Error.throwWithStackTrace(
+        firstUploadError!,
+        firstUploadStackTrace ?? StackTrace.current,
+      );
+    }
+
+    for (
+      var sampleIndex = 0;
+      sampleIndex < persistedBySample.length;
+      sampleIndex++
+    ) {
+      for (
+        var itemIndex = 0;
+        itemIndex < persistedBySample[sampleIndex].length;
+        itemIndex++
+      ) {
+        final persistedPhotos = persistedBySample[sampleIndex][itemIndex];
+        final localObjectPaths =
+            localObjectPathsBySample[sampleIndex][itemIndex];
+        final uploadJobIndices =
+            uploadJobIndicesBySample[sampleIndex][itemIndex];
+        for (
+          var photoIndex = 0;
+          photoIndex < localObjectPaths.length;
+          photoIndex++
+        ) {
+          final objectPath =
+              localObjectPaths[photoIndex] ??
+              uploadedObjectPaths[uploadJobIndices[photoIndex]!];
+          persistedPhotos.add(objectPath!);
+        }
+      }
     }
     return persistedBySample;
   }
