@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile/core/dummy/dummy_state.dart';
 import 'package:mobile/core/services/api_service.dart';
-import 'package:mobile/core/utils/status_helper.dart';
 import 'package:mobile/features/qc_material/screens/qc_material_form_screen.dart';
 import 'package:mobile/shared/models/enums.dart';
 import 'package:mobile/shared/models/qc_material_evaluation_model.dart';
@@ -449,14 +448,27 @@ void main() {
       isNull,
     );
 
-    await provider.persistReport(QCReportStatus.NEEDS_FOLLOW_UP);
+    await provider.persistReport(QCReportStatus.SUBMITTED);
     final saved = api.savedReport!;
     expect(saved.generalInfo[QCMaterialSamplingDecision.decisionKey], 'STOP');
-    expect(saved.status, QCReportStatus.NEEDS_FOLLOW_UP);
+    expect(saved.status, QCReportStatus.SUBMITTED);
     expect(saved.status, isNot(QCReportStatus.DRAFT));
+    expect(saved.adminReview.conclusion, isNull);
     expect(
-      StatusHelper.getQCReportStatusLabel(saved.status),
-      'Perlu Tindak Lanjut',
+      saved.generalInfo[QCMaterialReviewRequest.requestedKey],
+      'true',
+    );
+    expect(
+      saved.generalInfo[QCMaterialReviewRequest.requestedAtKey],
+      decidedAt.toIso8601String(),
+    );
+    expect(
+      saved.generalInfo[QCMaterialReviewRequest.failedSampleIdsKey],
+      jsonEncode(provider.samplingDecision!.failedSampleIds),
+    );
+    expect(
+      saved.generalInfo[QCMaterialReviewRequest.failedSampleNumbersKey],
+      jsonEncode([1, 2]),
     );
 
     restored.init(
@@ -497,7 +509,7 @@ void main() {
   });
 
   test(
-    'STOP with a reason auto-submits as NEEDS_FOLLOW_UP (Perlu Perbaikan), not DRAFT, and retry deduplicates',
+    'STOP with a reason submits for Admin review without an Admin conclusion and retry deduplicates',
     () async {
       final state = DummyState();
       final originalReports = List<QCReportModel>.from(state.reports);
@@ -525,7 +537,7 @@ void main() {
       // 1. First submission fails
       api.shouldFail = true;
       await expectLater(
-        provider.persistReport(QCReportStatus.NEEDS_FOLLOW_UP),
+        provider.persistReport(QCReportStatus.SUBMITTED),
         throwsA(isA<QCMaterialPersistenceException>()),
       );
       // Data and STOP state remain preserved and recoverable
@@ -537,14 +549,31 @@ void main() {
 
       // 2. Retry submission succeeds without duplicate report creation or photo upload
       api.shouldFail = false;
-      await provider.persistReport(QCReportStatus.NEEDS_FOLLOW_UP);
+      await provider.persistReport(QCReportStatus.SUBMITTED);
       final saved = api.savedReport!;
-      expect(saved.status, QCReportStatus.NEEDS_FOLLOW_UP);
+      expect(saved.status, QCReportStatus.SUBMITTED);
+      expect(saved.adminReview.conclusion, isNull);
+      expect(
+        saved.generalInfo[QCMaterialReviewRequest.requestedKey],
+        'true',
+      );
+      expect(
+        saved.generalInfo[QCMaterialReviewRequest.failedSampleNumbersKey],
+        jsonEncode([1, 2]),
+      );
+      expect(
+        saved.generalInfo[QCMaterialSamplingDecision.decisionKey],
+        'STOP',
+      );
+      expect(
+        saved.generalInfo[QCMaterialSamplingDecision.stopReasonKey],
+        'Kerusakan komponen fisik',
+      );
       expect(saved.status, isNot(QCReportStatus.DRAFT));
       expect(api.postReportCount, 1);
 
       // Retry again should patch the existing report rather than calling postReport again
-      await provider.persistReport(QCReportStatus.NEEDS_FOLLOW_UP);
+      await provider.persistReport(QCReportStatus.SUBMITTED);
       expect(api.postReportCount, 1);
       expect(api.patchReportCount, 1);
     },

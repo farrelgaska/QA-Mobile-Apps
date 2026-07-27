@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart'
-    show kIsWeb, kReleaseMode, visibleForTesting;
+    show debugPrint, kIsWeb, kReleaseMode, visibleForTesting;
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
@@ -111,9 +111,59 @@ class ApiService {
         return list.map((json) => QCReportModel.fromJson(json)).toList();
       }
     } catch (e) {
-      print('[Mock API Offline - Prototype Fallback] fetchReports failed: $e');
+      debugPrint(
+        '[Mock API Offline - Prototype Fallback] fetchReports failed: $e',
+      );
     }
     return null;
+  }
+
+  /// Fetch one report directly so report detail never relies on a stale list
+  /// snapshot after an Admin workflow action.
+  Future<QCReportModel?> fetchReport(
+    String reportId, {
+    bool throwOnError = false,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/reports/$reportId');
+      final response =
+          await (_client?.get(
+                    uri,
+                    headers: const {'Cache-Control': 'no-cache'},
+                  ) ??
+                  http.get(uri, headers: const {'Cache-Control': 'no-cache'}))
+              .timeout(const Duration(seconds: 4));
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          return QCReportModel.fromJson(decoded);
+        }
+        throw const ApiRequestException(
+          'Respons detail laporan dari server tidak valid.',
+        );
+      }
+      if (response.statusCode == 404) {
+        throw ApiRequestException('Laporan $reportId tidak ditemukan.');
+      }
+      throw ApiRequestException(
+        'Detail laporan gagal dimuat (HTTP ${response.statusCode}).',
+      );
+    } on ApiRequestException catch (error) {
+      if (throwOnError) rethrow;
+      debugPrint(
+        '[Mock API Offline - Prototype Fallback] fetchReport failed: $error',
+      );
+      return null;
+    } catch (error) {
+      final exception = ApiRequestException(
+        'Tidak dapat terhubung ke server saat memuat laporan: $error',
+      );
+      if (throwOnError) throw exception;
+      debugPrint(
+        '[Mock API Offline - Prototype Fallback] fetchReport failed: $error',
+      );
+      return null;
+    }
   }
 
   /// Fetch all QC templates from the mock API backend.
@@ -140,7 +190,7 @@ class ApiService {
         return list.cast<Map<String, dynamic>>();
       }
     } catch (e) {
-      print(
+      debugPrint(
         '[Mock API Offline - Prototype Fallback] fetchTemplates failed: $e',
       );
     }
@@ -181,7 +231,7 @@ class ApiService {
       );
     } on ApiRequestException catch (error) {
       if (throwOnError) rethrow;
-      print(
+      debugPrint(
         '[Mock API Offline - Prototype Fallback] postReport failed: $error',
       );
       return false;
@@ -191,7 +241,7 @@ class ApiService {
         'Tidak dapat terhubung ke server saat menyimpan laporan: $error',
       );
       if (throwOnError) throw exception;
-      print(
+      debugPrint(
         '[Mock API Offline - Prototype Fallback] postReport failed: $error',
       );
       return false;
@@ -228,7 +278,7 @@ class ApiService {
       );
     } on ApiRequestException catch (error) {
       if (throwOnError) rethrow;
-      print(
+      debugPrint(
         '[Mock API Offline - Prototype Fallback] patchReport failed: $error',
       );
       return false;
@@ -237,7 +287,7 @@ class ApiService {
         'Tidak dapat terhubung ke server saat memperbarui laporan: $error',
       );
       if (throwOnError) throw exception;
-      print(
+      debugPrint(
         '[Mock API Offline - Prototype Fallback] patchReport failed: $error',
       );
       return false;

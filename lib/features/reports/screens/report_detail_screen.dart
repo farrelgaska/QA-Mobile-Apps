@@ -96,7 +96,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       _errorMessage = null;
     });
     try {
-      await DummyState().fetchReportsFromApi();
+      await DummyState().fetchReportFromApi(widget.reportId);
     } catch (e) {
       _errorMessage = 'Gagal memuat detail laporan: $e';
     } finally {

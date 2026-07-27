@@ -1269,6 +1269,14 @@ class QCMaterialFormProvider extends ChangeNotifier {
       _reviewEligibleKey: isSamplingWarningActive.toString(),
     };
     _samplingDecision?.writeToGeneralInfo(genInfo);
+    if (_samplingDecision case final decision?
+        when decision.type == QCMaterialSamplingDecisionType.stop) {
+      QCMaterialReviewRequest(
+        requestedAt: decision.decidedAt,
+        failedSampleIds: decision.failedSampleIds,
+        failedSampleNumbers: decision.failedSampleNumbers,
+      ).writeToGeneralInfo(genInfo);
+    }
     final sampleSnapshots = List<QCReportSample>.generate(samples.length, (
       index,
     ) {
@@ -1364,9 +1372,6 @@ class QCMaterialFormProvider extends ChangeNotifier {
         generalInfo: genInfo,
         sampleCount: _sampleCount,
         samples: sampleSnapshots,
-        finalConclusion: status == QCReportStatus.DRAFT
-            ? 'Belum Lengkap'
-            : 'Pending',
         revisionNumber: 1,
         revisionHistory: [],
       );
