@@ -37,13 +37,10 @@ export const buildRecentWeeklyReportTrend = (
   reports: readonly ReportTrendInput[],
   now: Date = new Date()
 ): WeeklyReportTrendPoint[] => {
-  const latestMonday = startOfLocalWeek(now);
+  const currentMonday = startOfLocalWeek(now);
   const weeks = Array.from({ length: RECENT_REPORT_WEEK_COUNT }, (_, index) => {
-    const monday = new Date(latestMonday);
-    monday.setDate(
-      latestMonday.getDate() -
-        (RECENT_REPORT_WEEK_COUNT - index - 1) * 7
-    );
+    const monday = new Date(currentMonday);
+    monday.setDate(currentMonday.getDate() + index * 7);
     return {
       key: weekKey(monday),
       point: {

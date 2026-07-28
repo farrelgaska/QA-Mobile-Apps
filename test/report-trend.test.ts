@@ -15,19 +15,19 @@ const report = (
   status: ReportTrendInput['status'] = 'SUBMITTED'
 ): ReportTrendInput => ({ submittedAt, status });
 
-test('empty reports produce six unique zero-value Indonesian week labels', () => {
+test('empty reports produce six forward-looking zero-value Indonesian week labels', () => {
   const trend = buildRecentWeeklyReportTrend([], referenceDate);
 
   assert.equal(trend.length, RECENT_REPORT_WEEK_COUNT);
   assert.deepEqual(
     trend.map(point => point.name),
     [
-      'Mgu 22/06',
-      'Mgu 29/06',
-      'Mgu 06/07',
-      'Mgu 13/07',
-      'Mgu 20/07',
       'Mgu 27/07',
+      'Mgu 03/08',
+      'Mgu 10/08',
+      'Mgu 17/08',
+      'Mgu 24/08',
+      'Mgu 31/08',
     ]
   );
   assert.equal(new Set(trend.map(point => point.name)).size, trend.length);
@@ -36,7 +36,7 @@ test('empty reports produce six unique zero-value Indonesian week labels', () =>
   ));
 });
 
-test('one active week keeps surrounding zero weeks', () => {
+test('reports in the current week populate the first bucket', () => {
   const trend = buildRecentWeeklyReportTrend(
     [
       report('2026-07-28T09:00:00+07:00'),
@@ -45,23 +45,26 @@ test('one active week keeps surrounding zero weeks', () => {
     referenceDate
   );
 
-  assert.deepEqual(trend.slice(0, 5).map(point => point.Laporan), [0, 0, 0, 0, 0]);
-  assert.deepEqual(trend[5], {
+  assert.deepEqual(trend[0], {
     name: 'Mgu 27/07',
     Laporan: 2,
     Disetujui: 1,
   });
+  assert.ok(trend.slice(1).every(point =>
+    point.Laporan === 0 && point.Disetujui === 0
+  ));
 });
 
-test('multiple active weeks aggregate totals and approvals without duplicates', () => {
+test('future weeks aggregate reports while past, out-of-range, and invalid dates are ignored', () => {
   const trend = buildRecentWeeklyReportTrend(
     [
-      report('2026-06-22T10:00:00+07:00', 'APPROVED'),
-      report('2026-07-06T10:00:00+07:00'),
-      report('2026-07-12T10:00:00+07:00', 'APPROVED'),
+      report('2026-07-28T10:00:00+07:00', 'APPROVED'),
+      report('2026-08-03T10:00:00+07:00'),
+      report('2026-08-09T10:00:00+07:00', 'APPROVED'),
+      report('2026-08-17T10:00:00+07:00', 'APPROVED'),
+      report('2026-08-30T10:00:00+07:00'),
       report('2026-07-20T10:00:00+07:00', 'APPROVED'),
-      report('2026-07-26T10:00:00+07:00'),
-      report('2026-05-01T10:00:00+07:00', 'APPROVED'),
+      report('2026-09-07T10:00:00+07:00', 'APPROVED'),
       report('invalid-date', 'APPROVED'),
     ],
     referenceDate
@@ -71,10 +74,10 @@ test('multiple active weeks aggregate totals and approvals without duplicates', 
     trend.map(({ Laporan, Disetujui }) => [Laporan, Disetujui]),
     [
       [1, 1],
-      [0, 0],
       [2, 1],
       [0, 0],
-      [2, 1],
+      [1, 1],
+      [1, 0],
       [0, 0],
     ]
   );
