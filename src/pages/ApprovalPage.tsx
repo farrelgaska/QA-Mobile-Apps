@@ -11,6 +11,7 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Modal } from '../components/ui/Modal';
 import { StandardResultBadge } from '../components/reports/StandardResultBadge';
+import { isAdminDecisionProcessable } from '../utils/materialReportPresentation';
 import {
   Search,
   CheckCircle,
@@ -35,7 +36,9 @@ export const ApprovalPage: React.FC = () => {
   const { reports, approveReport, requestRevision } = useReports();
 
   // Only show "SUBMITTED" reports
-  const pendingReports = reports.filter(r => r.status === 'SUBMITTED');
+  const pendingReports = reports.filter(r =>
+    isAdminDecisionProcessable(r.status)
+  );
 
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
@@ -327,7 +330,10 @@ export const ApprovalPage: React.FC = () => {
               variant="primary"
               className="bg-[#006B5A] hover:bg-[#005244]"
               onClick={handleApproveConfirm}
-              disabled={approveTarget !== null && !approveTarget.checklistItems.every(i => i.result === 'PASS')}
+              disabled={
+                approveTarget !== null &&
+                !isAdminDecisionProcessable(approveTarget.status)
+              }
             >
               <CheckCircle className="h-4 w-4 mr-1.5" />
               Ya, Setujui Laporan
@@ -349,20 +355,20 @@ export const ApprovalPage: React.FC = () => {
               </p>
             </div>
 
-            {/* Warning if failures or needs review */}
+            {/* Checklist outcomes inform the Admin decision without blocking it. */}
             {approveTarget.checklistItems.some((c: ChecklistItem) => c.result === 'FAIL') && (
-              <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 leading-relaxed">
-                <AlertCircle className="h-4 w-4 text-rose-500 flex-shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 leading-relaxed">
+                <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
                 <span>
-                  <strong>Persetujuan Ditolak:</strong> Laporan ini memiliki parameter yang <strong>gagal</strong>. Laporan dengan parameter gagal tidak boleh disetujui.
+                  Terdapat parameter yang ditandai Gagal. Admin tetap dapat meminta perbaikan atau menyetujui laporan berdasarkan hasil evaluasi.
                 </span>
               </div>
             )}
             {approveTarget.checklistItems.some((c: ChecklistItem) => c.result === 'NEEDS_REVIEW') && (
-              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 leading-relaxed">
-                <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800 leading-relaxed">
+                <AlertCircle className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
                 <span>
-                  <strong>Persetujuan Ditolak:</strong> Masih ada parameter yang memerlukan <strong>review / evaluasi</strong>. Harap evaluasi setiap item terlebih dahulu.
+                  Terdapat parameter yang masih berstatus Review. Status ini tetap ditampilkan sebagai informasi dan tidak membatasi keputusan akhir Admin.
                 </span>
               </div>
             )}

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import type { QCReport, StandardResult } from '../types/report';
 import { mapToSharedReport } from '../utils/status';
 import {
+  isAdminDecisionProcessable,
   sampleAdminReviewItems,
   updateSampleAdminReview,
   withEvidenceDisplayUrls,
@@ -190,18 +191,9 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const report = reportsRef.current.find(r => r.id === id);
     if (!report) throw new Error('Report not found.');
 
-    // Guard: only SUBMITTED reports can be approved
-    if (report.status !== 'SUBMITTED') {
+    // Workflow status is the only approval eligibility gate.
+    if (!isAdminDecisionProcessable(report.status)) {
       throw new Error(`Laporan berstatus "${report.status}" tidak dapat disetujui. Hanya laporan SUBMITTED yang bisa diproses.`);
-    }
-
-    // Enforce: every checklist item must be PASS (ignore mobile values)
-    const failItems = reviewItemsForReport(report).filter(
-      item => item.result !== 'PASS'
-    );
-    if (failItems.length > 0) {
-      const failNames = failItems.map(i => i.name).join(', ');
-      throw new Error(`Persetujuan diblokir: ${failItems.length} parameter belum PASS (${failNames}).`);
     }
 
     const updatedChecklist = buildApiChecklistItems(report);

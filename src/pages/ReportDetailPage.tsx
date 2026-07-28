@@ -15,6 +15,7 @@ import { MaterialSampleEvaluation } from '../components/reports/MaterialSampleEv
 import { getReportStatusLabel } from '../utils/status';
 import {
   adminReviewReadiness,
+  isAdminDecisionProcessable,
   sampleAdminReviewItems,
 } from '../utils/materialReportPresentation';
 import {
@@ -143,16 +144,15 @@ export const ReportDetailPage: React.FC = () => {
     failedItems: failItems,
     failedItemsMissingAdminNote: failItemsMissingNote,
     pendingItems,
-    canApprove,
     canRequestRevision,
   } = reviewReadiness;
   const hasFailures = failItems.length > 0;
   const hasPendingReviews = pendingItems.length > 0;
   // Admin can evaluate on SUBMITTED reports; NEEDS_FOLLOW_UP handled by re-submit from mobile
-  const isEditable = report.status === 'SUBMITTED';
+  const isEditable = isAdminDecisionProcessable(report.status);
 
   // ── Approval gate ──────────────────────────────────────────────────────────
-  // Rule: every item must be PASS (none FAIL, none NEEDS_REVIEW)
+  // Rule: workflow status only; PASS, FAIL, and NEEDS_REVIEW remain approvable.
 
 
   // ── Follow-up gate ─────────────────────────────────────────────────────────
@@ -160,14 +160,6 @@ export const ReportDetailPage: React.FC = () => {
 
 
   // ── Validation messages shown inline ──────────────────────────────────────
-  const approvalBlockReasons: string[] = [];
-  if (hasFailures) {
-    approvalBlockReasons.push(`${failItems.length} parameter ditandai Gagal — ubah ke Lulus atau minta perbaikan.`);
-  }
-  if (hasPendingReviews) {
-    approvalBlockReasons.push(`${pendingItems.length} parameter belum dievaluasi (masih Perlu Review).`);
-  }
-
   const revisionBlockReasons: string[] = [];
   if (!hasFailures) {
     revisionBlockReasons.push('Harus ada minimal satu parameter yang ditandai Gagal.');
@@ -422,16 +414,24 @@ export const ReportDetailPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-5">
-                  {/* Approval validation block */}
-                  {approvalBlockReasons.length > 0 && (
-                    <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl leading-relaxed">
-                      <div className="flex items-center gap-2 font-bold mb-1.5">
-                        <AlertTriangle className="h-4 w-4 text-rose-500 flex-shrink-0" />
-                        Persetujuan diblokir — syarat belum terpenuhi:
+                  {hasFailures && (
+                    <div className="p-3.5 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-xl leading-relaxed">
+                      <div className="flex items-start gap-2">
+                        <Info className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <span>
+                          Terdapat parameter yang ditandai Gagal. Admin tetap dapat meminta perbaikan atau menyetujui laporan berdasarkan hasil evaluasi.
+                        </span>
                       </div>
-                      <ul className="list-disc list-inside space-y-0.5 pl-1">
-                        {approvalBlockReasons.map((r, i) => <li key={i}>{r}</li>)}
-                      </ul>
+                    </div>
+                  )}
+                  {hasPendingReviews && (
+                    <div className="p-3.5 bg-blue-50 border border-blue-200 text-blue-800 text-xs rounded-xl leading-relaxed">
+                      <div className="flex items-start gap-2">
+                        <Info className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                        <span>
+                          Terdapat {pendingItems.length} parameter yang masih berstatus Review. Status ini tetap ditampilkan sebagai informasi dan tidak membatasi keputusan akhir Admin.
+                        </span>
+                      </div>
                     </div>
                   )}
                   {/* Follow-up validation block — only show when relevant */}
@@ -479,7 +479,7 @@ export const ReportDetailPage: React.FC = () => {
                       variant="primary"
                       onClick={() => setIsApproveModalOpen(true)}
                       className="flex-1 bg-[#006B5A] hover:bg-[#005244] shadow-sm shadow-[#006B5A]/20"
-                      disabled={!canApprove || isApproving || isRequestingRevision}
+                      disabled={!isEditable || isApproving || isRequestingRevision}
                     >
                       {isApproving
                         ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />

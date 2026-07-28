@@ -11,6 +11,7 @@ import {
   adminReviewReadiness,
   hasPersistedOutOfStandard,
   inspectionInformationRows,
+  isAdminDecisionProcessable,
   isPersistedStopDecision,
   PARAMETER_EVALUATION_LABELS,
   parameterAdminNoteState,
@@ -331,7 +332,7 @@ test('failed parameters require a non-whitespace Admin note', () => {
   assert.equal(parameterAdminNoteState('PASS', '').missing, false);
 });
 
-test('follow-up and approval gates respond to Admin decision and note changes', () => {
+test('PASS, FAIL, and NEEDS_REVIEW parameters remain approvable', () => {
   const item = {
     id: 'parameter-1',
     name: 'Dimensi',
@@ -345,7 +346,7 @@ test('follow-up and approval gates respond to Admin decision and note changes', 
   const empty = adminReviewReadiness([item], 'Perbaiki pengiriman');
   assert.equal(empty.canRequestRevision, false);
   assert.equal(empty.failedItemsMissingAdminNote.length, 1);
-  assert.equal(empty.canApprove, false);
+  assert.equal(empty.canApprove, true);
 
   const whitespace = adminReviewReadiness(
     [{ ...item, adminNote: '   ' }],
@@ -358,7 +359,7 @@ test('follow-up and approval gates respond to Admin decision and note changes', 
     'Perbaiki pengiriman'
   );
   assert.equal(complete.canRequestRevision, true);
-  assert.equal(complete.canApprove, false);
+  assert.equal(complete.canApprove, true);
 
   const changedToPass = adminReviewReadiness(
     [{ ...item, result: 'PASS', adminNote: '' }],
@@ -373,6 +374,59 @@ test('follow-up and approval gates respond to Admin decision and note changes', 
     '   '
   );
   assert.equal(missingReportNote.canRequestRevision, false);
+  assert.equal(missingReportNote.canApprove, true);
+
+  const pending = adminReviewReadiness(
+    [{ ...item, result: 'NEEDS_REVIEW', adminNote: '' }],
+    ''
+  );
+  assert.equal(pending.canApprove, true);
+  assert.equal(pending.canRequestRevision, false);
+});
+
+test('only SUBMITTED reports are processable for an Admin decision', () => {
+  assert.equal(isAdminDecisionProcessable('SUBMITTED'), true);
+  assert.equal(isAdminDecisionProcessable('DRAFT'), false);
+  assert.equal(isAdminDecisionProcessable('NEEDS_FOLLOW_UP'), false);
+  assert.equal(isAdminDecisionProcessable('APPROVED'), false);
+});
+
+test('report decision UI treats failed and pending parameters as informational', () => {
+  const detailSource = fs.readFileSync(new URL(
+    '../src/pages/ReportDetailPage.tsx',
+    import.meta.url
+  ), 'utf8');
+  const approvalSource = fs.readFileSync(new URL(
+    '../src/pages/ApprovalPage.tsx',
+    import.meta.url
+  ), 'utf8');
+  const contextSource = fs.readFileSync(new URL(
+    '../src/app/ReportsContext.tsx',
+    import.meta.url
+  ), 'utf8');
+  const informationalMessage =
+    'Terdapat parameter yang ditandai Gagal. Admin tetap dapat meminta perbaikan atau menyetujui laporan berdasarkan hasil evaluasi.';
+
+  assert.match(detailSource, new RegExp(informationalMessage));
+  assert.match(detailSource, /disabled=\{!isEditable \|\| isApproving \|\| isRequestingRevision\}/);
+  assert.match(detailSource, /tidak membatasi keputusan akhir Admin/);
+  assert.doesNotMatch(detailSource, /ubah ke Lulus atau minta perbaikan/);
+  assert.match(
+    approvalSource,
+    /!isAdminDecisionProcessable\(approveTarget\.status\)/
+  );
+  assert.match(approvalSource, /tidak membatasi keputusan akhir Admin/);
+  assert.doesNotMatch(approvalSource, /Persetujuan Ditolak/);
+  const approveContext = contextSource.slice(
+    contextSource.indexOf('const approveReport ='),
+    contextSource.indexOf('const requestRevision =')
+  );
+  assert.match(
+    approveContext,
+    /!isAdminDecisionProcessable\(report\.status\)/
+  );
+  assert.doesNotMatch(approveContext, /\.result/);
+  assert.doesNotMatch(contextSource, /item\.result !== 'PASS'/);
 });
 
 test('multi-sample presentation provides separate Staff and editable Admin notes', () => {
@@ -582,7 +636,7 @@ test('action eligibility evaluates Admin decisions across every sample', () => {
     sampleAdminReviewItems(report),
     'Perbaiki sampel gagal'
   );
-  assert.equal(missingNote.canApprove, false);
+  assert.equal(missingNote.canApprove, true);
   assert.equal(missingNote.canRequestRevision, false);
   assert.equal(missingNote.failedItemsMissingAdminNote.length, 1);
 
@@ -598,7 +652,7 @@ test('action eligibility evaluates Admin decisions across every sample', () => {
     'Perbaiki sampel gagal'
   );
   assert.equal(readyForRevision.canRequestRevision, true);
-  assert.equal(readyForRevision.canApprove, false);
+  assert.equal(readyForRevision.canApprove, true);
 
   const allPassSamples = updateSampleAdminReview(
     withNoteSamples,

@@ -3,6 +3,7 @@ import type {
   ChecklistResult,
   ParameterEvaluationStatus,
   QCReport,
+  ReportStatus,
   ReportSample,
 } from '../types/report';
 
@@ -210,13 +211,17 @@ export const adminReviewReadiness = (
     failedItems,
     failedItemsMissingAdminNote,
     pendingItems,
-    canApprove: items.every(item => item.result === 'PASS'),
+    canApprove: true,
     canRequestRevision:
       failedItems.length > 0 &&
       failedItemsMissingAdminNote.length === 0 &&
       reportLevelRevisionNote.trim().length > 0,
   };
 };
+
+export const isAdminDecisionProcessable = (
+  status: ReportStatus
+): boolean => status === 'SUBMITTED';
 
 const INSPECTION_GENERAL_INFO_FIELDS = [
   ['poNumber', 'Nomor PO'],
