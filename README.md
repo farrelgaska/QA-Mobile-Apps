@@ -4,7 +4,7 @@ QA Mobile Apps is an integrated Quality Assurance system designed to manage **QC
 
 The system consists of a Flutter application for Staff Warehouse, a React-based Admin Dashboard, an Express API, PostgreSQL, and private object storage.
 
-> **Project status:** Active prototype/demo development. The system is not yet production-ready.
+> **Project status:** Active prototype and pilot-candidate development. The current deployments are not production-ready.
 
 ## Live Demo
 
@@ -23,14 +23,16 @@ QA Mobile Apps supports two main actors:
 
 ### Staff Warehouse
 
-Staff Warehouse use the Flutter application to:
+Staff Warehouse users use the Flutter application to:
 
 - View available QC Material and QC Pekerjaan templates.
 - Fill numeric, boolean, choice, and text checklist items.
-- Add notes and multiple evidence photos to checklist items.
+- Capture camera-only evidence photos and add notes to checklist items.
+- Complete multi-step QC Material inspections with independent data for each sample.
 - Save inspections as drafts.
 - Restore and continue previously saved drafts.
 - Submit completed inspection reports.
+- Receive synchronized revision requests, Admin notes, and report statuses.
 - View report history and report details.
 - Monitor inspection summaries through the dashboard.
 - Manage basic profile information.
@@ -44,8 +46,9 @@ Administrators use the React Web Dashboard to:
 - Monitor Quality Control activity.
 - Manage QC Material and QC Pekerjaan templates.
 - Review reports submitted by Staff Warehouse.
-- Inspect checklist answers, notes, and evidence photos.
-- Approve or reject inspection reports.
+- Inspect sample-scoped checklist answers, notes, statuses, and evidence photos.
+- Record review decisions and notes independently for each QC Material sample.
+- Request a revision, approve, or reject inspection reports.
 - Determine the final inspection result.
 - Filter reports by location, QC type, status, and standard result.
 - View report statistics and dashboard summaries.
@@ -106,14 +109,24 @@ Admin creates a template
         ↓
 Staff Warehouse selects the material
         ↓
-Staff Warehouse fills checklist items and evidence
+Step 1: Staff Warehouse fills general procurement information
+        ↓
+Step 2 through Step N+1: Staff Warehouse inspects Sample 1 through Sample N
         ↓
 Report is saved as Draft or Submitted
         ↓
-Admin reviews the submitted report
+Admin reviews each persisted sample
         ↓
-Admin approves or rejects the report
+Admin requests revision, approves, or rejects the report
 ```
+
+QC Material uses a multi-step, multi-sample form:
+
+- Step 1 contains general procurement and inspection information.
+- The following steps contain Sample 1 through Sample N.
+- Every sample maintains independent checklist answers, inspection notes, evaluation statuses, and evidence photos.
+- Moving between sample steps does not copy or overwrite another sample's data.
+- Draft and submitted reports preserve the sample number and the association between every answer, note, status, and photo.
 
 ### QC Pekerjaan
 
@@ -137,8 +150,11 @@ Evidence photos can be attached to individual checklist items.
 
 The current implementation supports:
 
-- Camera and gallery selection.
+- Camera-only capture in the Mobile application; gallery selection is not used for QC evidence.
 - Multiple photos per checklist item.
+- A maximum processed size of 2 MB per image.
+- Automatic image compression when needed to meet the 2 MB limit.
+- Automatic HEIC/HEIF conversion to JPEG before persistence.
 - Draft photo persistence.
 - Upload retry handling.
 - Canonical object-path persistence.
@@ -147,6 +163,48 @@ The current implementation supports:
 - Removal of newly selected or restored draft photos.
 
 Stored reports persist canonical object paths instead of temporary signed URLs.
+
+## QC Material Standard Evaluation
+
+The Mobile application automatically evaluates supported QC Material parameters using persisted template standards:
+
+- Numeric standards use the calculated minimum and maximum values derived from the configured standard and tolerances.
+- Staff Warehouse users enter the measured value and do not need to calculate percentage tolerances manually.
+- Persisted evaluation statuses are **Within Standard**, **Out of Standard**, and **Not Evaluated**.
+- Parameters that cannot be evaluated automatically remain **Not Evaluated**.
+- Automatic evaluation is inspection information only and does not replace the Admin's final review decision.
+
+## Review Warning and Admin Workflow
+
+A QC Material report becomes eligible for a review warning when at least two samples are **Out of Standard**.
+
+The warning is informational:
+
+- It does not block draft saving.
+- It does not block navigation between steps or samples.
+- It does not block report submission.
+- The final approve, reject, or revision decision remains with Admin.
+
+Admin review data is stored per sample so identical checklist parameters in different samples retain independent Admin decisions and notes. Admin can request a revision, approve the report, or reject it. Revision notes, sample-scoped Admin notes, and the resulting report workflow status are synchronized back to Mobile when the report is refreshed.
+
+Sampling warnings and sampling-stop information remain separate from the Admin workflow status and final decision.
+
+## Production Login and Staff Access
+
+The current demo login is not the final production authentication or access model.
+
+Production access for Staff Warehouse will depend on verified completion of the required integrity agreement. The verification mechanism, identity integration, account provisioning, and enforcement controls must be finalized before production rollout. Demo credentials and prototype account behavior must not be treated as production access controls.
+
+## Planned AI Integration
+
+AI integration is planned for the final project phase as an assistive inspection capability. The intended scope is to:
+
+- Read measuring-tool values from submitted photos.
+- Compare extracted values with the applicable standards and tolerances.
+- Return a recommendation with a confidence score.
+- Flag photos that are blurred, incomplete, unreadable, or otherwise unsuitable for reliable evaluation.
+
+AI output must remain advisory. It must not silently change persisted measurements, sampling decisions, Admin evaluations, or final conclusions. Admin retains authority over the final report decision.
 
 ## Local Development
 
@@ -248,17 +306,17 @@ Currently being stabilized:
 
 ## Production Readiness
 
-The current deployment is a prototype and still requires:
+The current deployments are prototype/pilot candidates and are not production-ready. Production release still requires:
 
 - Production-grade authentication.
-- Role-based authorization.
-- Secure account and session management.
-- Password recovery.
+- Backend-enforced role-based authorization.
+- Secure session management.
 - Request rate limiting.
 - Monitoring and centralized logging.
 - Backup and recovery procedures.
 - Final security review.
 - Full end-to-end and device testing.
+- Load testing.
 - Deployment and operational documentation.
 
 ## Documentation
