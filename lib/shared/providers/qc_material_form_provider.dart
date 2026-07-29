@@ -27,7 +27,12 @@ import '../../shared/models/template_choice_option.dart';
 
 enum QCMaterialPhotoAddResult {
   added,
-  addedWithoutLocation,
+  addedWithoutLocationServiceDisabled,
+  addedWithoutLocationPermissionDenied,
+  addedWithoutLocationPermissionDeniedForever,
+  addedWithoutLocationTimeout,
+  addedWithoutLocationPositionUnavailable,
+  addedWithoutLocationUnexpectedError,
   cancelled,
   fileTooLarge,
 }
@@ -1030,9 +1035,23 @@ class QCMaterialFormProvider extends ChangeNotifier {
         activeSample.inspectionStatus = QCSampleInspectionStatus.inProgress;
       }
       notifyListeners();
-      return captureMetadata.hasLocation
-          ? QCMaterialPhotoAddResult.added
-          : QCMaterialPhotoAddResult.addedWithoutLocation;
+      if (captureMetadata.hasLocation) {
+        return QCMaterialPhotoAddResult.added;
+      }
+      return switch (location.failure) {
+        QCCaptureLocationFailure.serviceDisabled =>
+          QCMaterialPhotoAddResult.addedWithoutLocationServiceDisabled,
+        QCCaptureLocationFailure.permissionDenied =>
+          QCMaterialPhotoAddResult.addedWithoutLocationPermissionDenied,
+        QCCaptureLocationFailure.permissionDeniedForever =>
+          QCMaterialPhotoAddResult.addedWithoutLocationPermissionDeniedForever,
+        QCCaptureLocationFailure.timeout =>
+          QCMaterialPhotoAddResult.addedWithoutLocationTimeout,
+        QCCaptureLocationFailure.positionUnavailable =>
+          QCMaterialPhotoAddResult.addedWithoutLocationPositionUnavailable,
+        QCCaptureLocationFailure.unexpectedError ||
+        null => QCMaterialPhotoAddResult.addedWithoutLocationUnexpectedError,
+      };
     } finally {
       _photoCapturesInProgress.remove(captureKey);
     }
@@ -1043,7 +1062,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
       return await _captureLocationService.captureLocation();
     } catch (_) {
       return const QCCaptureLocationResult.unavailable(
-        QCCaptureLocationFailure.unavailable,
+        QCCaptureLocationFailure.unexpectedError,
       );
     }
   }

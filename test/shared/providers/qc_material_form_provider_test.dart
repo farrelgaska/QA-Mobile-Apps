@@ -258,7 +258,10 @@ void main() {
       final result = await provider.addPhoto(0);
       final metadata = provider.samples.single.localPhotoMetadata[captured]!;
 
-      expect(result, QCMaterialPhotoAddResult.addedWithoutLocation);
+      expect(
+        result,
+        QCMaterialPhotoAddResult.addedWithoutLocationPermissionDeniedForever,
+      );
       expect(location.calls, 1);
       expect(provider.localItemPhotos[0], [same(captured)]);
       expect(metadata.capturedAt, isNotEmpty);
