@@ -11,6 +11,7 @@ import 'package:mobile/shared/models/qc_material_template_model.dart';
 import 'package:mobile/shared/models/qc_report_model.dart';
 import 'package:mobile/shared/models/template_choice_option.dart';
 import 'package:mobile/shared/providers/qc_material_form_provider.dart';
+import 'package:mobile/shared/services/qc_capture_location_service.dart';
 import 'package:mobile/shared/services/qc_photo_processor.dart';
 import 'package:mobile/shared/utils/qc_photo_validation.dart';
 
@@ -48,6 +49,19 @@ class _ControlledPhotoProcessor implements QCPhotoProcessor {
   @override
   Future<void> deleteGeneratedFile(XFile photo) async {
     deletedFiles.add(photo);
+  }
+}
+
+class _FakeCaptureLocationService implements QCCaptureLocationService {
+  final QCCaptureLocationResult result;
+  int calls = 0;
+
+  _FakeCaptureLocationService(this.result);
+
+  @override
+  Future<QCCaptureLocationResult> captureLocation() async {
+    calls++;
+    return result;
   }
 }
 
@@ -186,6 +200,104 @@ XFile _localPng() => XFile.fromData(
 );
 
 void main() {
+  test('newly captured material photo retains capture metadata', () async {
+    final captured = _localPng();
+    final bytes = await captured.readAsBytes();
+    final location = _FakeCaptureLocationService(
+      const QCCaptureLocationResult.available(
+        latitude: -6.2088,
+        longitude: 106.8456,
+        accuracyMeters: 4.5,
+      ),
+    );
+    final template = _draftTemplate();
+    final provider = QCMaterialFormProvider(
+      photoPicker: (_) async => captured,
+      photoProcessor: _FakePhotoProcessor(
+        QCProcessedPhoto(file: captured, bytes: bytes, isGenerated: false),
+      ),
+      captureLocationService: location,
+      clock: () => DateTime(2026, 7, 29, 9, 15, 30),
+    )..init(template.id, template: template);
+    addTearDown(provider.dispose);
+
+    final result = await provider.addPhoto(0);
+    final metadata = provider.samples.single.localPhotoMetadata[captured]!;
+
+    expect(result, QCMaterialPhotoAddResult.added);
+    expect(location.calls, 1);
+    expect(metadata.capturedAt, startsWith('2026-07-29T09:15:30'));
+    expect(metadata.capturedAt, matches(RegExp(r'[+-]\d{2}:\d{2}$')));
+    expect(metadata.latitude, -6.2088);
+    expect(metadata.longitude, 106.8456);
+    expect(metadata.accuracyMeters, 4.5);
+    expect(metadata.locationLabel, isNull);
+  });
+
+  test(
+    'location unavailable still captures photo with timestamp and null coordinates',
+    () async {
+      final captured = _localPng();
+      final bytes = await captured.readAsBytes();
+      final location = _FakeCaptureLocationService(
+        const QCCaptureLocationResult.unavailable(
+          QCCaptureLocationFailure.permissionDeniedForever,
+        ),
+      );
+      final template = _draftTemplate();
+      final provider = QCMaterialFormProvider(
+        photoPicker: (_) async => captured,
+        photoProcessor: _FakePhotoProcessor(
+          QCProcessedPhoto(file: captured, bytes: bytes, isGenerated: false),
+        ),
+        captureLocationService: location,
+        clock: () => DateTime(2026, 7, 29, 9, 16),
+      )..init(template.id, template: template);
+      addTearDown(provider.dispose);
+
+      final result = await provider.addPhoto(0);
+      final metadata = provider.samples.single.localPhotoMetadata[captured]!;
+
+      expect(result, QCMaterialPhotoAddResult.addedWithoutLocation);
+      expect(location.calls, 1);
+      expect(provider.localItemPhotos[0], [same(captured)]);
+      expect(metadata.capturedAt, isNotEmpty);
+      expect(metadata.hasLocation, isFalse);
+      expect(metadata.latitude, isNull);
+      expect(metadata.longitude, isNull);
+      expect(metadata.accuracyMeters, isNull);
+    },
+  );
+
+  test('deleting a pending photo removes its capture metadata', () async {
+    final captured = _localPng();
+    final bytes = await captured.readAsBytes();
+    final template = _draftTemplate();
+    final provider = QCMaterialFormProvider(
+      photoPicker: (_) async => captured,
+      photoProcessor: _FakePhotoProcessor(
+        QCProcessedPhoto(file: captured, bytes: bytes, isGenerated: false),
+      ),
+      captureLocationService: _FakeCaptureLocationService(
+        const QCCaptureLocationResult.available(
+          latitude: -6.2,
+          longitude: 106.8,
+          accuracyMeters: 5,
+        ),
+      ),
+    )..init(template.id, template: template);
+    addTearDown(provider.dispose);
+
+    await provider.addPhoto(0);
+    expect(provider.samples.single.localPhotoMetadata, contains(captured));
+
+    provider.removePhoto(0, 0);
+
+    expect(provider.localItemPhotos[0], isEmpty);
+    expect(provider.localItemPhotoBytes[0], isEmpty);
+    expect(provider.samples.single.localPhotoMetadata, isEmpty);
+  });
+
   test(
     'material photo capture uses camera and rejects processing failure',
     () async {
@@ -248,6 +360,13 @@ void main() {
       final provider = QCMaterialFormProvider(
         photoPicker: (_) async => captured,
         photoProcessor: processor,
+        captureLocationService: _FakeCaptureLocationService(
+          const QCCaptureLocationResult.available(
+            latitude: -6.2,
+            longitude: 106.8,
+            accuracyMeters: 5,
+          ),
+        ),
       )..init(template.id, template: template);
       addTearDown(provider.dispose);
 
@@ -401,6 +520,13 @@ void main() {
             isGenerated: true,
           ),
         ),
+        captureLocationService: _FakeCaptureLocationService(
+          const QCCaptureLocationResult.available(
+            latitude: -6.2,
+            longitude: 106.8,
+            accuracyMeters: 5,
+          ),
+        ),
       )..init(template.id, template: template);
       addTearDown(provider.dispose);
 
@@ -509,6 +635,129 @@ void main() {
     expect(provider.answers.single.issueNote, isEmpty);
     expect(provider.validateForm(), isNull);
   });
+
+  test(
+    'draft serialization and restoration preserve capture metadata',
+    () async {
+      const metadataKey = 'qcEvidenceCaptureMetadata';
+      final captured = _localPng();
+      final bytes = await captured.readAsBytes();
+      final template = _draftTemplate();
+      final api = _FakeMaterialPersistenceApi();
+      final state = DummyState();
+      final originalReports = List<QCReportModel>.from(state.reports);
+      final provider = QCMaterialFormProvider(
+        api: api,
+        photoPicker: (_) async => captured,
+        photoProcessor: _FakePhotoProcessor(
+          QCProcessedPhoto(file: captured, bytes: bytes, isGenerated: false),
+        ),
+        captureLocationService: _FakeCaptureLocationService(
+          const QCCaptureLocationResult.available(
+            latitude: -6.2088,
+            longitude: 106.8456,
+            accuracyMeters: 3.25,
+          ),
+        ),
+        clock: () => DateTime(2026, 7, 29, 10, 30),
+      )..init(template.id, template: template);
+      final restoredProvider = QCMaterialFormProvider(api: api);
+
+      addTearDown(() {
+        provider.dispose();
+        restoredProvider.dispose();
+        state.reports
+          ..clear()
+          ..addAll(originalReports);
+      });
+
+      await provider.addPhoto(0);
+      await provider.persistReport(QCReportStatus.DRAFT);
+
+      final saved = state.reports.firstWhere(
+        (report) => report.id == provider.reportId,
+      );
+      final objectPath = saved.samples.single.checklistAnswers
+          .firstWhere((answer) => answer.itemId == 'number-1')
+          .photoPaths
+          .single;
+      final serializedMetadata =
+          jsonDecode(saved.generalInfo[metadataKey]!) as Map<String, dynamic>;
+
+      expect(serializedMetadata.keys, [objectPath]);
+      expect(serializedMetadata[objectPath]['latitude'], -6.2088);
+      expect(serializedMetadata[objectPath]['longitude'], 106.8456);
+      expect(serializedMetadata[objectPath]['accuracyMeters'], 3.25);
+      expect(
+        serializedMetadata[objectPath]['capturedAt'],
+        matches(RegExp(r'[+-]\d{2}:\d{2}$')),
+      );
+
+      restoredProvider.init(
+        template.id,
+        editReportId: saved.id,
+        template: template,
+      );
+      final restoredAnswer = restoredProvider.answers.firstWhere(
+        (answer) => answer.itemId == 'number-1',
+      );
+      final restoredMetadata = restoredAnswer.photoMetadataByPath[objectPath]!;
+      expect(restoredMetadata.latitude, -6.2088);
+      expect(restoredMetadata.longitude, 106.8456);
+      expect(restoredMetadata.accuracyMeters, 3.25);
+
+      restoredProvider.removePhoto(0, 0);
+      expect(
+        restoredProvider.answers
+            .firstWhere((answer) => answer.itemId == 'number-1')
+            .photoMetadataByPath,
+        isEmpty,
+      );
+      await restoredProvider.persistReport(QCReportStatus.DRAFT);
+      expect(api.patchedReport!.generalInfo, isNot(contains(metadataKey)));
+    },
+  );
+
+  test(
+    'legacy draft photo paths restore safely without capture metadata',
+    () async {
+      const legacyPath =
+          'reports/QC-MAT-LEGACY/checklist/number-1/162a1d19-23cf-4950-9671-41e1293d68f2.jpg';
+      final template = _draftTemplate();
+      final api = _FakeMaterialPersistenceApi();
+      final state = DummyState();
+      final originalReports = List<QCReportModel>.from(state.reports);
+      final provider = QCMaterialFormProvider(api: api)
+        ..init(template.id, template: template);
+      final restoredProvider = QCMaterialFormProvider(api: api);
+
+      addTearDown(() {
+        provider.dispose();
+        restoredProvider.dispose();
+        state.reports
+          ..clear()
+          ..addAll(originalReports);
+      });
+
+      provider.answers[0].photoPaths.add(legacyPath);
+      await provider.persistReport(QCReportStatus.DRAFT);
+      final saved = state.reports.firstWhere(
+        (report) => report.id == provider.reportId,
+      );
+
+      expect(saved.generalInfo, isNot(contains('qcEvidenceCaptureMetadata')));
+      restoredProvider.init(
+        template.id,
+        editReportId: saved.id,
+        template: template,
+      );
+      final restoredAnswer = restoredProvider.answers.firstWhere(
+        (answer) => answer.itemId == 'number-1',
+      );
+      expect(restoredAnswer.photoPaths, [legacyPath]);
+      expect(restoredAnswer.photoMetadataByPath, isEmpty);
+    },
+  );
 
   test(
     'draft uploads local photo and snapshots multiple answer types by item ID',

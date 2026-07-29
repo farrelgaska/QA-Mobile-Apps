@@ -14,16 +14,23 @@ import '../../shared/models/qc_report_sample_model.dart';
 import '../../shared/models/qc_checklist_answer_model.dart';
 import '../../shared/models/qc_material_template_model.dart';
 import '../../shared/models/qc_material_evaluation_model.dart';
+import '../../shared/models/qc_evidence_capture_metadata.dart';
 import '../../shared/models/qc_photo_processing_entry.dart';
 import '../../shared/models/work_location_model.dart';
 import '../../shared/models/site_model.dart';
 import '../../shared/utils/qc_photo_validation.dart';
 import '../../shared/services/qc_photo_processor.dart';
+import '../../shared/services/qc_capture_location_service.dart';
 import '../../core/utils/validators.dart';
 import '../../core/utils/qc_validation_helper.dart';
 import '../../shared/models/template_choice_option.dart';
 
-enum QCMaterialPhotoAddResult { added, cancelled, fileTooLarge }
+enum QCMaterialPhotoAddResult {
+  added,
+  addedWithoutLocation,
+  cancelled,
+  fileTooLarge,
+}
 
 enum QCMaterialGeneralField {
   poNumber,
@@ -114,6 +121,7 @@ class QCMaterialSampleState {
   DateTime updatedAt;
   final List<List<XFile>> localItemPhotos;
   final List<List<Uint8List>> localItemPhotoBytes;
+  final Map<XFile, QCEvidenceCaptureMetadata> localPhotoMetadata;
   final List<List<QCPhotoProcessingEntry>> processingItemPhotos;
 
   QCMaterialSampleState({
@@ -131,6 +139,7 @@ class QCMaterialSampleState {
          answers.length,
          (_) => <Uint8List>[],
        ),
+       localPhotoMetadata = <XFile, QCEvidenceCaptureMetadata>{},
        processingItemPhotos = List.generate(
          answers.length,
          (_) => <QCPhotoProcessingEntry>[],
@@ -160,6 +169,8 @@ class QCMaterialFormProvider extends ChangeNotifier {
   final Future<XFile?> Function(ImageSource source)? photoPicker;
   final QCMaterialPersistenceApi _api;
   final QCPhotoProcessor _photoProcessor;
+  final QCCaptureLocationService _captureLocationService;
+  final DateTime Function() _clock;
   final Map<XFile, String> _uploadedObjectPaths = {};
   final Set<String> _photoCapturesInProgress = <String>{};
   int _processingPhotoSequence = 0;
@@ -173,15 +184,21 @@ class QCMaterialFormProvider extends ChangeNotifier {
   static const _sampleStatusesKey = 'qcSampleEvaluationStatuses';
   static const _failedSampleCountKey = 'qcFailedSampleCount';
   static const _reviewEligibleKey = 'qcReviewRequestEligible';
+  static const _evidenceCaptureMetadataKey = 'qcEvidenceCaptureMetadata';
 
   QCMaterialFormProvider({
     ImagePicker? imagePicker,
     this.photoPicker,
     QCMaterialPersistenceApi? api,
     QCPhotoProcessor? photoProcessor,
+    QCCaptureLocationService? captureLocationService,
+    DateTime Function()? clock,
   }) : _imagePicker = imagePicker ?? ImagePicker(),
        _api = api ?? _DefaultQCMaterialPersistenceApi(),
-       _photoProcessor = photoProcessor ?? BoundedQCPhotoProcessor();
+       _photoProcessor = photoProcessor ?? BoundedQCPhotoProcessor(),
+       _captureLocationService =
+           captureLocationService ?? GeolocatorQCCaptureLocationService(),
+       _clock = clock ?? DateTime.now;
 
   // Template
   late QCMaterialTemplate _template;
@@ -539,6 +556,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
       }
 
       samples.clear();
+      final captureMetadataByPath = _captureMetadataFromGeneralInfo(
+        report.generalInfo,
+      );
       _samplingDecision = QCMaterialSamplingDecision.fromGeneralInfo(
         report.generalInfo,
       );
@@ -549,7 +569,10 @@ class QCMaterialFormProvider extends ChangeNotifier {
               id: sample.id,
               sampleNumber: sample.sampleNumber,
               inspectionStatus: sample.inspectionStatus,
-              answers: _answersFromSnapshot(sample.checklistAnswers),
+              answers: _answersFromSnapshot(
+                sample.checklistAnswers,
+                captureMetadataByPath: captureMetadataByPath,
+              ),
               notes: sample.notes,
               photoPaths: List<String>.from(sample.photoPaths),
               createdAt: sample.createdAt,
@@ -560,7 +583,10 @@ class QCMaterialFormProvider extends ChangeNotifier {
         _sampleCount = max(report.sampleCount, samples.length);
       } else {
         _sampleCount = report.sampleCount > 0 ? report.sampleCount : 1;
-        final legacyAnswers = _answersFromSnapshot(report.checklistItems);
+        final legacyAnswers = _answersFromSnapshot(
+          report.checklistItems,
+          captureMetadataByPath: captureMetadataByPath,
+        );
         samples.add(
           _newSampleState(
             1,
@@ -715,8 +741,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
   }
 
   List<QCChecklistAnswer> _answersFromSnapshot(
-    List<QCChecklistAnswer> snapshot,
-  ) {
+    List<QCChecklistAnswer> snapshot, {
+    Map<String, QCEvidenceCaptureMetadata> captureMetadataByPath = const {},
+  }) {
     final byItemId = {for (final answer in snapshot) answer.itemId: answer};
     return _template.checklistItems
         .map((item) {
@@ -737,9 +764,38 @@ class QCMaterialFormProvider extends ChangeNotifier {
             warningMessage: validation.warningMessage,
             status: validation.status,
             photoPaths: List<String>.unmodifiable(matchingAnswer.photoPaths),
+            photoMetadataByPath: {
+              for (final path in matchingAnswer.photoPaths)
+                if ((captureMetadataByPath[path] ??
+                        matchingAnswer.photoMetadataByPath[path]) !=
+                    null)
+                  path:
+                      (captureMetadataByPath[path] ??
+                      matchingAnswer.photoMetadataByPath[path])!,
+            },
           );
         })
         .toList(growable: false);
+  }
+
+  Map<String, QCEvidenceCaptureMetadata> _captureMetadataFromGeneralInfo(
+    Map<String, String> generalInfo,
+  ) {
+    final raw = generalInfo[_evidenceCaptureMetadataKey];
+    if (raw == null || raw.isEmpty) return {};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return {};
+      return {
+        for (final entry in decoded.entries)
+          if (entry.key.toString().isNotEmpty && entry.value is Map)
+            entry.key.toString(): QCEvidenceCaptureMetadata.fromJson(
+              Map<String, dynamic>.from(entry.value as Map),
+            ),
+      };
+    } catch (_) {
+      return {};
+    }
   }
 
   String _inputTypeValue(QCInputType inputType) => switch (inputType) {
@@ -905,9 +961,17 @@ class QCMaterialFormProvider extends ChangeNotifier {
       if (selectedPhoto == null) return QCMaterialPhotoAddResult.cancelled;
       if (_isDisposed) return QCMaterialPhotoAddResult.cancelled;
 
+      final capturedAt = QCEvidenceCaptureMetadata.iso8601WithTimezone(
+        _clock(),
+      );
+      final locationFuture = _safeCaptureLocation();
+      final captureMetadataWithoutLocation = QCEvidenceCaptureMetadata(
+        capturedAt: capturedAt,
+      );
       final processingEntry = QCPhotoProcessingEntry.fromCapture(
         id: '$captureKey:${++_processingPhotoSequence}',
         source: selectedPhoto,
+        captureMetadata: captureMetadataWithoutLocation,
       );
       activeSample.processingItemPhotos[index].add(processingEntry);
       if (!_isDisposed) notifyListeners();
@@ -936,6 +1000,21 @@ class QCMaterialFormProvider extends ChangeNotifier {
         }
         return QCMaterialPhotoAddResult.fileTooLarge;
       }
+      final location = await locationFuture;
+      final captureMetadata = QCEvidenceCaptureMetadata(
+        capturedAt: capturedAt,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracyMeters: location.accuracyMeters,
+        locationLabel: location.locationLabel,
+      );
+      if (_isDisposed ||
+          !_hasProcessingEntry(activeSample, index, processingEntry.id)) {
+        if (processed.isGenerated) {
+          await _photoProcessor.deleteGeneratedFile(processed.file);
+        }
+        return QCMaterialPhotoAddResult.cancelled;
+      }
       _removeProcessingEntry(
         activeSample,
         index,
@@ -944,32 +1023,54 @@ class QCMaterialFormProvider extends ChangeNotifier {
       );
       activeSample.localItemPhotos[index].add(processed.file);
       activeSample.localItemPhotoBytes[index].add(processed.bytes);
+      activeSample.localPhotoMetadata[processed.file] = captureMetadata;
       activeSample.updatedAt = DateTime.now();
       if (activeSample.inspectionStatus ==
           QCSampleInspectionStatus.notStarted) {
         activeSample.inspectionStatus = QCSampleInspectionStatus.inProgress;
       }
       notifyListeners();
-      return QCMaterialPhotoAddResult.added;
+      return captureMetadata.hasLocation
+          ? QCMaterialPhotoAddResult.added
+          : QCMaterialPhotoAddResult.addedWithoutLocation;
     } finally {
       _photoCapturesInProgress.remove(captureKey);
     }
   }
 
+  Future<QCCaptureLocationResult> _safeCaptureLocation() async {
+    try {
+      return await _captureLocationService.captureLocation();
+    } catch (_) {
+      return const QCCaptureLocationResult.unavailable(
+        QCCaptureLocationFailure.unavailable,
+      );
+    }
+  }
+
   void removePhoto(int index, int photoIdx) {
+    final activeSample = currentSample ?? samples.first;
     final itemId = _template.checklistItems[index].id;
     final answerIndex = answers.indexWhere((answer) => answer.itemId == itemId);
     final answer = answers[answerIndex];
     final storedPhotoCount = answer.photoPaths.length;
     if (photoIdx < storedPhotoCount) {
+      final removedPath = answer.photoPaths[photoIdx];
       final updatedPhotoPaths = List<String>.from(answer.photoPaths)
         ..removeAt(photoIdx);
-      answers[answerIndex] = answer.copyWith(photoPaths: updatedPhotoPaths);
+      final updatedMetadata = Map<String, QCEvidenceCaptureMetadata>.from(
+        answer.photoMetadataByPath,
+      )..remove(removedPath);
+      answers[answerIndex] = answer.copyWith(
+        photoPaths: updatedPhotoPaths,
+        photoMetadataByPath: updatedMetadata,
+      );
     } else {
       final localIndex = photoIdx - storedPhotoCount;
       if (localIndex < localItemPhotos[index].length) {
         final removed = localItemPhotos[index].removeAt(localIndex);
         localItemPhotoBytes[index].removeAt(localIndex);
+        activeSample.localPhotoMetadata.remove(removed);
         _uploadedObjectPaths.remove(removed);
         unawaited(_photoProcessor.deleteGeneratedFile(removed));
       } else {
@@ -1139,6 +1240,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
     for (final photos in sample.processingItemPhotos) {
       photos.clear();
     }
+    sample.localPhotoMetadata.clear();
     sample.dispose();
   }
 
@@ -1191,6 +1293,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
   List<QCChecklistAnswer> _snapshotAnswersByItemId(
     QCMaterialSampleState sample,
     List<List<String>> persistedPhotos,
+    Map<String, QCEvidenceCaptureMetadata> captureMetadataByPath,
   ) {
     final answersByItemId = {
       for (final answer in sample.answers) answer.itemId: answer,
@@ -1208,6 +1311,11 @@ class QCMaterialFormProvider extends ChangeNotifier {
               photoPaths: List<String>.unmodifiable(
                 photosByItemId[item.id] ?? const <String>[],
               ),
+              photoMetadataByPath: {
+                for (final path in photosByItemId[item.id] ?? const <String>[])
+                  if (captureMetadataByPath[path] != null)
+                    path: captureMetadataByPath[path]!,
+              },
             );
           }
           return _emptyAnswerForItem(item);
@@ -1229,8 +1337,11 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
     try {
       final persistedPhotos = await _uploadPendingPhotos();
-      await _persistReport(status, persistedPhotos);
-      _commitPersistedPhotos(persistedPhotos);
+      final captureMetadataByPath = _captureMetadataForPersistedPhotos(
+        persistedPhotos,
+      );
+      await _persistReport(status, persistedPhotos, captureMetadataByPath);
+      _commitPersistedPhotos(persistedPhotos, captureMetadataByPath);
     } on QCMaterialPersistenceException {
       rethrow;
     } on ApiRequestException catch (error) {
@@ -1248,6 +1359,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
   Future<void> _persistReport(
     QCReportStatus status,
     List<List<List<String>>> persistedPhotos,
+    Map<String, QCEvidenceCaptureMetadata> captureMetadataByPath,
   ) async {
     final workLoc = WorkLocation(
       siteName: isCustomLocation
@@ -1285,6 +1397,12 @@ class QCMaterialFormProvider extends ChangeNotifier {
       _failedSampleCountKey: failedSampleCount.toString(),
       _reviewEligibleKey: isSamplingWarningActive.toString(),
     };
+    if (captureMetadataByPath.isNotEmpty) {
+      genInfo[_evidenceCaptureMetadataKey] = jsonEncode({
+        for (final entry in captureMetadataByPath.entries)
+          entry.key: entry.value.toJson(),
+      });
+    }
     _samplingDecision?.writeToGeneralInfo(genInfo);
     if (_samplingDecision case final decision?
         when decision.type == QCMaterialSamplingDecisionType.stop) {
@@ -1315,6 +1433,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
         checklistAnswers: _snapshotAnswersByItemId(
           sample,
           persistedPhotos[index],
+          captureMetadataByPath,
         ),
         notes: sample.notesController.text,
         photoPaths: canonicalSamplePhotos,
@@ -1563,7 +1682,52 @@ class QCMaterialFormProvider extends ChangeNotifier {
     return persistedBySample;
   }
 
-  void _commitPersistedPhotos(List<List<List<String>>> persistedBySample) {
+  Map<String, QCEvidenceCaptureMetadata> _captureMetadataForPersistedPhotos(
+    List<List<List<String>>> persistedBySample,
+  ) {
+    final captureMetadataByPath = <String, QCEvidenceCaptureMetadata>{};
+    for (var sampleIndex = 0; sampleIndex < samples.length; sampleIndex++) {
+      final sample = samples[sampleIndex];
+      final answersByItemId = {
+        for (final answer in sample.answers) answer.itemId: answer,
+      };
+      for (
+        var itemIndex = 0;
+        itemIndex < _template.checklistItems.length;
+        itemIndex++
+      ) {
+        final itemId = _template.checklistItems[itemIndex].id;
+        final answer = answersByItemId[itemId];
+        final canonicalExistingPaths =
+            answer?.photoPaths.where(_isCanonicalObjectPath).toList() ??
+            const <String>[];
+        for (final path in canonicalExistingPaths) {
+          final metadata = answer?.photoMetadataByPath[path];
+          if (metadata != null) captureMetadataByPath[path] = metadata;
+        }
+
+        final persistedPaths = persistedBySample[sampleIndex][itemIndex];
+        final localPhotos = sample.localItemPhotos[itemIndex];
+        for (
+          var localIndex = 0;
+          localIndex < localPhotos.length;
+          localIndex++
+        ) {
+          final metadata = sample.localPhotoMetadata[localPhotos[localIndex]];
+          final persistedIndex = canonicalExistingPaths.length + localIndex;
+          if (metadata != null && persistedIndex < persistedPaths.length) {
+            captureMetadataByPath[persistedPaths[persistedIndex]] = metadata;
+          }
+        }
+      }
+    }
+    return captureMetadataByPath;
+  }
+
+  void _commitPersistedPhotos(
+    List<List<List<String>>> persistedBySample,
+    Map<String, QCEvidenceCaptureMetadata> captureMetadataByPath,
+  ) {
     for (var sampleIndex = 0; sampleIndex < samples.length; sampleIndex++) {
       final sample = samples[sampleIndex];
       final persistedPhotos = persistedBySample[sampleIndex];
@@ -1591,8 +1755,15 @@ class QCMaterialFormProvider extends ChangeNotifier {
           photoPaths: List<String>.from(
             photosByItemId[answer.itemId] ?? const <String>[],
           ),
+          photoMetadataByPath: {
+            for (final path
+                in photosByItemId[answer.itemId] ?? const <String>[])
+              if (captureMetadataByPath[path] != null)
+                path: captureMetadataByPath[path]!,
+          },
         );
       }
+      sample.localPhotoMetadata.clear();
     }
     _uploadedObjectPaths.clear();
   }

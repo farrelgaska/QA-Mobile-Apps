@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Camera access is required to take QC documentation photos.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Location access is used to record capture-time evidence for QC material photos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Photo library access is required to select QC documentation photos.</string>
 	<key>UIApplicationSceneManifest</key>
