@@ -2,15 +2,19 @@ import 'dart:typed_data';
 
 import 'package:image_picker/image_picker.dart';
 
+import 'qc_evidence_capture_metadata.dart';
+
 class QCPhotoProcessingEntry {
   final String id;
   final XFile source;
+  final QCEvidenceCaptureMetadata? captureMetadata;
   final bool canPreviewSource;
   final Future<Uint8List>? previewBytes;
 
   QCPhotoProcessingEntry._({
     required this.id,
     required this.source,
+    this.captureMetadata,
     required this.canPreviewSource,
     required this.previewBytes,
   });
@@ -18,6 +22,7 @@ class QCPhotoProcessingEntry {
   factory QCPhotoProcessingEntry.fromCapture({
     required String id,
     required XFile source,
+    QCEvidenceCaptureMetadata? captureMetadata,
   }) {
     final mimeType = source.mimeType?.split(';').first.trim().toLowerCase();
     final sourceName = source.name.isNotEmpty ? source.name : source.path;
@@ -43,6 +48,7 @@ class QCPhotoProcessingEntry {
     return QCPhotoProcessingEntry._(
       id: id,
       source: source,
+      captureMetadata: captureMetadata,
       canPreviewSource: canPreviewSource,
       previewBytes: canPreviewSource ? source.readAsBytes() : null,
     );

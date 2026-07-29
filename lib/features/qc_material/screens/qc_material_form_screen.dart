@@ -766,6 +766,11 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
       }
       if (result == QCMaterialPhotoAddResult.fileTooLarge) {
         AppSnackbar.warning(context, qcPhotoTooLargeMessage);
+      } else if (result == QCMaterialPhotoAddResult.addedWithoutLocation) {
+        AppSnackbar.warning(
+          context,
+          'Foto diambil tanpa bukti lokasi karena lokasi perangkat tidak tersedia.',
+        );
       }
     } on PlatformException {
       if (!context.mounted) return;

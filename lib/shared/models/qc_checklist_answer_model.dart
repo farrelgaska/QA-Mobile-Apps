@@ -1,4 +1,5 @@
 import 'enums.dart';
+import 'qc_evidence_capture_metadata.dart';
 
 class QCChecklistAnswer {
   final String itemId;
@@ -7,6 +8,7 @@ class QCChecklistAnswer {
   String? warningMessage;
   String? issueNote;
   List<String> photoPaths;
+  Map<String, QCEvidenceCaptureMetadata> photoMetadataByPath;
 
   // Standard fields
   String paramName;
@@ -28,6 +30,7 @@ class QCChecklistAnswer {
     this.warningMessage,
     this.issueNote,
     required this.photoPaths,
+    Map<String, QCEvidenceCaptureMetadata>? photoMetadataByPath,
     String? paramName,
     String? standardText,
     this.unit,
@@ -39,7 +42,8 @@ class QCChecklistAnswer {
     this.minimumValue,
     this.maximumValue,
     this.evaluationStatus = 'NOT_EVALUATED',
-  }) : paramName = paramName ?? '',
+  }) : photoMetadataByPath = photoMetadataByPath ?? {},
+       paramName = paramName ?? '',
        standardText = standardText ?? '',
        inputType = inputType ?? 'text';
 
@@ -50,6 +54,7 @@ class QCChecklistAnswer {
     String? warningMessage,
     String? issueNote,
     List<String>? photoPaths,
+    Map<String, QCEvidenceCaptureMetadata>? photoMetadataByPath,
     String? paramName,
     String? standardText,
     String? unit,
@@ -69,6 +74,7 @@ class QCChecklistAnswer {
       warningMessage: warningMessage ?? this.warningMessage,
       issueNote: issueNote ?? this.issueNote,
       photoPaths: photoPaths ?? this.photoPaths,
+      photoMetadataByPath: photoMetadataByPath ?? this.photoMetadataByPath,
       paramName: paramName ?? this.paramName,
       standardText: standardText ?? this.standardText,
       unit: unit ?? this.unit,
@@ -104,6 +110,9 @@ class QCChecklistAnswer {
       issueNote: json['staff_note'] ?? json['issueNote'] ?? json['note'] ?? '',
       photoPaths: List<String>.from(
         json['item_photos'] ?? json['photoPaths'] ?? json['photo_paths'] ?? [],
+      ),
+      photoMetadataByPath: _metadataByPath(
+        json['photo_metadata'] ?? json['photoMetadataByPath'],
       ),
       status: parsedStatus,
       adminNote: json['admin_note'] ?? json['adminNote'] ?? '',
@@ -155,5 +164,16 @@ class QCChecklistAnswer {
   static double? _asDouble(dynamic value) {
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '');
+  }
+
+  static Map<String, QCEvidenceCaptureMetadata> _metadataByPath(dynamic value) {
+    if (value is! Map) return {};
+    return {
+      for (final entry in value.entries)
+        if (entry.key.toString().isNotEmpty && entry.value is Map)
+          entry.key.toString(): QCEvidenceCaptureMetadata.fromJson(
+            Map<String, dynamic>.from(entry.value as Map),
+          ),
+    };
   }
 }
