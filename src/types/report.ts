@@ -13,6 +13,41 @@ export type ParameterEvaluationStatus =
 
 export type SampleInspectionStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
 
+export interface QCEvidenceCaptureMetadataEntry {
+  capturedAt: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  accuracyMeters: number | null;
+  locationLabel: string | null;
+  serverReceivedAt: string | null;
+}
+
+export type QCEvidenceCaptureMetadata =
+  Record<string, QCEvidenceCaptureMetadataEntry>;
+
+export interface ReportGeneralInfo {
+  qcEvidenceCaptureMetadata?: QCEvidenceCaptureMetadata | null;
+  qcSampleEvaluationStatuses?: string;
+  qcSamplingFailedSampleNumbers?: string;
+  qcSamplingDecision?: string;
+  qcSamplingStopReason?: string;
+  poNumber?: string;
+  poDate?: string;
+  doNumber?: string;
+  vendorName?: string;
+  materialId?: string;
+  brandName?: string;
+  warehouseLocation?: string;
+  arrivalVolume?: string;
+  samplingVolume?: string;
+  tkdnNumber?: string;
+  tkdnCertDate?: string;
+  tkdnValue?: string;
+  stelVersion?: string;
+  qaExpiryDate?: string;
+  [key: string]: unknown;
+}
+
 export interface SampleChecklistAnswer {
   checklist_item_id: string;
   input_type: 'number' | 'text' | 'choice' | 'boolean';
@@ -91,7 +126,7 @@ export interface QCReport {
     area: string;
     detail_location: string;
   };
-  general_info?: Record<string, string>;
+  general_info?: ReportGeneralInfo;
   checklist_items?: SharedChecklistItem[];
   sample_count?: number;
   samples?: ReportSample[];

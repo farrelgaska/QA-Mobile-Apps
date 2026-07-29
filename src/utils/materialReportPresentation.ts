@@ -3,6 +3,7 @@ import type {
   ChecklistResult,
   ParameterEvaluationStatus,
   QCReport,
+  ReportGeneralInfo,
   ReportStatus,
   ReportSample,
 } from '../types/report';
@@ -34,6 +35,17 @@ export interface AdminReviewReadiness {
   pendingItems: ChecklistItem[];
   canApprove: boolean;
   canRequestRevision: boolean;
+}
+
+export interface EvidenceCapturePresentation {
+  hasMetadata: boolean;
+  capturedAt: string | null;
+  locationLabel: string | null;
+  coordinates: string | null;
+  accuracy: string | null;
+  serverReceivedAt: string | null;
+  mapUrl: string | null;
+  locationUnavailable: boolean;
 }
 
 export const PARAMETER_EVALUATION_LABELS: Record<ParameterEvaluationStatus, string> = {
@@ -82,7 +94,7 @@ export const persistedSamplePage = (
 };
 
 export const persistedSampleEvaluationStatuses = (
-  generalInfo: Readonly<Record<string, string>> = {}
+  generalInfo: Readonly<ReportGeneralInfo> = {}
 ): Readonly<Record<string, ParameterEvaluationStatus>> => {
   const parsed = parsePersistedJson(generalInfo.qcSampleEvaluationStatuses);
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
@@ -96,7 +108,7 @@ export const persistedSampleEvaluationStatuses = (
 };
 
 export const persistedSamplingFailedNumbers = (
-  generalInfo: Readonly<Record<string, string>> = {}
+  generalInfo: Readonly<ReportGeneralInfo> = {}
 ): number[] => {
   const parsed = parsePersistedJson(generalInfo.qcSamplingFailedSampleNumbers);
   if (!Array.isArray(parsed)) return [];
@@ -142,6 +154,110 @@ export const withEvidenceDisplayUrls = (
     ...displayUrls,
   },
 });
+
+const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+const validDate = (value: unknown): Date | null => {
+  if (typeof value !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value)) {
+    return null;
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const formatLocalDateTime = (value: unknown): string | null => {
+  const date = validDate(value);
+  return date
+    ? new Intl.DateTimeFormat('id-ID', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(date)
+    : null;
+};
+
+const boundedNumber = (
+  value: unknown,
+  minimum: number,
+  maximum: number
+): number | null =>
+  typeof value === 'number' &&
+  Number.isFinite(value) &&
+  value >= minimum &&
+  value <= maximum
+    ? value
+    : null;
+
+export const evidenceCapturePresentation = (
+  generalInfo: Readonly<ReportGeneralInfo> | undefined,
+  objectPath: string
+): EvidenceCapturePresentation => {
+  const container = generalInfo?.qcEvidenceCaptureMetadata;
+  const entry = isRecord(container) && isRecord(container[objectPath])
+    ? container[objectPath]
+    : null;
+  if (!entry) {
+    return {
+      hasMetadata: false,
+      capturedAt: null,
+      locationLabel: null,
+      coordinates: null,
+      accuracy: null,
+      serverReceivedAt: null,
+      mapUrl: null,
+      locationUnavailable: false,
+    };
+  }
+
+  const capturedAt = formatLocalDateTime(entry.capturedAt);
+  const serverReceivedAt = formatLocalDateTime(entry.serverReceivedAt);
+  const latitude = boundedNumber(entry.latitude, -90, 90);
+  const longitude = boundedNumber(entry.longitude, -180, 180);
+  const hasCoordinatePair = latitude !== null && longitude !== null;
+  const locationLabel = typeof entry.locationLabel === 'string' &&
+    entry.locationLabel.trim()
+    ? entry.locationLabel.trim()
+    : null;
+  const accuracyMeters = typeof entry.accuracyMeters === 'number' &&
+    Number.isFinite(entry.accuracyMeters) &&
+    entry.accuracyMeters >= 0
+    ? entry.accuracyMeters
+    : null;
+  const coordinates = hasCoordinatePair
+    ? `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+    : null;
+  const accuracy = accuracyMeters === null
+    ? null
+    : `${new Intl.NumberFormat('id-ID', {
+        maximumFractionDigits: 2,
+      }).format(accuracyMeters)} m`;
+  const mapUrl = hasCoordinatePair
+    ? `https://www.google.com/maps?q=${encodeURIComponent(
+        `${latitude},${longitude}`
+      )}`
+    : null;
+  const hasMetadata = Boolean(
+    capturedAt ||
+    serverReceivedAt ||
+    locationLabel ||
+    coordinates ||
+    accuracy
+  );
+
+  return {
+    hasMetadata,
+    capturedAt,
+    locationLabel,
+    coordinates,
+    accuracy,
+    serverReceivedAt,
+    mapUrl,
+    locationUnavailable: Boolean(
+      capturedAt && !locationLabel && !hasCoordinatePair
+    ),
+  };
+};
 
 export const sampleAdminReviewItems = (report: QCReport): ChecklistItem[] => {
   const itemNames = new Map(

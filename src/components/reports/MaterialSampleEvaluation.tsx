@@ -6,7 +6,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Clock3,
+  ExternalLink,
   Image as ImageIcon,
+  MapPin,
   OctagonX,
   X,
 } from 'lucide-react';
@@ -17,6 +20,7 @@ import type {
   SampleChecklistAnswer,
 } from '../../types/report';
 import {
+  evidenceCapturePresentation,
   hasCurrentSampleOutOfStandard,
   isPersistedStopDecision,
   PARAMETER_EVALUATION_LABELS,
@@ -41,6 +45,96 @@ interface MaterialSampleEvaluationProps {
     note: string
   ) => void;
 }
+
+interface EvidencePhotoProps {
+  objectPath: string;
+  displayUrl: string;
+  alt: string;
+  generalInfo: QCReport['general_info'];
+  onPreview: () => void;
+}
+
+const EvidencePhoto: React.FC<EvidencePhotoProps> = ({
+  objectPath,
+  displayUrl,
+  alt,
+  generalInfo,
+  onPreview,
+}) => {
+  const metadata = evidenceCapturePresentation(generalInfo, objectPath);
+  return (
+    <div className="flex min-w-[280px] max-w-md flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50/60 p-2 sm:flex-row">
+      <button
+        type="button"
+        onClick={onPreview}
+        className="relative h-20 w-full flex-shrink-0 overflow-hidden rounded-md border border-gray-200 bg-white hover:border-[#006B5A] sm:w-20"
+        aria-label={`Buka ${alt}`}
+      >
+        <ImageIcon className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 text-gray-400" />
+        {/^(?:https?:|\/|data:)/i.test(displayUrl) && (
+          <img
+            src={displayUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            onError={event => {
+              event.currentTarget.style.display = 'none';
+            }}
+          />
+        )}
+      </button>
+      <div className="min-w-0 flex-1 space-y-1 text-[11px] leading-snug text-gray-600">
+        {!metadata.hasMetadata ? (
+          <p className="italic text-gray-400">
+            Informasi waktu dan lokasi tidak tersedia.
+          </p>
+        ) : (
+          <>
+            {metadata.capturedAt && (
+              <p className="flex items-start gap-1.5">
+                <Clock3 className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-400" />
+                <span><strong>Diambil:</strong> {metadata.capturedAt}</span>
+              </p>
+            )}
+            {metadata.locationLabel && (
+              <p className="flex items-start gap-1.5">
+                <MapPin className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-400" />
+                <span>{metadata.locationLabel}</span>
+              </p>
+            )}
+            {metadata.coordinates && (
+              <p><strong>Koordinat:</strong> {metadata.coordinates}</p>
+            )}
+            {metadata.accuracy && (
+              <p><strong>Akurasi:</strong> {metadata.accuracy}</p>
+            )}
+            {metadata.locationUnavailable && (
+              <p className="italic text-amber-700">Lokasi tidak tersedia.</p>
+            )}
+            {metadata.mapUrl && (
+              <a
+                href={metadata.mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-semibold text-[#006B5A] hover:underline"
+              >
+                Buka di Google Maps
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+            {metadata.serverReceivedAt && (
+              <p className="text-gray-400">
+                <strong>Diterima server:</strong> {metadata.serverReceivedAt}
+              </p>
+            )}
+            <p className="text-[10px] text-gray-400">
+              Metadata perangkat bersifat informasi pendukung.
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const evaluationColor = (
   status: ParameterEvaluationStatus
@@ -225,8 +319,33 @@ export const MaterialSampleEvaluation: React.FC<MaterialSampleEvaluationProps> =
               </div>
             </div>
 
+            {sample.photo_paths.length > 0 && (
+              <div className="border-b border-gray-100 px-4 py-3">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                  Bukti Foto Sampel
+                </p>
+                <div className="grid gap-2 xl:grid-cols-2">
+                  {sample.photo_paths.map((objectPath, index) => {
+                    const displayUrl = displayPhotoUrl(objectPath);
+                    const alt =
+                      `foto sampel ${sample.sample_number} nomor ${index + 1}`;
+                    return (
+                      <EvidencePhoto
+                        key={`${objectPath}:${index}`}
+                        objectPath={objectPath}
+                        displayUrl={displayUrl}
+                        alt={alt}
+                        generalInfo={report.general_info}
+                        onPreview={() => setPreviewImage({ url: displayUrl, alt })}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1380px] text-left text-sm">
+              <table className="w-full min-w-[1620px] text-left text-sm">
                 <thead className="border-b border-gray-100 bg-white text-[11px] uppercase tracking-wider text-gray-400">
                   <tr>
                     <th className="px-4 py-3">Parameter</th>
@@ -312,34 +431,25 @@ export const MaterialSampleEvaluation: React.FC<MaterialSampleEvaluationProps> =
                             </Badge>
                           )}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="min-w-[380px] px-4 py-3 align-top">
                           {answer.photo_paths.length > 0 ? (
-                            <div className="flex flex-wrap gap-1.5">
+                            <div className="space-y-2">
                               {answer.photo_paths.map((objectPath, index) => {
                                 const displayUrl = displayPhotoUrl(objectPath);
+                                const alt =
+                                  `foto sampel ${sample.sample_number} ${parameterName} nomor ${index + 1}`;
                                 return (
-                                  <button
-                                  key={objectPath}
-                                  type="button"
-                                  onClick={() => setPreviewImage({
-                                    url: displayUrl,
-                                    alt: `Sampel ${sample.sample_number} ${answer.checklist_item_id} foto ${index + 1}`,
-                                  })}
-                                  className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50 hover:border-[#006B5A]"
-                                  aria-label={`Buka foto ${index + 1} untuk sampel ${sample.sample_number}`}
-                                >
-                                  <ImageIcon className="h-4 w-4 text-gray-400" />
-                                  {/^(?:https?:|\/|data:)/i.test(displayUrl) && (
-                                    <img
-                                      src={displayUrl}
-                                      alt=""
-                                      className="absolute inset-0 h-full w-full object-cover"
-                                      onError={event => {
-                                        event.currentTarget.style.display = 'none';
-                                      }}
-                                    />
-                                  )}
-                                </button>
+                                  <EvidencePhoto
+                                    key={`${objectPath}:${index}`}
+                                    objectPath={objectPath}
+                                    displayUrl={displayUrl}
+                                    alt={alt}
+                                    generalInfo={report.general_info}
+                                    onPreview={() => setPreviewImage({
+                                      url: displayUrl,
+                                      alt,
+                                    })}
+                                  />
                                 );
                               })}
                             </div>

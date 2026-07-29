@@ -4,6 +4,8 @@
  * All functions throw on non-2xx responses so callers can handle errors.
  */
 
+import type { ReportGeneralInfo } from '../types/report';
+
 const BASE_URL = (import.meta.env?.VITE_API_BASE_URL?.trim() || 'http://localhost:3002')
   .replace(/\/+$/, '');
 
@@ -65,7 +67,7 @@ export interface ApiReport {
     area: string;
     detail_location: string;
   };
-  general_info?: Record<string, string>;
+  general_info?: ReportGeneralInfo;
   checklist_items?: ApiChecklistItem[];
   sample_count?: number;
   samples?: ApiReportSample[];
