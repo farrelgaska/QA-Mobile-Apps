@@ -29,14 +29,15 @@ const validateAndNormalizeSampleInput = (reportData, { patch = false } = {}) => 
   delete reportData.sampleCount;
 };
 
-const getReports = async (req, res, next) => {
+const createGetReports = repository => async (req, res, next) => {
   try {
-    const reports = await reportRepository.findAll();
+    const reports = await repository.findAll();
     res.json(reports);
   } catch (err) {
     next(err);
   }
 };
+const getReports = createGetReports(reportRepository);
 
 const getReportById = async (req, res, next) => {
   try {
@@ -105,6 +106,7 @@ const deleteReport = async (req, res, next) => {
 module.exports = {
   validateObjectBody,
   validateAndNormalizeSampleInput,
+  createGetReports,
   getReports,
   getReportById,
   createReport,

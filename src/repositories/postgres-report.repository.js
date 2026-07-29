@@ -1,10 +1,18 @@
 const { getPool } = require('../database/postgres');
 const { canonicalReportInput, mapReportAggregate } = require('./postgres/mappers');
-const { notFound, translatePostgresError } = require('./repository-errors');
+const {
+  notFound,
+  translatePostgresError,
+  isTransientPostgresError,
+  databaseUnavailable
+} = require('./repository-errors');
 const {
   mergeReportReviewRequestPatch,
   mergeReportSamplePatch
 } = require('../contracts/report.contract');
+const {
+  normalizeQCEvidenceCaptureMetadata
+} = require('../contracts/qc-evidence-capture-metadata');
 
 const ROOT_COLUMNS = `id, type, template_id, form_code, title, status, staff_name,
   staff_nik, site_id, site_name, area, detail_location, general_info, staff_note,
@@ -14,8 +22,9 @@ const ROOT_COLUMNS = `id, type, template_id, form_code, title, status, staff_nam
   created_at, updated_at`;
 
 class PostgresReportRepository {
-  constructor(pool = getPool()) {
+  constructor(pool = getPool(), { now = () => new Date() } = {}) {
     this.pool = pool;
+    this.now = now;
   }
 
   async _transaction(work) {
@@ -33,19 +42,49 @@ class PostgresReportRepository {
     }
   }
 
+  async _readWithTransientRetry(work) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let client;
+      let releaseError;
+      try {
+        client = await this.pool.connect();
+        return await work(client);
+      } catch (error) {
+        if (!isTransientPostgresError(error)) throw error;
+        releaseError = error;
+        if (attempt === 1) throw databaseUnavailable(error);
+      } finally {
+        if (client) client.release(releaseError);
+      }
+    }
+  }
+
   async _findById(executor, id, lock = false) {
     const rootResult = await executor.query(
       `select ${ROOT_COLUMNS} from public.qc_reports where id = $1${lock ? ' for update' : ''}`,
       [id]
     );
     if (!rootResult.rows[0]) return undefined;
-    const [items, reviews, attachments, samples, sampleAnswers] = await Promise.all([
-      executor.query('select * from public.qc_report_items where report_id = $1 order by id', [id]),
-      executor.query('select * from public.qc_report_admin_reviews where report_id = $1', [id]),
-      executor.query('select * from public.qc_report_attachments where report_id = $1 order by sort_order, id', [id]),
-      executor.query('select * from public.qc_report_samples where report_id = $1 order by position', [id]),
-      executor.query('select * from public.qc_report_sample_answers where report_id = $1 order by sample_id, position', [id])
-    ]);
+    const items = await executor.query(
+      'select * from public.qc_report_items where report_id = $1 order by id',
+      [id]
+    );
+    const reviews = await executor.query(
+      'select * from public.qc_report_admin_reviews where report_id = $1',
+      [id]
+    );
+    const attachments = await executor.query(
+      'select * from public.qc_report_attachments where report_id = $1 order by sort_order, id',
+      [id]
+    );
+    const samples = await executor.query(
+      'select * from public.qc_report_samples where report_id = $1 order by position',
+      [id]
+    );
+    const sampleAnswers = await executor.query(
+      'select * from public.qc_report_sample_answers where report_id = $1 order by sample_id, position',
+      [id]
+    );
     return mapReportAggregate(
       rootResult.rows[0],
       items.rows,
@@ -56,17 +95,32 @@ class PostgresReportRepository {
     );
   }
 
-  async findAll() {
-    const roots = await this.pool.query(`select ${ROOT_COLUMNS} from public.qc_reports order by created_at, id`);
+  async _findAll(executor) {
+    const roots = await executor.query(
+      `select ${ROOT_COLUMNS} from public.qc_reports order by created_at, id`
+    );
     if (roots.rows.length === 0) return [];
     const ids = roots.rows.map(row => row.id);
-    const [items, reviews, attachments, samples, sampleAnswers] = await Promise.all([
-      this.pool.query('select * from public.qc_report_items where report_id = any($1::text[]) order by report_id, id', [ids]),
-      this.pool.query('select * from public.qc_report_admin_reviews where report_id = any($1::text[])', [ids]),
-      this.pool.query('select * from public.qc_report_attachments where report_id = any($1::text[]) order by report_id, sort_order, id', [ids]),
-      this.pool.query('select * from public.qc_report_samples where report_id = any($1::text[]) order by report_id, position', [ids]),
-      this.pool.query('select * from public.qc_report_sample_answers where report_id = any($1::text[]) order by report_id, sample_id, position', [ids])
-    ]);
+    const items = await executor.query(
+      'select * from public.qc_report_items where report_id = any($1::text[]) order by report_id, id',
+      [ids]
+    );
+    const reviews = await executor.query(
+      'select * from public.qc_report_admin_reviews where report_id = any($1::text[])',
+      [ids]
+    );
+    const attachments = await executor.query(
+      'select * from public.qc_report_attachments where report_id = any($1::text[]) order by report_id, sort_order, id',
+      [ids]
+    );
+    const samples = await executor.query(
+      'select * from public.qc_report_samples where report_id = any($1::text[]) order by report_id, position',
+      [ids]
+    );
+    const sampleAnswers = await executor.query(
+      'select * from public.qc_report_sample_answers where report_id = any($1::text[]) order by report_id, sample_id, position',
+      [ids]
+    );
     const itemMap = new Map(ids.map(id => [id, []]));
     const reviewMap = new Map();
     const attachmentMap = new Map(ids.map(id => [id, []]));
@@ -87,8 +141,12 @@ class PostgresReportRepository {
     ));
   }
 
+  findAll() {
+    return this._readWithTransientRetry(client => this._findAll(client));
+  }
+
   findById(id) {
-    return this._findById(this.pool, id);
+    return this._readWithTransientRetry(client => this._findById(client, id));
   }
 
   async _writeRoot(client, report, update = false) {
@@ -217,7 +275,9 @@ class PostgresReportRepository {
   }
 
   async create(input) {
-    const report = canonicalReportInput(input);
+    const report = canonicalReportInput(normalizeQCEvidenceCaptureMetadata(input, {
+      now: this.now
+    }));
     try {
       return await this._transaction(async client => {
         await this._writeRoot(client, report, false);
@@ -249,7 +309,10 @@ class PostgresReportRepository {
           merged.samples = mergeReportSamplePatch(current.samples, patch.samples);
         }
         Object.assign(merged, mergeReportReviewRequestPatch(current, patch));
-        const report = canonicalReportInput(merged);
+        const report = canonicalReportInput(normalizeQCEvidenceCaptureMetadata(merged, {
+          existingReport: current,
+          now: this.now
+        }));
         await this._writeRoot(client, report, true);
         await client.query('delete from public.qc_report_attachments where report_id = $1', [id]);
         await client.query('delete from public.qc_report_admin_reviews where report_id = $1', [id]);

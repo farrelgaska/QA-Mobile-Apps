@@ -11,7 +11,7 @@ test('JSON is the default provider and PostgreSQL requires DATABASE_URL', () => 
   );
 });
 
-test('PostgreSQL pool defaults to two connections without opening a connection', async () => {
+test('PostgreSQL pool uses bounded timeout and keepalive defaults without opening a connection', async () => {
   const config = parseEnvironment({
     DATA_PROVIDER: 'postgres',
     DATABASE_URL: 'postgresql://placeholder:placeholder@localhost:5432/placeholder',
@@ -19,8 +19,62 @@ test('PostgreSQL pool defaults to two connections without opening a connection',
   });
   const pool = createPool(config);
   assert.equal(pool.options.max, 2);
+  assert.equal(pool.options.connectionTimeoutMillis, 10000);
+  assert.equal(pool.options.idleTimeoutMillis, 30000);
+  assert.equal(pool.options.keepAlive, true);
+  assert.equal(pool.options.ssl, false);
   assert.equal(pool.options.connectionString.includes('placeholder'), true);
   await pool.end();
+});
+
+test('PostgreSQL pool preserves configurable Supabase SSL and logs idle client errors', () => {
+  class RecordingPool {
+    constructor(options) {
+      this.options = options;
+      this.listeners = {};
+    }
+
+    on(event, listener) {
+      this.listeners[event] = listener;
+      return this;
+    }
+  }
+
+  const logged = [];
+  const pool = createPool(
+    parseEnvironment({
+      DATA_PROVIDER: 'postgres',
+      DATABASE_URL:
+        'postgresql://postgres.project:password@region.pooler.supabase.com:6543/postgres',
+      DATABASE_POOL_MAX: '4',
+      DATABASE_CONNECTION_TIMEOUT_MS: '12000',
+      DATABASE_IDLE_TIMEOUT_MS: '45000',
+      DATABASE_KEEP_ALIVE: 'true',
+      DATABASE_SSL: 'true',
+      DATABASE_SSL_REJECT_UNAUTHORIZED: 'false'
+    }),
+    RecordingPool,
+    { error: (...args) => logged.push(args) }
+  );
+
+  assert.equal(pool.options.max, 4);
+  assert.equal(pool.options.connectionTimeoutMillis, 12000);
+  assert.equal(pool.options.idleTimeoutMillis, 45000);
+  assert.equal(pool.options.keepAlive, true);
+  assert.deepEqual(pool.options.ssl, { rejectUnauthorized: false });
+
+  const idleError = Object.assign(
+    new Error('Connection terminated unexpectedly'),
+    { code: 'ECONNRESET' }
+  );
+  assert.doesNotThrow(() => pool.listeners.error(idleError));
+  assert.deepEqual(logged, [[
+    'Unexpected idle PostgreSQL client error.',
+    {
+      code: 'ECONNRESET',
+      message: 'Connection terminated unexpectedly'
+    }
+  ]]);
 });
 
 test('STORAGE_PROVIDER is reserved for supported object storage providers', () => {

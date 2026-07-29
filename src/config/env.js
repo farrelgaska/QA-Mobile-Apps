@@ -54,6 +54,23 @@ const parseEnvironment = (environment) => {
     SUPABASE_SERVICE_ROLE_KEY: supabaseServiceRoleKey,
     DATABASE_URL: databaseUrl,
     DATABASE_POOL_MAX: parseInteger('DATABASE_POOL_MAX', environment.DATABASE_POOL_MAX, 2, { max: 20 }),
+    DATABASE_CONNECTION_TIMEOUT_MS: parseInteger(
+      'DATABASE_CONNECTION_TIMEOUT_MS',
+      environment.DATABASE_CONNECTION_TIMEOUT_MS,
+      10000,
+      { max: 60000 }
+    ),
+    DATABASE_IDLE_TIMEOUT_MS: parseInteger(
+      'DATABASE_IDLE_TIMEOUT_MS',
+      environment.DATABASE_IDLE_TIMEOUT_MS,
+      30000,
+      { max: 300000 }
+    ),
+    DATABASE_KEEP_ALIVE: parseBoolean(
+      'DATABASE_KEEP_ALIVE',
+      environment.DATABASE_KEEP_ALIVE,
+      true
+    ),
     VERCEL: environment.VERCEL === '1' || environment.VERCEL === 'true',
     DATABASE_SSL: parseBoolean('DATABASE_SSL', environment.DATABASE_SSL, true),
     DATABASE_SSL_REJECT_UNAUTHORIZED: parseBoolean(

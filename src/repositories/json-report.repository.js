@@ -7,10 +7,14 @@ const {
   normalizeReportReviewRequestFields,
   normalizeReportSampleFields
 } = require('../contracts/report.contract');
+const {
+  normalizeQCEvidenceCaptureMetadata
+} = require('../contracts/qc-evidence-capture-metadata');
 
 class JsonReportRepository {
-  constructor(filePath = REPORTS_FILE) {
+  constructor(filePath = REPORTS_FILE, { now = () => new Date() } = {}) {
     this.filePath = filePath;
+    this.now = now;
   }
 
   _read() {
@@ -71,10 +75,13 @@ class JsonReportRepository {
       err.statusCode = 409;
       throw err;
     }
+    const metadataNormalized = normalizeQCEvidenceCaptureMetadata(report, {
+      now: this.now
+    });
     const normalized = {
-      ...report,
-      ...normalizeReportSampleFields(report),
-      ...normalizeReportReviewRequestFields(report)
+      ...metadataNormalized,
+      ...normalizeReportSampleFields(metadataNormalized),
+      ...normalizeReportReviewRequestFields(metadataNormalized)
     };
     reports.push(normalized);
     this._write(reports);
@@ -101,10 +108,14 @@ class JsonReportRepository {
       merged.samples = mergeReportSamplePatch(reports[index].samples, patchData.samples);
     }
     Object.assign(merged, mergeReportReviewRequestPatch(reports[index], patchData));
+    const metadataNormalized = normalizeQCEvidenceCaptureMetadata(merged, {
+      existingReport: reports[index],
+      now: this.now
+    });
     const updated = {
-      ...merged,
-      ...normalizeReportSampleFields(merged),
-      ...normalizeReportReviewRequestFields(merged)
+      ...metadataNormalized,
+      ...normalizeReportSampleFields(metadataNormalized),
+      ...normalizeReportReviewRequestFields(metadataNormalized)
     };
     reports[index] = updated;
     this._write(reports);
