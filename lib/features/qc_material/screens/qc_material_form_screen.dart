@@ -766,10 +766,42 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
       }
       if (result == QCMaterialPhotoAddResult.fileTooLarge) {
         AppSnackbar.warning(context, qcPhotoTooLargeMessage);
-      } else if (result == QCMaterialPhotoAddResult.addedWithoutLocation) {
+      } else if (result ==
+          QCMaterialPhotoAddResult.addedWithoutLocationServiceDisabled) {
         AppSnackbar.warning(
           context,
-          'Foto diambil tanpa bukti lokasi karena lokasi perangkat tidak tersedia.',
+          'Foto diambil tanpa bukti lokasi karena layanan lokasi perangkat dinonaktifkan.',
+        );
+      } else if (result ==
+          QCMaterialPhotoAddResult.addedWithoutLocationPermissionDenied) {
+        AppSnackbar.warning(
+          context,
+          'Foto diambil tanpa bukti lokasi karena izin lokasi ditolak.',
+        );
+      } else if (result ==
+          QCMaterialPhotoAddResult
+              .addedWithoutLocationPermissionDeniedForever) {
+        AppSnackbar.warning(
+          context,
+          'Foto diambil tanpa bukti lokasi karena izin lokasi ditolak permanen. Aktifkan izin lokasi di Pengaturan Safari.',
+        );
+      } else if (result ==
+          QCMaterialPhotoAddResult.addedWithoutLocationTimeout) {
+        AppSnackbar.warning(
+          context,
+          'Foto diambil tanpa bukti lokasi karena pencarian lokasi melewati batas waktu 8 detik.',
+        );
+      } else if (result ==
+          QCMaterialPhotoAddResult.addedWithoutLocationPositionUnavailable) {
+        AppSnackbar.warning(
+          context,
+          'Foto diambil tanpa bukti lokasi karena posisi perangkat tidak tersedia.',
+        );
+      } else if (result ==
+          QCMaterialPhotoAddResult.addedWithoutLocationUnexpectedError) {
+        AppSnackbar.warning(
+          context,
+          'Foto diambil tanpa bukti lokasi karena terjadi kesalahan saat membaca lokasi perangkat.',
         );
       }
     } on PlatformException {
