@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile/shared/models/enums.dart';
+import 'package:mobile/shared/models/qc_evidence_capture_metadata.dart';
 import 'package:mobile/core/dummy/dummy_state.dart';
 import 'package:mobile/shared/models/checklist_item_model.dart';
 import 'package:mobile/shared/models/pekerjaan_model.dart';
@@ -20,7 +21,10 @@ class _FailingPhotoProcessor implements QCPhotoProcessor {
   _FailingPhotoProcessor(this.error);
 
   @override
-  Future<QCProcessedPhoto> process(XFile photo) => Future.error(error);
+  Future<QCProcessedPhoto> process(
+    XFile photo, {
+    QCEvidenceCaptureMetadata? captureMetadata,
+  }) => Future.error(error);
 
   @override
   Future<void> deleteGeneratedFile(XFile photo) async {}
@@ -30,7 +34,10 @@ class _ControlledPhotoProcessor implements QCPhotoProcessor {
   final Completer<QCProcessedPhoto> completer = Completer<QCProcessedPhoto>();
 
   @override
-  Future<QCProcessedPhoto> process(XFile photo) => completer.future;
+  Future<QCProcessedPhoto> process(
+    XFile photo, {
+    QCEvidenceCaptureMetadata? captureMetadata,
+  }) => completer.future;
 
   @override
   Future<void> deleteGeneratedFile(XFile photo) async {}

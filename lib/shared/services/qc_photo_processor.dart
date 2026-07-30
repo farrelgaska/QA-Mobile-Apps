@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 
 import 'qc_heic_converter.dart';
 import 'qc_photo_output.dart';
+import 'qc_photo_watermark.dart';
+import '../models/qc_evidence_capture_metadata.dart';
 import '../utils/qc_photo_validation.dart';
 
 class QCPhotoProcessingException implements Exception {
@@ -41,7 +43,10 @@ class QCProcessedPhoto {
 }
 
 abstract class QCPhotoProcessor {
-  Future<QCProcessedPhoto> process(XFile photo);
+  Future<QCProcessedPhoto> process(
+    XFile photo, {
+    QCEvidenceCaptureMetadata? captureMetadata,
+  });
 
   Future<void> deleteGeneratedFile(XFile photo);
 }
@@ -59,7 +64,10 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
     : _heicConverter = heicConverter ?? const PlatformQCHeicConverter();
 
   @override
-  Future<QCProcessedPhoto> process(XFile photo) async {
+  Future<QCProcessedPhoto> process(
+    XFile photo, {
+    QCEvidenceCaptureMetadata? captureMetadata,
+  }) async {
     final originalBytes = await photo.readAsBytes();
     final metadata = inspectInput(photo, originalBytes);
 
@@ -85,6 +93,29 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
       requiresJpegOutput = true;
     } else if (!_isDecodableImage(originalBytes)) {
       throw const QCPhotoDecodingException();
+    }
+
+    if (captureMetadata != null) {
+      final processedBytes = await compute(_watermarkAndCompressToLimit, {
+        'source': processableBytes,
+        'metadata': captureMetadata.toJson(),
+      });
+      if (processedBytes == null ||
+          !_isValidJpeg(processedBytes) ||
+          exceedsQCPhotoSizeLimit(processedBytes)) {
+        throw const QCPhotoProcessingException();
+      }
+      final processedPhoto = await createQCPhotoJpegOutput(
+        source: photo,
+        bytes: processedBytes,
+        outputName: _createOutputName(photo),
+      );
+      _generatedFiles.add(processedPhoto);
+      return QCProcessedPhoto(
+        file: processedPhoto,
+        bytes: processedBytes,
+        isGenerated: true,
+      );
     }
 
     if (!exceedsQCPhotoSizeLimit(processableBytes) && !requiresJpegOutput) {
@@ -130,11 +161,7 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
   }
 
   static QCPhotoInputMetadata inspectInput(XFile photo, Uint8List bytes) {
-    final mimeType = photo.mimeType
-        ?.split(';')
-        .first
-        .trim()
-        .toLowerCase();
+    final mimeType = photo.mimeType?.split(';').first.trim().toLowerCase();
     final sourceName = photo.name.isNotEmpty ? photo.name : photo.path;
     final dotIndex = sourceName.lastIndexOf('.');
     final extension = dotIndex < 0
@@ -179,6 +206,56 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
               height: oriented.height > oriented.width ? longEdge : null,
               interpolation: image.Interpolation.average,
             );
+
+      for (final quality in _jpegQualities) {
+        final encoded = Uint8List.fromList(
+          image.encodeJpg(candidate, quality: quality),
+        );
+        if (!exceedsQCPhotoSizeLimit(encoded)) return encoded;
+      }
+
+      if (longEdge <= safeMinimumLongEdge) break;
+      final reduced = (longEdge * 0.82).round();
+      longEdge = reduced < safeMinimumLongEdge ? safeMinimumLongEdge : reduced;
+    }
+    return null;
+  }
+
+  static Uint8List? _watermarkAndCompressToLimit(Map<String, dynamic> input) {
+    final source = input['source'];
+    final rawMetadata = input['metadata'];
+    if (source is! Uint8List || rawMetadata is! Map) return null;
+    final decoded = image.decodeImage(source);
+    if (decoded == null) return null;
+
+    final metadata = QCEvidenceCaptureMetadata.fromJson(
+      Map<String, dynamic>.from(rawMetadata),
+    );
+    final oriented = image.bakeOrientation(decoded);
+    final originalLongEdge = oriented.width > oriented.height
+        ? oriented.width
+        : oriented.height;
+    final safeMinimumLongEdge = originalLongEdge < _minimumLongEdge
+        ? originalLongEdge
+        : _minimumLongEdge;
+    var longEdge = originalLongEdge > _maximumLongEdge
+        ? _maximumLongEdge
+        : originalLongEdge;
+
+    for (
+      var dimensionStep = 0;
+      dimensionStep < _maximumDimensionSteps;
+      dimensionStep++
+    ) {
+      final resized = longEdge == originalLongEdge
+          ? oriented.clone()
+          : image.copyResize(
+              oriented,
+              width: oriented.width >= oriented.height ? longEdge : null,
+              height: oriented.height > oriented.width ? longEdge : null,
+              interpolation: image.Interpolation.average,
+            );
+      final candidate = QCPhotoWatermark.apply(resized, metadata);
 
       for (final quality in _jpegQualities) {
         final encoded = Uint8List.fromList(

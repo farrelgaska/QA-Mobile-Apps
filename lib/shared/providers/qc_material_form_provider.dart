@@ -981,9 +981,25 @@ class QCMaterialFormProvider extends ChangeNotifier {
       activeSample.processingItemPhotos[index].add(processingEntry);
       if (!_isDisposed) notifyListeners();
 
+      final location = await locationFuture;
+      final captureMetadata = QCEvidenceCaptureMetadata(
+        capturedAt: capturedAt,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracyMeters: location.accuracyMeters,
+        locationLabel: location.locationLabel,
+      );
+      if (_isDisposed ||
+          !_hasProcessingEntry(activeSample, index, processingEntry.id)) {
+        return QCMaterialPhotoAddResult.cancelled;
+      }
+
       final QCProcessedPhoto processed;
       try {
-        processed = await _photoProcessor.process(selectedPhoto);
+        processed = await _photoProcessor.process(
+          selectedPhoto,
+          captureMetadata: captureMetadata,
+        );
       } on QCPhotoProcessingException {
         _removeProcessingEntry(activeSample, index, processingEntry.id);
         return QCMaterialPhotoAddResult.fileTooLarge;
@@ -1005,14 +1021,6 @@ class QCMaterialFormProvider extends ChangeNotifier {
         }
         return QCMaterialPhotoAddResult.fileTooLarge;
       }
-      final location = await locationFuture;
-      final captureMetadata = QCEvidenceCaptureMetadata(
-        capturedAt: capturedAt,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        accuracyMeters: location.accuracyMeters,
-        locationLabel: location.locationLabel,
-      );
       if (_isDisposed ||
           !_hasProcessingEntry(activeSample, index, processingEntry.id)) {
         if (processed.isGenerated) {
