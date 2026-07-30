@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mobile/core/dummy/dummy_state.dart';
 import 'package:mobile/core/services/api_service.dart';
 import 'package:mobile/shared/models/enums.dart';
+import 'package:mobile/shared/models/qc_evidence_capture_metadata.dart';
 import 'package:mobile/shared/models/qc_material_template_model.dart';
 import 'package:mobile/shared/models/qc_report_model.dart';
 import 'package:mobile/shared/models/template_choice_option.dart';
@@ -17,11 +18,18 @@ import 'package:mobile/shared/utils/qc_photo_validation.dart';
 
 class _FakePhotoProcessor implements QCPhotoProcessor {
   final QCProcessedPhoto result;
+  QCEvidenceCaptureMetadata? receivedCaptureMetadata;
 
   _FakePhotoProcessor(this.result);
 
   @override
-  Future<QCProcessedPhoto> process(XFile photo) async => result;
+  Future<QCProcessedPhoto> process(
+    XFile photo, {
+    QCEvidenceCaptureMetadata? captureMetadata,
+  }) async {
+    receivedCaptureMetadata = captureMetadata;
+    return result;
+  }
 
   @override
   Future<void> deleteGeneratedFile(XFile photo) async {}
@@ -33,7 +41,10 @@ class _FailingPhotoProcessor implements QCPhotoProcessor {
   _FailingPhotoProcessor(this.error);
 
   @override
-  Future<QCProcessedPhoto> process(XFile photo) => Future.error(error);
+  Future<QCProcessedPhoto> process(
+    XFile photo, {
+    QCEvidenceCaptureMetadata? captureMetadata,
+  }) => Future.error(error);
 
   @override
   Future<void> deleteGeneratedFile(XFile photo) async {}
@@ -44,7 +55,10 @@ class _ControlledPhotoProcessor implements QCPhotoProcessor {
   final List<XFile> deletedFiles = [];
 
   @override
-  Future<QCProcessedPhoto> process(XFile photo) => completer.future;
+  Future<QCProcessedPhoto> process(
+    XFile photo, {
+    QCEvidenceCaptureMetadata? captureMetadata,
+  }) => completer.future;
 
   @override
   Future<void> deleteGeneratedFile(XFile photo) async {
@@ -211,11 +225,12 @@ void main() {
       ),
     );
     final template = _draftTemplate();
+    final processor = _FakePhotoProcessor(
+      QCProcessedPhoto(file: captured, bytes: bytes, isGenerated: false),
+    );
     final provider = QCMaterialFormProvider(
       photoPicker: (_) async => captured,
-      photoProcessor: _FakePhotoProcessor(
-        QCProcessedPhoto(file: captured, bytes: bytes, isGenerated: false),
-      ),
+      photoProcessor: processor,
       captureLocationService: location,
       clock: () => DateTime(2026, 7, 29, 9, 15, 30),
     )..init(template.id, template: template);
@@ -232,6 +247,7 @@ void main() {
     expect(metadata.longitude, 106.8456);
     expect(metadata.accuracyMeters, 4.5);
     expect(metadata.locationLabel, isNull);
+    expect(processor.receivedCaptureMetadata, same(metadata));
   });
 
   test(
