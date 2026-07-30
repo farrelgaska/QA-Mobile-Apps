@@ -121,7 +121,7 @@ class QCReportModel {
   final QCReportStatus status;
   final StaffIdentity staff;
   final ReportLocation location;
-  final Map<String, String> generalInfo;
+  final Map<String, dynamic> generalInfo;
   final List<QCChecklistAnswer> checklistItems;
   final String staffNote;
   final DateTime submittedAt;
@@ -144,7 +144,7 @@ class QCReportModel {
     required this.status,
     StaffIdentity? staff,
     ReportLocation? location,
-    Map<String, String>? generalInfo,
+    Map<String, dynamic>? generalInfo,
     List<QCChecklistAnswer>? checklistItems,
     required this.staffNote,
     DateTime? submittedAt,
@@ -287,7 +287,7 @@ class QCReportModel {
     QCReportStatus? status,
     StaffIdentity? staff,
     ReportLocation? location,
-    Map<String, String>? generalInfo,
+    Map<String, dynamic>? generalInfo,
     List<QCChecklistAnswer>? checklistItems,
     String? staffNote,
     DateTime? submittedAt,
@@ -366,7 +366,7 @@ class QCReportModel {
       status: parsedStatus,
       staff: StaffIdentity.fromJson(json['staff'] ?? {}),
       location: ReportLocation.fromJson(json['location'] ?? {}),
-      generalInfo: Map<String, String>.from(json['general_info'] ?? {}),
+      generalInfo: _generalInfo(json['general_info']),
       checklistItems: (json['checklist_items'] as List? ?? [])
           .map((i) => QCChecklistAnswer.fromJson(i))
           .toList(),
@@ -396,5 +396,12 @@ class QCReportModel {
   static int? _positiveInt(dynamic value) {
     final parsed = value is int ? value : int.tryParse(value?.toString() ?? '');
     return parsed != null && parsed > 0 ? parsed : null;
+  }
+
+  static Map<String, dynamic> _generalInfo(dynamic value) {
+    if (value is! Map) return {};
+    return {
+      for (final entry in value.entries) entry.key.toString(): entry.value,
+    };
   }
 }

@@ -105,12 +105,19 @@ class ApiService {
   /// Fetch all reports from the mock API backend.
   Future<List<QCReportModel>?> fetchReports() async {
     try {
-      final response = await http
-          .get(Uri.parse('$baseUrl/reports'))
-          .timeout(const Duration(seconds: 4));
+      final uri = Uri.parse('$baseUrl/reports');
+      final response = await (_client?.get(uri) ?? http.get(uri)).timeout(
+        const Duration(seconds: 4),
+      );
       if (response.statusCode == 200) {
         final List<dynamic> list = jsonDecode(response.body);
-        return list.map((json) => QCReportModel.fromJson(json)).toList();
+        return list
+            .map(
+              (json) => QCReportModel.fromJson(
+                Map<String, dynamic>.from(json as Map),
+              ),
+            )
+            .toList();
       }
     } catch (e) {
       debugPrint(

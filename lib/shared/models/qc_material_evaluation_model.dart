@@ -64,17 +64,19 @@ class QCMaterialSamplingDecision {
   }
 
   static QCMaterialSamplingDecision? fromGeneralInfo(
-    Map<String, String> generalInfo,
+    Map<String, dynamic> generalInfo,
   ) {
-    final type = switch (generalInfo[decisionKey]?.toUpperCase()) {
+    final type = switch (generalInfo[decisionKey]?.toString().toUpperCase()) {
       'STOP' => QCMaterialSamplingDecisionType.stop,
       'CONTINUE' => QCMaterialSamplingDecisionType.continueInspection,
       _ => null,
     };
-    final decidedAt = DateTime.tryParse(generalInfo[decidedAtKey] ?? '');
+    final decidedAt = DateTime.tryParse(
+      generalInfo[decidedAtKey]?.toString() ?? '',
+    );
     if (type == null || decidedAt == null) return null;
 
-    final stopReason = generalInfo[stopReasonKey]?.trim() ?? '';
+    final stopReason = generalInfo[stopReasonKey]?.toString().trim() ?? '';
     if (type == QCMaterialSamplingDecisionType.stop && stopReason.isEmpty) {
       return null;
     }
@@ -91,9 +93,12 @@ class QCMaterialSamplingDecision {
     );
   }
 
-  static List<String> _stringList(String? value) {
+  static List<String> _stringList(dynamic value) {
     try {
-      return (jsonDecode(value ?? '') as List)
+      final decoded = value is List
+          ? value
+          : jsonDecode(value?.toString() ?? '');
+      return (decoded as List)
           .map((entry) => entry.toString())
           .where((entry) => entry.isNotEmpty)
           .toList(growable: false);
@@ -102,9 +107,12 @@ class QCMaterialSamplingDecision {
     }
   }
 
-  static List<int> _intList(String? value) {
+  static List<int> _intList(dynamic value) {
     try {
-      return (jsonDecode(value ?? '') as List)
+      final decoded = value is List
+          ? value
+          : jsonDecode(value?.toString() ?? '');
+      return (decoded as List)
           .map((entry) => entry is int ? entry : int.tryParse('$entry'))
           .whereType<int>()
           .where((entry) => entry > 0)
@@ -139,10 +147,14 @@ class QCMaterialReviewRequest {
   }
 
   static QCMaterialReviewRequest? fromGeneralInfo(
-    Map<String, String> generalInfo,
+    Map<String, dynamic> generalInfo,
   ) {
-    if (generalInfo[requestedKey]?.toLowerCase() != 'true') return null;
-    final requestedAt = DateTime.tryParse(generalInfo[requestedAtKey] ?? '');
+    if (generalInfo[requestedKey]?.toString().toLowerCase() != 'true') {
+      return null;
+    }
+    final requestedAt = DateTime.tryParse(
+      generalInfo[requestedAtKey]?.toString() ?? '',
+    );
     if (requestedAt == null) return null;
 
     final ids = _stringList(generalInfo[failedSampleIdsKey]);
@@ -156,9 +168,12 @@ class QCMaterialReviewRequest {
     );
   }
 
-  static List<String> _stringList(String? value) {
+  static List<String> _stringList(dynamic value) {
     try {
-      return (jsonDecode(value ?? '') as List)
+      final decoded = value is List
+          ? value
+          : jsonDecode(value?.toString() ?? '');
+      return (decoded as List)
           .map((entry) => entry.toString())
           .where((entry) => entry.isNotEmpty)
           .toList(growable: false);
@@ -167,9 +182,12 @@ class QCMaterialReviewRequest {
     }
   }
 
-  static List<int> _intList(String? value) {
+  static List<int> _intList(dynamic value) {
     try {
-      return (jsonDecode(value ?? '') as List)
+      final decoded = value is List
+          ? value
+          : jsonDecode(value?.toString() ?? '');
+      return (decoded as List)
           .map((entry) => entry is int ? entry : int.tryParse('$entry'))
           .whereType<int>()
           .where((entry) => entry > 0)

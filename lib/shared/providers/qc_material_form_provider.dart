@@ -784,12 +784,12 @@ class QCMaterialFormProvider extends ChangeNotifier {
   }
 
   Map<String, QCEvidenceCaptureMetadata> _captureMetadataFromGeneralInfo(
-    Map<String, String> generalInfo,
+    Map<String, dynamic> generalInfo,
   ) {
     final raw = generalInfo[_evidenceCaptureMetadataKey];
-    if (raw == null || raw.isEmpty) return {};
+    if (raw == null) return {};
     try {
-      final decoded = jsonDecode(raw);
+      final decoded = raw is Map ? raw : jsonDecode(raw.toString());
       if (decoded is! Map) return {};
       return {
         for (final entry in decoded.entries)
