@@ -62,12 +62,19 @@ const EvidencePhoto: React.FC<EvidencePhotoProps> = ({
   onPreview,
 }) => {
   const metadata = evidenceCapturePresentation(generalInfo, objectPath);
+  const containerClassName = metadata.hasMetadata
+    ? 'flex min-w-[280px] max-w-md flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50/60 p-2 sm:flex-row'
+    : 'inline-flex w-fit rounded-lg border border-gray-200 bg-gray-50/60 p-2';
+  const photoButtonClassName = metadata.hasMetadata
+    ? 'relative h-20 w-full flex-shrink-0 overflow-hidden rounded-md border border-gray-200 bg-white hover:border-[#006B5A] sm:w-20'
+    : 'relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border border-gray-200 bg-white hover:border-[#006B5A]';
+
   return (
-    <div className="flex min-w-[280px] max-w-md flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50/60 p-2 sm:flex-row">
+    <div className={containerClassName}>
       <button
         type="button"
         onClick={onPreview}
-        className="relative h-20 w-full flex-shrink-0 overflow-hidden rounded-md border border-gray-200 bg-white hover:border-[#006B5A] sm:w-20"
+        className={photoButtonClassName}
         aria-label={`Buka ${alt}`}
       >
         <ImageIcon className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 text-gray-400" />
@@ -82,12 +89,8 @@ const EvidencePhoto: React.FC<EvidencePhotoProps> = ({
           />
         )}
       </button>
-      <div className="min-w-0 flex-1 space-y-1 text-[11px] leading-snug text-gray-600">
-        {!metadata.hasMetadata ? (
-          <p className="italic text-gray-400">
-            Informasi waktu dan lokasi tidak tersedia.
-          </p>
-        ) : (
+      {metadata.hasMetadata && (
+        <div className="min-w-0 flex-1 space-y-1 text-[11px] leading-snug text-gray-600">
           <>
             {metadata.capturedAt && (
               <p className="flex items-start gap-1.5">
@@ -130,8 +133,8 @@ const EvidencePhoto: React.FC<EvidencePhotoProps> = ({
               Metadata perangkat bersifat informasi pendukung.
             </p>
           </>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

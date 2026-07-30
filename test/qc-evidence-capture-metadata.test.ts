@@ -67,7 +67,7 @@ test('capture time remains visible when location evidence is unavailable', () =>
   assert.equal(presentation.mapUrl, null);
 });
 
-test('missing metadata produces the explicit legacy fallback presentation', () => {
+test('missing metadata renders a compact photo without a metadata placeholder', () => {
   const presentation = evidenceCapturePresentation({}, PHOTO_PATH);
   const source = fs.readFileSync(new URL(
     '../src/components/reports/MaterialSampleEvaluation.tsx',
@@ -75,7 +75,9 @@ test('missing metadata produces the explicit legacy fallback presentation', () =
   ), 'utf8');
 
   assert.equal(presentation.hasMetadata, false);
-  assert.match(source, /Informasi waktu dan lokasi tidak tersedia\./);
+  assert.doesNotMatch(source, /Informasi waktu dan lokasi tidak tersedia\./);
+  assert.match(source, /metadata\.hasMetadata && \(/);
+  assert.match(source, /inline-flex w-fit/);
   assert.match(source, /Lokasi tidak tersedia\./);
 });
 
