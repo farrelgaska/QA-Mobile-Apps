@@ -163,3 +163,18 @@ test('legacy photo string arrays remain canonical and render through the same pa
   assert.match(source, /answer\.photo_paths\.map/);
   assert.match(source, /report\.evidenceDisplayUrls\?\.\[objectPath\]/);
 });
+
+test('photo-only evidence uses compact aligned table and sample layouts', () => {
+  const source = fs.readFileSync(new URL(
+    '../src/components/reports/MaterialSampleEvaluation.tsx',
+    import.meta.url
+  ), 'utf8');
+
+  assert.match(source, /hasVisibleParameterPhotoMetadata/);
+  assert.match(source, /min-w-\[1360px\]/);
+  assert.match(source, /w-\[112px\] min-w-\[112px\]/);
+  assert.match(source, /<col className=\{evidenceColumnClassName\} \/>/);
+  assert.match(source, /flex flex-wrap items-start gap-2/);
+  assert.match(source, /min-w-\[1620px\]/);
+  assert.match(source, /w-\[380px\] min-w-\[380px\]/);
+});

@@ -212,6 +212,15 @@ export const MaterialSampleEvaluation: React.FC<MaterialSampleEvaluationProps> =
   const failedSampleNumbers = persistedSamplingFailedNumbers(report.general_info);
   const hasOutOfStandard = hasCurrentSampleOutOfStandard(sample, sampleStatus);
   const isStop = isPersistedStopDecision(report);
+  const hasVisibleParameterPhotoMetadata = sample.checklist_answers.some(
+    answer => answer.photo_paths.some(
+      objectPath =>
+        evidenceCapturePresentation(report.general_info, objectPath).hasMetadata
+    )
+  );
+  const evidenceColumnClassName = hasVisibleParameterPhotoMetadata
+    ? 'w-[380px] min-w-[380px]'
+    : 'w-[112px] min-w-[112px]';
 
   return (
     <>
@@ -327,7 +336,7 @@ export const MaterialSampleEvaluation: React.FC<MaterialSampleEvaluationProps> =
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
                   Bukti Foto Sampel
                 </p>
-                <div className="grid gap-2 xl:grid-cols-2">
+                <div className="flex flex-wrap items-start gap-2">
                   {sample.photo_paths.map((objectPath, index) => {
                     const displayUrl = displayPhotoUrl(objectPath);
                     const alt =
@@ -348,7 +357,23 @@ export const MaterialSampleEvaluation: React.FC<MaterialSampleEvaluationProps> =
             )}
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1620px] text-left text-sm">
+              <table
+                className={`w-full table-fixed text-left text-sm ${
+                  hasVisibleParameterPhotoMetadata
+                    ? 'min-w-[1620px]'
+                    : 'min-w-[1360px]'
+                }`}
+              >
+                <colgroup>
+                  <col className="w-[180px]" />
+                  <col className="w-[220px]" />
+                  <col className="w-[130px]" />
+                  <col className="w-[150px]" />
+                  <col className="w-[240px]" />
+                  <col className={evidenceColumnClassName} />
+                  <col className="w-[190px]" />
+                  <col className="w-[260px]" />
+                </colgroup>
                 <thead className="border-b border-gray-100 bg-white text-[11px] uppercase tracking-wider text-gray-400">
                   <tr>
                     <th className="px-4 py-3">Parameter</th>
@@ -356,7 +381,7 @@ export const MaterialSampleEvaluation: React.FC<MaterialSampleEvaluationProps> =
                     <th className="px-4 py-3">Nilai Aktual</th>
                     <th className="px-4 py-3">Status Standar</th>
                     <th className="px-4 py-3">Keputusan Admin</th>
-                    <th className="px-4 py-3">Bukti Foto</th>
+                    <th className="px-3 py-3">Bukti Foto</th>
                     <th className="px-4 py-3">Catatan Staff</th>
                     <th className="px-4 py-3">Catatan Admin</th>
                   </tr>
@@ -434,7 +459,9 @@ export const MaterialSampleEvaluation: React.FC<MaterialSampleEvaluationProps> =
                             </Badge>
                           )}
                         </td>
-                        <td className="min-w-[380px] px-4 py-3 align-top">
+                        <td
+                          className={`${evidenceColumnClassName} px-3 py-3 align-top`}
+                        >
                           {answer.photo_paths.length > 0 ? (
                             <div className="space-y-2">
                               {answer.photo_paths.map((objectPath, index) => {
