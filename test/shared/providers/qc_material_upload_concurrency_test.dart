@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -5,9 +6,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mobile/core/dummy/dummy_state.dart';
 import 'package:mobile/core/services/api_service.dart';
 import 'package:mobile/shared/models/enums.dart';
+import 'package:mobile/shared/models/qc_evidence_capture_metadata.dart';
 import 'package:mobile/shared/models/qc_material_template_model.dart';
 import 'package:mobile/shared/models/qc_report_model.dart';
 import 'package:mobile/shared/providers/qc_material_form_provider.dart';
+import 'package:mobile/shared/services/qc_photo_processor.dart';
 
 class _UploadCall {
   final String fileName;
@@ -23,6 +26,7 @@ class _UploadCall {
 
 class _ConcurrentPersistenceApi implements QCMaterialPersistenceApi {
   final Set<int> failOncePhotoNumbers;
+  final Completer<void>? uploadGate;
   final List<_UploadCall> uploadCalls = [];
   final Map<String, int> uploadAttemptsByFileName = {};
   int activeUploads = 0;
@@ -31,8 +35,10 @@ class _ConcurrentPersistenceApi implements QCMaterialPersistenceApi {
   int patchCalls = 0;
   QCReportModel? persistedReport;
 
-  _ConcurrentPersistenceApi({Set<int> failOncePhotoNumbers = const {}})
-    : failOncePhotoNumbers = Set<int>.from(failOncePhotoNumbers);
+  _ConcurrentPersistenceApi({
+    Set<int> failOncePhotoNumbers = const {},
+    this.uploadGate,
+  }) : failOncePhotoNumbers = Set<int>.from(failOncePhotoNumbers);
 
   @override
   Future<QCEvidenceUploadResult> uploadQCEvidence({
@@ -60,6 +66,7 @@ class _ConcurrentPersistenceApi implements QCMaterialPersistenceApi {
         : maximumActiveUploads;
 
     try {
+      await uploadGate?.future;
       final photoNumber = _photoNumber(fileName);
       if (failOncePhotoNumbers.contains(photoNumber)) {
         await Future<void>.delayed(const Duration(milliseconds: 5));
@@ -106,6 +113,22 @@ class _ConcurrentPersistenceApi implements QCMaterialPersistenceApi {
     persistedReport = QCReportModel.fromJson(report.toJson());
     return true;
   }
+}
+
+class _SubmitGuardPhotoProcessor implements QCPhotoProcessor {
+  int processCalls = 0;
+
+  @override
+  Future<QCProcessedPhoto> process(
+    XFile photo, {
+    QCEvidenceCaptureMetadata? captureMetadata,
+  }) {
+    processCalls++;
+    throw StateError('Submission must not process captured photos again.');
+  }
+
+  @override
+  Future<void> deleteGeneratedFile(XFile photo) async {}
 }
 
 QCMaterialTemplate _template() => QCMaterialTemplate(
@@ -157,10 +180,13 @@ void _fillGeneralInformation(
 Future<QCMaterialFormProvider> _providerWithSamples(
   _ConcurrentPersistenceApi api, {
   int sampleCount = 4,
+  QCPhotoProcessor? photoProcessor,
 }) async {
   final template = _template();
-  final provider = QCMaterialFormProvider(api: api)
-    ..init(template.id, template: template);
+  final provider = QCMaterialFormProvider(
+    api: api,
+    photoProcessor: photoProcessor,
+  )..init(template.id, template: template);
   _fillGeneralInformation(provider, sampleCount: sampleCount);
   expect(await provider.nextStep(), isNull);
   expect(provider.samples, hasLength(sampleCount));
@@ -299,6 +325,57 @@ void main() {
       },
     );
   }
+
+  test(
+    'one sample submits eight retained photos without reprocessing',
+    () async {
+      final api = _ConcurrentPersistenceApi();
+      final photoProcessor = _SubmitGuardPhotoProcessor();
+      final provider = await _providerWithSamples(
+        api,
+        sampleCount: 1,
+        photoProcessor: photoProcessor,
+      );
+      addTearDown(provider.dispose);
+      final expectedPaths = _addPendingPhotos(provider);
+
+      await provider.persistReport(QCReportStatus.SUBMITTED);
+
+      expect(api.uploadCalls, hasLength(8));
+      expect(api.maximumActiveUploads, 3);
+      expect(photoProcessor.processCalls, 0);
+      expect(api.postCalls, 1);
+      expect(api.patchCalls, 0);
+      expect(_persistedPaths(api.persistedReport!), expectedPaths);
+    },
+  );
+
+  test('repeated submit while uploads are active sends one report', () async {
+    final uploadGate = Completer<void>();
+    final api = _ConcurrentPersistenceApi(uploadGate: uploadGate);
+    final provider = await _providerWithSamples(api, sampleCount: 1);
+    addTearDown(provider.dispose);
+    _addPendingPhotos(provider);
+
+    final firstSubmit = provider.persistReport(QCReportStatus.SUBMITTED);
+    while (api.uploadCalls.length < 3) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    expect(provider.isPersisting, isTrue);
+
+    final repeatedSubmit = provider.persistReport(QCReportStatus.SUBMITTED);
+    await repeatedSubmit;
+    expect(api.uploadCalls, hasLength(3));
+    expect(api.postCalls, 0);
+
+    uploadGate.complete();
+    await firstSubmit;
+
+    expect(api.uploadCalls, hasLength(8));
+    expect(api.maximumActiveUploads, 3);
+    expect(api.postCalls, 1);
+    expect(api.patchCalls, 0);
+  });
 
   test(
     'canonical paths bypass upload and remain before pending paths',
