@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -9,6 +10,7 @@ import '../../core/services/api_service.dart';
 import '../../shared/models/enums.dart';
 import '../../shared/models/qc_report_model.dart'; // QCReportModel, AdminReview
 import '../../shared/models/qc_checklist_answer_model.dart';
+import '../../shared/models/qc_evidence_capture_metadata.dart';
 import '../../shared/models/qc_photo_processing_entry.dart';
 import '../../shared/models/work_location_model.dart';
 import '../../core/utils/validators.dart';
@@ -16,8 +18,20 @@ import '../../shared/models/pekerjaan_model.dart';
 import '../../shared/models/template_choice_option.dart';
 import '../../shared/utils/qc_photo_validation.dart';
 import '../../shared/services/qc_photo_processor.dart';
+import '../../shared/services/qc_capture_location_service.dart';
 
-enum PhotoAddResult { added, cancelled, limitReached, fileTooLarge }
+enum PhotoAddResult {
+  added,
+  addedWithoutLocationServiceDisabled,
+  addedWithoutLocationPermissionDenied,
+  addedWithoutLocationPermissionDeniedForever,
+  addedWithoutLocationTimeout,
+  addedWithoutLocationPositionUnavailable,
+  addedWithoutLocationUnexpectedError,
+  cancelled,
+  limitReached,
+  fileTooLarge,
+}
 
 class ReportPersistenceException implements Exception {
   final String message;
@@ -33,6 +47,8 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   final Future<XFile?> Function(ImageSource source)? photoPicker;
   final ApiService _apiService;
   final QCPhotoProcessor _photoProcessor;
+  final QCCaptureLocationService _captureLocationService;
+  final DateTime Function() _clock;
   final Set<int> _photoCapturesInProgress = <int>{};
   int _processingPhotoSequence = 0;
   bool _isInit = false;
@@ -41,15 +57,24 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   bool _isDisposed = false;
   late String _reportId;
   late PekerjaanModel _pekerjaan;
+  int _currentStep = 0;
+
+  static const _evidenceCaptureMetadataKey = 'qcEvidenceCaptureMetadata';
+  static const _currentStepKey = 'qcPekerjaanCurrentStep';
 
   QCPekerjaanFormProvider({
     ImagePicker? imagePicker,
     this.photoPicker,
     ApiService? apiService,
     QCPhotoProcessor? photoProcessor,
+    QCCaptureLocationService? captureLocationService,
+    DateTime Function()? clock,
   }) : _imagePicker = imagePicker ?? ImagePicker(),
        _apiService = apiService ?? ApiService(),
-       _photoProcessor = photoProcessor ?? BoundedQCPhotoProcessor();
+       _photoProcessor = photoProcessor ?? BoundedQCPhotoProcessor(),
+       _captureLocationService =
+           captureLocationService ?? GeolocatorQCCaptureLocationService(),
+       _clock = clock ?? DateTime.now;
 
   /// Public getters for UI consumption
   bool get isReady => _isInit;
@@ -57,6 +82,10 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   bool get isPersisting => _isPersisting;
   bool get hasProcessingPhotos =>
       processingItemPhotos.any((photos) => photos.isNotEmpty);
+  int get currentStep => _currentStep;
+  int get totalSteps => 2;
+  bool get isInformationStep => _currentStep == 0;
+  bool get isChecklistStep => _currentStep == 1;
   PekerjaanModel get pekerjaan => _pekerjaan;
   DummyState get state => _state;
 
@@ -79,6 +108,8 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   final List<String?> itemWarnings = [];
   final List<String?> itemAdminNotes = [];
   final Map<XFile, String> _uploadedObjectPaths = {};
+  final Map<XFile, QCEvidenceCaptureMetadata> _localPhotoMetadata = {};
+  final Map<String, QCEvidenceCaptureMetadata> _captureMetadataByPath = {};
 
   // Revision state
   bool isRevisionMode = false;
@@ -112,6 +143,19 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
       locationDetailController.text = report.detailLocation;
       mitraController.text = report.generalInfo['mitraName'] ?? '';
       staffNoteController.text = report.staffNote;
+      _captureMetadataByPath.addAll(
+        _captureMetadataFromGeneralInfo(report.generalInfo),
+      );
+      final storedStep = int.tryParse(
+        report.generalInfo[_currentStepKey]?.toString() ?? '',
+      );
+      final hasChecklistContent = report.checklistItems.any(
+        (answer) =>
+            answer.value?.toString().trim().isNotEmpty == true ||
+            answer.issueNote?.trim().isNotEmpty == true ||
+            answer.photoPaths.isNotEmpty,
+      );
+      _currentStep = storedStep == 1 || hasChecklistContent ? 1 : 0;
 
       // Populate checklist items
       for (int i = 0; i < _pekerjaan.checklistItems.length; i++) {
@@ -134,6 +178,12 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
               .where(_isPersistablePhotoReference)
               .toList(),
         );
+        for (final path in matchingAnswer.photoPaths) {
+          final metadata =
+              matchingAnswer.photoMetadataByPath[path] ??
+              _captureMetadataByPath[path];
+          if (metadata != null) _captureMetadataByPath[path] = metadata;
+        }
         pendingItemPhotos.add([]);
         pendingItemPhotoBytes.add([]);
         processingItemPhotos.add([]);
@@ -147,6 +197,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         _recalculateStatus(i);
       }
     } else {
+      _currentStep = 0;
       // Initialize empty lists based on checklist items
       for (var _ in _pekerjaan.checklistItems) {
         itemStatuses.add(ChecklistStatus.belumDiisi);
@@ -172,6 +223,33 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
       (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
     ).join();
     return 'QC-WRK-${DateTime.now().microsecondsSinceEpoch}-$randomPart';
+  }
+
+  String? validateGeneralInformation() {
+    if (areaController.text.trim().isEmpty) {
+      return 'Area / zona kerja wajib diisi.';
+    }
+    if (locationDetailController.text.trim().isEmpty) {
+      return 'Detail lokasi pekerjaan wajib diisi.';
+    }
+    if (mitraController.text.trim().isEmpty) {
+      return 'Nama mitra pelaksana wajib diisi.';
+    }
+    return null;
+  }
+
+  String? goToChecklistStep() {
+    final error = validateGeneralInformation();
+    if (error != null) return error;
+    _currentStep = 1;
+    notifyListeners();
+    return null;
+  }
+
+  void goToInformationStep() {
+    if (_isPersisting || _currentStep == 0) return;
+    _currentStep = 0;
+    notifyListeners();
   }
 
   void updateResult(int index, String value) {
@@ -268,16 +346,39 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         return PhotoAddResult.limitReached;
       }
 
+      final capturedAt = QCEvidenceCaptureMetadata.iso8601WithTimezone(
+        _clock(),
+      );
+      final locationFuture = _safeCaptureLocation();
+      final metadataWithoutLocation = QCEvidenceCaptureMetadata(
+        capturedAt: capturedAt,
+      );
       final processingEntry = QCPhotoProcessingEntry.fromCapture(
         id: '$index:${++_processingPhotoSequence}',
         source: selectedPhoto,
+        captureMetadata: metadataWithoutLocation,
       );
       processingItemPhotos[index].add(processingEntry);
       if (!_isDisposed) notifyListeners();
 
+      final location = await locationFuture;
+      final captureMetadata = QCEvidenceCaptureMetadata(
+        capturedAt: capturedAt,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracyMeters: location.accuracyMeters,
+        locationLabel: location.locationLabel,
+      );
+      if (_isDisposed || !_hasProcessingEntry(index, processingEntry.id)) {
+        return PhotoAddResult.cancelled;
+      }
+
       final QCProcessedPhoto processed;
       try {
-        processed = await _photoProcessor.process(selectedPhoto);
+        processed = await _photoProcessor.process(
+          selectedPhoto,
+          captureMetadata: captureMetadata,
+        );
       } on QCPhotoProcessingException {
         _removeProcessingEntry(index, processingEntry.id);
         return PhotoAddResult.fileTooLarge;
@@ -301,11 +402,36 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
       _removeProcessingEntry(index, processingEntry.id, notify: false);
       pendingItemPhotos[index].add(processed.file);
       pendingItemPhotoBytes[index].add(processed.bytes);
+      _localPhotoMetadata[processed.file] = captureMetadata;
       _recalculateStatus(index);
       notifyListeners();
-      return PhotoAddResult.added;
+      if (captureMetadata.hasLocation) return PhotoAddResult.added;
+      return switch (location.failure) {
+        QCCaptureLocationFailure.serviceDisabled =>
+          PhotoAddResult.addedWithoutLocationServiceDisabled,
+        QCCaptureLocationFailure.permissionDenied =>
+          PhotoAddResult.addedWithoutLocationPermissionDenied,
+        QCCaptureLocationFailure.permissionDeniedForever =>
+          PhotoAddResult.addedWithoutLocationPermissionDeniedForever,
+        QCCaptureLocationFailure.timeout =>
+          PhotoAddResult.addedWithoutLocationTimeout,
+        QCCaptureLocationFailure.positionUnavailable =>
+          PhotoAddResult.addedWithoutLocationPositionUnavailable,
+        QCCaptureLocationFailure.unexpectedError ||
+        null => PhotoAddResult.addedWithoutLocationUnexpectedError,
+      };
     } finally {
       _photoCapturesInProgress.remove(index);
+    }
+  }
+
+  Future<QCCaptureLocationResult> _safeCaptureLocation() async {
+    try {
+      return await _captureLocationService.captureLocation();
+    } catch (_) {
+      return const QCCaptureLocationResult.unavailable(
+        QCCaptureLocationFailure.unexpectedError,
+      );
     }
   }
 
@@ -313,16 +439,17 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
     if (photoIdx < itemPhotos[index].length) {
       final removed = itemPhotos[index].removeAt(photoIdx);
       uploadedPhotoPreviewBytes.remove(removed);
+      _captureMetadataByPath.remove(removed);
     } else {
       final pendingIndex = photoIdx - itemPhotos[index].length;
       if (pendingIndex < pendingItemPhotos[index].length) {
         final removed = pendingItemPhotos[index].removeAt(pendingIndex);
         pendingItemPhotoBytes[index].removeAt(pendingIndex);
+        _localPhotoMetadata.remove(removed);
         _uploadedObjectPaths.remove(removed);
         unawaited(_photoProcessor.deleteGeneratedFile(removed));
       } else {
-        final processingIndex =
-            pendingIndex - pendingItemPhotos[index].length;
+        final processingIndex = pendingIndex - pendingItemPhotos[index].length;
         processingItemPhotos[index].removeAt(processingIndex);
       }
     }
@@ -346,9 +473,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
     bool notify = true,
   }) {
     if (itemIndex >= processingItemPhotos.length) return;
-    processingItemPhotos[itemIndex].removeWhere(
-      (entry) => entry.id == entryId,
-    );
+    processingItemPhotos[itemIndex].removeWhere((entry) => entry.id == entryId);
     if (notify && !_isDisposed) notifyListeners();
   }
 
@@ -365,6 +490,8 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
 
   String? validateForm() {
     if (hasProcessingPhotos) return qcPhotoProcessingMessage;
+    final generalError = validateGeneralInformation();
+    if (generalError != null) return generalError;
     _submitAttempted = true;
     for (int i = 0; i < _pekerjaan.checklistItems.length; i++) {
       _recalculateStatus(i);
@@ -436,6 +563,24 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         note: '',
         isCustom: false,
       );
+      final persistedPathSet = persistedPhotos
+          .expand((photos) => photos)
+          .toSet();
+      final captureMetadataForReport = <String, QCEvidenceCaptureMetadata>{
+        for (final entry in _captureMetadataByPath.entries)
+          if (persistedPathSet.contains(entry.key)) entry.key: entry.value,
+      };
+      final generalInfo = <String, dynamic>{
+        ...?_originalReport?.generalInfo,
+        'mitraName': mitraController.text.trim(),
+        _currentStepKey: _currentStep.toString(),
+      }..remove(_evidenceCaptureMetadataKey);
+      if (captureMetadataForReport.isNotEmpty) {
+        generalInfo[_evidenceCaptureMetadataKey] = jsonEncode({
+          for (final entry in captureMetadataForReport.entries)
+            entry.key: entry.value.toJson(),
+        });
+      }
       final answers = List<QCChecklistAnswer>.generate(
         _pekerjaan.checklistItems.length,
         (i) {
@@ -445,6 +590,11 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
             value: itemResults[i],
             status: QCResultStatus.notFilled,
             photoPaths: List<String>.unmodifiable(persistedPhotos[i]),
+            photoMetadataByPath: {
+              for (final path in persistedPhotos[i])
+                if (captureMetadataForReport[path] != null)
+                  path: captureMetadataForReport[path]!,
+            },
             paramName: item.title,
             standardText: item.standard,
             unit: item.unit,
@@ -477,6 +627,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
           siteName: _originalReport!.siteName,
           area: workLoc.area ?? '',
           detailLocation: workLoc.segment ?? '',
+          generalInfo: generalInfo,
           checklistAnswers: answers,
           photos: [],
           staffNote: staffNoteController.text,
@@ -514,6 +665,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
           siteName: _state.currentSite.name,
           area: workLoc.area ?? '',
           detailLocation: workLoc.segment ?? '',
+          generalInfo: generalInfo,
           checklistAnswers: answers,
           photos: [],
           staffNote: staffNoteController.text,
@@ -589,6 +741,10 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
           _uploadedObjectPaths[photo] = objectPath;
         }
         itemPhotos[itemIndex].add(objectPath);
+        final captureMetadata = _localPhotoMetadata.remove(photo);
+        if (captureMetadata != null) {
+          _captureMetadataByPath[objectPath] = captureMetadata;
+        }
         uploadedPhotoPreviewBytes[objectPath] = previewBytes;
         pendingItemPhotos[itemIndex].removeAt(0);
         pendingItemPhotoBytes[itemIndex].removeAt(0);
@@ -625,6 +781,26 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
     return !uri.path.contains('/storage/v1/object/sign/');
   }
 
+  Map<String, QCEvidenceCaptureMetadata> _captureMetadataFromGeneralInfo(
+    Map<String, dynamic> generalInfo,
+  ) {
+    final raw = generalInfo[_evidenceCaptureMetadataKey];
+    if (raw == null) return {};
+    try {
+      final decoded = raw is Map ? raw : jsonDecode(raw.toString());
+      if (decoded is! Map) return {};
+      return {
+        for (final entry in decoded.entries)
+          if (entry.key.toString().isNotEmpty && entry.value is Map)
+            entry.key.toString(): QCEvidenceCaptureMetadata.fromJson(
+              Map<String, dynamic>.from(entry.value as Map),
+            ),
+      };
+    } catch (_) {
+      return {};
+    }
+  }
+
   @override
   void dispose() {
     _isDisposed = true;
@@ -633,6 +809,8 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         unawaited(_photoProcessor.deleteGeneratedFile(photo));
       }
     }
+    _localPhotoMetadata.clear();
+    _captureMetadataByPath.clear();
     for (final photos in processingItemPhotos) {
       photos.clear();
     }

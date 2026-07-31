@@ -1,16 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/dummy/dummy_state.dart';
 import '../../../core/utils/dummy_auth.dart';
 import '../../../shared/models/enums.dart';
+import '../../../shared/models/qc_report_model.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/stat_card.dart';
 import '../../../shared/widgets/material_summary_card.dart';
 import '../../../shared/widgets/work_status_card.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final DateTime? now;
+  final bool refreshOnInit;
+
+  const DashboardScreen({super.key, this.now, this.refreshOnInit = true});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -28,42 +34,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'Custom',
   ];
 
-  // Custom date range dummy state
-  DateTime _customStartDate = DateTime(2026, 7, 1);
-  DateTime _customEndDate = DateTime(2026, 7, 8);
+  late DateTime _customStartDate;
+  late DateTime _customEndDate;
 
-  final List<Map<String, dynamic>> _dummyMatNeedsRepair = [
-    {
-      "name": "TIANG 7M 2S",
-      "batch": "Batch #TG-0041",
-      "reason": "Diameter tidak sesuai standar",
-      "time": "09:22",
-      "status": "Perlu Perbaikan",
-      "qaNote": "Diameter lebih kecil dari standar minimal.",
-      "photos": [],
-    },
-    {
-      "name": "KABEL FO 24 Core",
-      "batch": "Batch #FO-1022",
-      "reason": "Dokumentasi kurang jelas",
-      "time": "10:15",
-      "status": "Perlu Perbaikan",
-      "qaNote": "Foto dokumentasi buram, perlu pengambilan ulang.",
-      "photos": [],
-    },
-  ];
+  DateTime get _now => widget.now ?? DateTime.now();
 
-  final List<Map<String, dynamic>> _dummyMatActivities = [
-    {"title": "Yanuar menambahkan QC Tiang Besi 7M", "time": "09:22"},
-    {"title": "QC Kabel FO 24 Core disimpan sebagai Pending", "time": "10:15"},
-    {"title": "Admin menyetujui QC Tiang Beton 7 Meter", "time": "11:40"},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    final now = _now;
+    _customStartDate = DateTime(now.year, now.month, 1);
+    _customEndDate = DateTime(now.year, now.month, now.day);
+    if (widget.refreshOnInit) {
+      unawaited(_refreshReports());
+    }
+  }
 
-  final List<Map<String, dynamic>> _dummyJobActivities = [
-    {"title": "QC Instalasi ONT dimulai", "time": "08:30"},
-    {"title": "Penarikan Kabel Dropcore selesai dicek", "time": "09:45"},
-    {"title": "Pemasangan Tiang ditandai perlu perbaikan", "time": "10:20"},
-  ];
+  Future<void> _refreshReports() async {
+    try {
+      await _state.fetchReportsFromApi();
+      if (mounted) setState(() {});
+    } catch (_) {
+      // Keep the locally cached reports usable when the dashboard is offline.
+    }
+  }
 
   Future<void> _selectCustomDateRange(BuildContext context) async {
     final DateTimeRange? picked = await showDateRangePicker(
@@ -199,7 +193,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'Rentang: ${_customStartDate.day} Jul 2026 - ${_customEndDate.day} Jul 2026',
+                              'Rentang: ${_formatDate(_customStartDate)} - ${_formatDate(_customEndDate)}',
                               style: const TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.bold,
@@ -249,13 +243,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildQcMaterialSections() {
-    final materialReports = _state.reports
-        .where(
-          (r) =>
-              r.type == QCType.material &&
-              r.createdByNik == DummyAuth.current.nik,
-        )
-        .toList();
+    final materialReports = filterDashboardReports(
+      _state.reports
+          .where(
+            (r) =>
+                r.type == QCType.material &&
+                r.createdByNik == DummyAuth.current.nik,
+          )
+          .toList(),
+      period: _selectedPeriod,
+      now: _now,
+      customStart: _customStartDate,
+      customEnd: _customEndDate,
+    );
     final totalMat = materialReports.length;
     final matApproved = materialReports
         .where((r) => r.status == QCReportStatus.APPROVED)
@@ -397,9 +397,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(height: 24),
 
         // 1. Daftar Material QC Minggu Ini
-        const Text(
-          'Daftar Material QC Minggu Ini',
-          style: TextStyle(
+        Text(
+          'Daftar Material QC $_selectedPeriod',
+          style: const TextStyle(
             color: AppColors.textMain,
             fontWeight: FontWeight.bold,
             fontSize: 15,
@@ -429,7 +429,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         // 3. Aktivitas Terbaru QC Material
         ActivityTimelineCard(
           title: 'Aktivitas Terbaru QC Material',
-          activities: _dummyMatActivities,
+          activities: buildDashboardActivities(materialReports, now: _now),
         ),
         const SizedBox(height: 16),
       ],
@@ -437,13 +437,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildQcPekerjaanSections() {
-    final pekerjaanReports = _state.reports
-        .where(
-          (r) =>
-              r.type == QCType.pekerjaan &&
-              r.createdByNik == DummyAuth.current.nik,
-        )
-        .toList();
+    final pekerjaanReports = filterDashboardReports(
+      _state.reports
+          .where(
+            (r) =>
+                r.type == QCType.pekerjaan &&
+                r.createdByNik == DummyAuth.current.nik,
+          )
+          .toList(),
+      period: _selectedPeriod,
+      now: _now,
+      customStart: _customStartDate,
+      customEnd: _customEndDate,
+    );
     final totalPek = pekerjaanReports.length;
     final pekApproved = pekerjaanReports
         .where((r) => r.status == QCReportStatus.APPROVED)
@@ -603,7 +609,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         // 3. Aktivitas Terbaru QC Pekerjaan
         ActivityTimelineCard(
           title: 'Aktivitas Terbaru QC Pekerjaan',
-          activities: _dummyJobActivities,
+          activities: buildDashboardActivities(pekerjaanReports, now: _now),
         ),
         const SizedBox(height: 16),
       ],
@@ -666,6 +672,118 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ],
     );
   }
+
+  String _formatDate(DateTime value) {
+    String twoDigits(int number) => number.toString().padLeft(2, '0');
+    return '${twoDigits(value.day)}/${twoDigits(value.month)}/${value.year}';
+  }
+}
+
+List<QCReportModel> filterDashboardReports(
+  Iterable<QCReportModel> reports, {
+  required String period,
+  required DateTime now,
+  required DateTime customStart,
+  required DateTime customEnd,
+}) {
+  final today = DateTime(now.year, now.month, now.day);
+  late final DateTime start;
+  late final DateTime endExclusive;
+
+  switch (period) {
+    case 'Hari Ini':
+      start = today;
+      endExclusive = today.add(const Duration(days: 1));
+      break;
+    case 'Bulan Ini':
+      start = DateTime(now.year, now.month, 1);
+      endExclusive = DateTime(now.year, now.month + 1, 1);
+      break;
+    case 'Custom':
+      final normalizedStart = DateTime(
+        customStart.year,
+        customStart.month,
+        customStart.day,
+      );
+      final normalizedEnd = DateTime(
+        customEnd.year,
+        customEnd.month,
+        customEnd.day,
+      );
+      start = normalizedStart.isBefore(normalizedEnd)
+          ? normalizedStart
+          : normalizedEnd;
+      final inclusiveEnd = normalizedStart.isAfter(normalizedEnd)
+          ? normalizedStart
+          : normalizedEnd;
+      endExclusive = inclusiveEnd.add(const Duration(days: 1));
+      break;
+    case 'Minggu Ini':
+    default:
+      start = today.subtract(Duration(days: today.weekday - DateTime.monday));
+      endExclusive = today.add(const Duration(days: 1));
+      break;
+  }
+
+  final filtered = reports.where((report) {
+    final date = report.submittedAt.toLocal();
+    return !date.isBefore(start) && date.isBefore(endExclusive);
+  }).toList();
+  filtered.sort((a, b) => b.submittedAt.compareTo(a.submittedAt));
+  return filtered;
+}
+
+class DashboardActivity {
+  final String reportId;
+  final String title;
+  final String time;
+
+  const DashboardActivity({
+    required this.reportId,
+    required this.title,
+    required this.time,
+  });
+}
+
+List<DashboardActivity> buildDashboardActivities(
+  Iterable<QCReportModel> reports, {
+  required DateTime now,
+  int limit = 5,
+}) {
+  final sorted = reports.toList()
+    ..sort((a, b) => b.submittedAt.compareTo(a.submittedAt));
+  return sorted.take(limit).map((report) {
+    return DashboardActivity(
+      reportId: report.id,
+      title: '${_dashboardStatusAction(report.status)} ${report.title}',
+      time: _dashboardTimeLabel(report.submittedAt.toLocal(), now.toLocal()),
+    );
+  }).toList();
+}
+
+String _dashboardStatusAction(QCReportStatus status) {
+  switch (status) {
+    case QCReportStatus.DRAFT:
+      return 'Draft disimpan:';
+    case QCReportStatus.SUBMITTED:
+      return 'Laporan dikirim:';
+    case QCReportStatus.APPROVED:
+      return 'Admin menyetujui:';
+    case QCReportStatus.NEEDS_FOLLOW_UP:
+      return 'Perlu perbaikan:';
+  }
+}
+
+String _dashboardTimeLabel(DateTime value, DateTime now) {
+  String twoDigits(int number) => number.toString().padLeft(2, '0');
+  final valueDay = DateTime(value.year, value.month, value.day);
+  final today = DateTime(now.year, now.month, now.day);
+  final time = '${twoDigits(value.hour)}:${twoDigits(value.minute)}';
+  if (valueDay == today) return time;
+  if (valueDay == today.subtract(const Duration(days: 1))) {
+    return 'Kemarin, $time';
+  }
+  return '${twoDigits(value.day)}/${twoDigits(value.month)}/${value.year} $time';
 }
 
 class MaterialNeedsRepairCard extends StatelessWidget {
@@ -1020,7 +1138,7 @@ class PekerjaanNeedsRepairCard extends StatelessWidget {
 
 class ActivityTimelineCard extends StatelessWidget {
   final String title;
-  final List<Map<String, dynamic>> activities;
+  final List<DashboardActivity> activities;
 
   const ActivityTimelineCard({
     super.key,
@@ -1054,49 +1172,72 @@ class ActivityTimelineCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: activities.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final act = activities[index];
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(top: 3),
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      act['title'],
-                      style: const TextStyle(
-                        color: AppColors.textMain,
-                        fontSize: 12,
-                        height: 1.3,
+          if (activities.isEmpty)
+            const Text(
+              'Belum ada aktivitas pada periode ini.',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: activities.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 4),
+              itemBuilder: (context, index) {
+                final activity = activities[index];
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    key: Key('dashboard_activity_${activity.reportId}'),
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => context.push('/reports/${activity.reportId}'),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(top: 3),
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              activity.title,
+                              style: const TextStyle(
+                                color: AppColors.textMain,
+                                fontSize: 12,
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            activity.time,
+                            style: const TextStyle(
+                              color: AppColors.textSoft,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.chevron_right,
+                            color: AppColors.textSoft,
+                            size: 16,
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    act['time'],
-                    style: const TextStyle(
-                      color: AppColors.textSoft,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
+                );
+              },
+            ),
         ],
       ),
     );

@@ -1,4 +1,6 @@
 // Refactored QC Pekerjaan Form using Provider
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -17,7 +19,7 @@ import '../../../shared/utils/qc_photo_validation.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/models/pekerjaan_model.dart';
 
-class QCPekerjaanFormScreen extends StatelessWidget {
+class QCPekerjaanFormScreen extends StatefulWidget {
   final PekerjaanModel pekerjaan;
   final String? editReportId;
   final bool isRevision;
@@ -30,10 +32,27 @@ class QCPekerjaanFormScreen extends StatelessWidget {
   });
 
   @override
+  State<QCPekerjaanFormScreen> createState() => _QCPekerjaanFormScreenState();
+}
+
+class _QCPekerjaanFormScreenState extends State<QCPekerjaanFormScreen> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => QCPekerjaanFormProvider()
-        ..init(pekerjaan, editReportId: editReportId, isRevision: isRevision),
+        ..init(
+          widget.pekerjaan,
+          editReportId: widget.editReportId,
+          isRevision: widget.isRevision,
+        ),
       child: Consumer<QCPekerjaanFormProvider>(
         builder: (context, provider, _) {
           if (!provider.isReady) {
@@ -47,6 +66,8 @@ class QCPekerjaanFormScreen extends StatelessWidget {
             backgroundColor: AppColors.background,
             body: SafeArea(
               child: SingleChildScrollView(
+                key: const Key('qc_pekerjaan_form_scroll'),
+                controller: _scrollController,
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20.0,
@@ -59,10 +80,14 @@ class QCPekerjaanFormScreen extends StatelessWidget {
                       title: 'Inspeksi Pekerjaan',
                       subtitle: provider.pekerjaan.name,
                     ),
-                    _buildDetailCard(provider),
+                    _buildProgressSection(provider),
                     const SizedBox(height: 24),
-                    _buildChecklistSection(context, provider),
-                    _buildStaffNoteCard(provider),
+                    if (provider.isInformationStep)
+                      _buildDetailCard(provider)
+                    else ...[
+                      _buildChecklistSection(context, provider),
+                      _buildStaffNoteCard(provider),
+                    ],
                     const SizedBox(height: 28),
                     _buildActionButtons(context, provider),
                     const SizedBox(height: 32),
@@ -72,6 +97,51 @@ class QCPekerjaanFormScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildProgressSection(QCPekerjaanFormProvider provider) {
+    final stepNumber = provider.currentStep + 1;
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Langkah $stepNumber dari ${provider.totalSteps}',
+                key: const Key('qc_pekerjaan_step_indicator'),
+                style: const TextStyle(
+                  color: AppColors.textMain,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                provider.isInformationStep
+                    ? 'Data Pekerjaan'
+                    : 'Form Pemeriksaan',
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LinearProgressIndicator(
+            key: const Key('qc_pekerjaan_progress'),
+            value: stepNumber / provider.totalSteps,
+            minHeight: 7,
+            borderRadius: BorderRadius.circular(8),
+            color: AppColors.primary,
+            backgroundColor: AppColors.inactiveBg,
+          ),
+        ],
       ),
     );
   }
@@ -274,6 +344,39 @@ class QCPekerjaanFormScreen extends StatelessWidget {
         );
       } else if (result == PhotoAddResult.fileTooLarge) {
         AppSnackbar.warning(context, qcPhotoTooLargeMessage);
+      } else if (result == PhotoAddResult.addedWithoutLocationServiceDisabled) {
+        AppSnackbar.warning(
+          context,
+          'Foto diambil tanpa bukti lokasi karena layanan lokasi perangkat dinonaktifkan.',
+        );
+      } else if (result ==
+          PhotoAddResult.addedWithoutLocationPermissionDenied) {
+        AppSnackbar.warning(
+          context,
+          'Foto diambil tanpa bukti lokasi karena izin lokasi ditolak.',
+        );
+      } else if (result ==
+          PhotoAddResult.addedWithoutLocationPermissionDeniedForever) {
+        AppSnackbar.warning(
+          context,
+          'Foto diambil tanpa bukti lokasi karena izin lokasi ditolak permanen. Aktifkan izin lokasi di Pengaturan Safari.',
+        );
+      } else if (result == PhotoAddResult.addedWithoutLocationTimeout) {
+        AppSnackbar.warning(
+          context,
+          'Foto diambil tanpa bukti lokasi karena pencarian lokasi melewati batas waktu 8 detik.',
+        );
+      } else if (result ==
+          PhotoAddResult.addedWithoutLocationPositionUnavailable) {
+        AppSnackbar.warning(
+          context,
+          'Foto diambil tanpa bukti lokasi karena posisi perangkat tidak tersedia.',
+        );
+      } else if (result == PhotoAddResult.addedWithoutLocationUnexpectedError) {
+        AppSnackbar.warning(
+          context,
+          'Foto diambil tanpa bukti lokasi karena terjadi kesalahan saat membaca lokasi perangkat.',
+        );
       }
     } on PlatformException {
       if (!context.mounted) return;
@@ -303,11 +406,13 @@ class QCPekerjaanFormScreen extends StatelessWidget {
   }
 
   Widget _buildActionButtons(BuildContext context, QCPekerjaanFormProvider p) {
+    final navigationDisabled = p.isPersisting;
     final draftButton = AppButton(
+      key: const Key('qc_pekerjaan_save_draft_button'),
       text: 'Simpan Draft',
       variant: AppButtonVariant.secondary,
       isLoading: p.isPersisting,
-      onPressed: p.isPersisting
+      onPressed: navigationDisabled
           ? null
           : () async {
               if (!p.hasAnyDraftContent) {
@@ -325,7 +430,48 @@ class QCPekerjaanFormScreen extends StatelessWidget {
               );
             },
     );
+    if (p.isInformationStep) {
+      return Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: AppButton(
+                  key: const Key('qc_pekerjaan_back_button'),
+                  text: 'Kembali',
+                  icon: Icons.arrow_back,
+                  variant: AppButtonVariant.ghost,
+                  onPressed: null,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: AppButton(
+                  key: const Key('qc_pekerjaan_next_button'),
+                  text: 'Selanjutnya',
+                  icon: Icons.arrow_forward,
+                  variant: AppButtonVariant.primary,
+                  onPressed: navigationDisabled
+                      ? null
+                      : () {
+                          final error = p.goToChecklistStep();
+                          if (error != null) {
+                            AppSnackbar.error(context, error);
+                            return;
+                          }
+                          _scrollToTop();
+                        },
+                ),
+              ),
+            ],
+          ),
+          if (!p.isRevisionMode) ...[const SizedBox(height: 12), draftButton],
+        ],
+      );
+    }
+
     final submitButton = AppButton(
+      key: const Key('qc_pekerjaan_submit_button'),
       text: p.isRevisionMode ? 'Kirim Ulang' : 'Submit Laporan',
       variant: AppButtonVariant.primary,
       isLoading: p.isPersisting,
@@ -364,25 +510,44 @@ class QCPekerjaanFormScreen extends StatelessWidget {
             },
     );
 
-    if (p.isRevisionMode) return submitButton;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 380) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [draftButton, const SizedBox(height: 12), submitButton],
-          );
-        }
-        return Row(
+    return Column(
+      children: [
+        Row(
           children: [
-            Expanded(flex: 4, child: draftButton),
+            Expanded(
+              child: AppButton(
+                key: const Key('qc_pekerjaan_back_button'),
+                text: 'Kembali',
+                icon: Icons.arrow_back,
+                variant: AppButtonVariant.ghost,
+                onPressed: navigationDisabled
+                    ? null
+                    : () {
+                        p.goToInformationStep();
+                        _scrollToTop();
+                      },
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(flex: 6, child: submitButton),
+            Expanded(child: submitButton),
           ],
-        );
-      },
+        ),
+        if (!p.isRevisionMode) ...[const SizedBox(height: 12), draftButton],
+      ],
     );
+  }
+
+  void _scrollToTop() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      unawaited(
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        ),
+      );
+    });
   }
 
   Future<void> _persistAndExit(

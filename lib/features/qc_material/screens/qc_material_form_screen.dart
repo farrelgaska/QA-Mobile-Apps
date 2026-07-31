@@ -887,36 +887,43 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
                       onPressed: navigationDisabled
                           ? null
                           : () async {
-                               final previousStep = p.currentStep;
-                               final error = await p.nextStep();
-                               if (!mounted) return;
-                               if (error == null) {
-                                 final currentCtx = context.mounted ? context : this.context;
-                                 if (p.isSamplingDecisionRequired) {
-                                   await _showSamplingDecisionDialog(currentCtx, p);
-                                   return;
-                                 }
-                                 if (p.currentStep != previousStep) {
-                                   _handleSuccessfulNext(p);
-                                 }
-                                 return;
-                               }
-                               final invalidField = p.firstInvalidGeneralField;
-                               final invalidContext =
-                                   generalFieldContexts[invalidField];
-                               if (invalidContext != null &&
-                                   invalidContext.mounted) {
-                                 await Scrollable.ensureVisible(
-                                   invalidContext,
-                                   alignment: 0.1,
-                                   duration: const Duration(milliseconds: 250),
-                                   curve: Curves.easeOut,
-                                 );
-                               }
-                               if (!mounted) return;
-                               final snackCtx = context.mounted ? context : this.context;
-                               AppSnackbar.error(snackCtx, error);
-                             },
+                              final previousStep = p.currentStep;
+                              final error = await p.nextStep();
+                              if (!mounted) return;
+                              if (error == null) {
+                                final currentCtx = context.mounted
+                                    ? context
+                                    : this.context;
+                                if (p.isSamplingDecisionRequired) {
+                                  await _showSamplingDecisionDialog(
+                                    currentCtx,
+                                    p,
+                                  );
+                                  return;
+                                }
+                                if (p.currentStep != previousStep) {
+                                  _handleSuccessfulNext(p);
+                                }
+                                return;
+                              }
+                              final invalidField = p.firstInvalidGeneralField;
+                              final invalidContext =
+                                  generalFieldContexts[invalidField];
+                              if (invalidContext != null &&
+                                  invalidContext.mounted) {
+                                await Scrollable.ensureVisible(
+                                  invalidContext,
+                                  alignment: 0.1,
+                                  duration: const Duration(milliseconds: 250),
+                                  curve: Curves.easeOut,
+                                );
+                              }
+                              if (!mounted) return;
+                              final snackCtx = context.mounted
+                                  ? context
+                                  : this.context;
+                              AppSnackbar.error(snackCtx, error);
+                            },
                     ),
             ),
           ],
@@ -941,12 +948,19 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
                     try {
                       await p.persistReport(QCReportStatus.DRAFT);
                       if (!mounted) return;
-                      final currentCtx = context.mounted ? context : this.context;
-                      AppSnackbar.success(currentCtx, 'Draft berhasil disimpan');
+                      final currentCtx = context.mounted
+                          ? context
+                          : this.context;
+                      AppSnackbar.success(
+                        currentCtx,
+                        'Draft berhasil disimpan',
+                      );
                       currentCtx.pop();
                     } on QCMaterialPersistenceException catch (error) {
                       if (!mounted) return;
-                      final currentCtx = context.mounted ? context : this.context;
+                      final currentCtx = context.mounted
+                          ? context
+                          : this.context;
                       AppSnackbar.error(currentCtx, error.message);
                     }
                   },
@@ -1039,6 +1053,12 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
           try {
             await p.persistReport(QCReportStatus.SUBMITTED);
             if (!context.mounted) return;
+            AppSnackbar.success(
+              context,
+              p.isRevisionMode
+                  ? 'Laporan berhasil dikirim ulang'
+                  : 'Laporan berhasil disubmit',
+            );
             context.pop();
           } on QCMaterialPersistenceException catch (error) {
             if (!context.mounted) return;
@@ -1138,15 +1158,13 @@ class _SamplingDecisionDialogState extends State<_SamplingDecisionDialog> {
   @override
   Widget build(BuildContext context) {
     return Theme(
-      data: Theme.of(context).copyWith(
-        dialogBackgroundColor: AppColors.surface,
-      ),
+      data: Theme.of(
+        context,
+      ).copyWith(dialogBackgroundColor: AppColors.surface),
       child: AlertDialog(
         backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           'Peringatan Sampling Material',
           style: TextStyle(
@@ -1175,10 +1193,7 @@ class _SamplingDecisionDialogState extends State<_SamplingDecisionDialog> {
                 key: const Key('qc_material_sampling_stop_reason'),
                 controller: _stopReasonController,
                 maxLines: 3,
-                style: const TextStyle(
-                  color: AppColors.textMain,
-                  fontSize: 14,
-                ),
+                style: const TextStyle(color: AppColors.textMain, fontSize: 14),
                 decoration: InputDecoration(
                   labelText: 'Alasan penghentian',
                   labelStyle: const TextStyle(color: AppColors.textMuted),
@@ -1194,7 +1209,10 @@ class _SamplingDecisionDialogState extends State<_SamplingDecisionDialog> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                    borderSide: const BorderSide(
+                      color: AppColors.primary,
+                      width: 1.5,
+                    ),
                   ),
                   errorBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -1202,7 +1220,10 @@ class _SamplingDecisionDialogState extends State<_SamplingDecisionDialog> {
                   ),
                   focusedErrorBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: AppColors.rejectedText, width: 1.5),
+                    borderSide: const BorderSide(
+                      color: AppColors.rejectedText,
+                      width: 1.5,
+                    ),
                   ),
                 ),
                 onChanged: (_) {
