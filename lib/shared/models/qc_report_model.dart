@@ -337,7 +337,7 @@ class QCReportModel {
       'general_info': generalInfo,
       'checklist_items': checklistItems.map((i) => i.toJson()).toList(),
       'staff_note': staffNote,
-      'submitted_at': submittedAt.toIso8601String(),
+      'submitted_at': submittedAt.toUtc().toIso8601String(),
       'admin_review': adminReview.toJson(),
       'general_photos': generalPhotos,
       'sample_count': sampleCount,

@@ -112,16 +112,19 @@ class GeolocatorQCCaptureLocationService implements QCCaptureLocationService {
   final DateTime Function() _clock;
   final Duration _locationTimeout;
   final Duration _maximumCachedPositionAge;
+  final bool _isWeb;
 
   GeolocatorQCCaptureLocationService({
     QCCaptureGeolocationClient? client,
     DateTime Function()? clock,
     Duration? timeout,
     Duration? maximumCachedAge,
+    bool? isWeb,
   }) : _client = client ?? GeolocatorQCCaptureGeolocationClient(),
        _clock = clock ?? DateTime.now,
        _locationTimeout = timeout ?? locationTimeout,
-       _maximumCachedPositionAge = maximumCachedAge ?? maximumCachedPositionAge;
+       _maximumCachedPositionAge = maximumCachedAge ?? maximumCachedPositionAge,
+       _isWeb = isWeb ?? kIsWeb;
 
   @override
   Future<QCCaptureLocationResult> captureLocation() async {
@@ -153,7 +156,7 @@ class GeolocatorQCCaptureLocationService implements QCCaptureLocationService {
         );
       }
 
-      final cachedPosition = await _recentCachedPosition();
+      final cachedPosition = _isWeb ? null : await _recentCachedPosition();
       if (cachedPosition != null) {
         return _availablePosition(cachedPosition);
       }
