@@ -9,10 +9,10 @@ import { Modal } from '../components/ui/Modal';
 import { ReportStatusBadge } from '../components/reports/ReportStatusBadge';
 import { StandardResultBadge } from '../components/reports/StandardResultBadge';
 import { ChecklistEvaluationTable } from '../components/reports/ChecklistEvaluationTable';
-import { ImagePreviewModal } from '../components/reports/ImagePreviewModal';
 import { InspectionInformation } from '../components/reports/InspectionInformation';
 import { MaterialSampleEvaluation } from '../components/reports/MaterialSampleEvaluation';
 import { getReportStatusLabel } from '../utils/status';
+import { workQcDataRows } from '../utils/workReportPresentation';
 import {
   adminReviewReadiness,
   isAdminDecisionProcessable,
@@ -27,7 +27,6 @@ import {
   AlertTriangle,
   RefreshCw,
   FileText,
-  ImageIcon,
   ArrowLeft,
   Info,
   Loader2,
@@ -51,11 +50,6 @@ export const ReportDetailPage: React.FC = () => {
   // Modals state
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState<{
-    url: string;
-    alt: string;
-  } | null>(null);
-
   // Action loading states
   const [isApproving, setIsApproving] = useState(false);
   const [isRequestingRevision, setIsRequestingRevision] = useState(false);
@@ -314,46 +308,32 @@ export const ReportDetailPage: React.FC = () => {
           {report.type === 'material' ? (
             <InspectionInformation report={report} />
           ) : (
-            <Card title="Galeri Foto Lapangan">
-              <CardContent className="pt-3">
-                {report.photos && report.photos.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    {report.photos.map((url, i) => (
-                      <button
-                        type="button"
-                        key={i}
-                        onClick={() => setPreviewImage({
-                          url,
-                          alt: `Bukti lapangan ${i + 1}`,
-                        })}
-                        className="group relative aspect-video rounded-lg overflow-hidden border border-gray-100 bg-gray-50 hover:border-[#006B5A] hover:shadow-md transition-all duration-200"
-                        aria-label={`Buka pratinjau bukti lapangan ${i + 1}`}
-                      >
-                        <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
-                          Foto tidak dapat dimuat
+            <Card title="Data QC Pekerjaan">
+              <CardContent className="space-y-4 pt-3">
+                {workQcDataRows(report).map((row, index) => {
+                  const icons = [
+                    <MapPin className="h-4 w-4" />,
+                    <ClipboardList className="h-4 w-4" />,
+                    <MapPin className="h-4 w-4" />,
+                    <User className="h-4 w-4" />,
+                  ];
+
+                  return (
+                    <div key={row.label} className="flex items-start gap-3">
+                      <div className="flex-shrink-0 h-8 w-8 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400">
+                        {icons[index]}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">
+                          {row.label}
                         </div>
-                        <img
-                          src={url}
-                          alt={`Bukti lapangan ${i + 1}`}
-                          className="relative h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          onError={(event) => {
-                            event.currentTarget.style.display = 'none';
-                          }}
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center">
-                          <span className="opacity-0 group-hover:opacity-100 text-white text-[10px] font-bold bg-black/50 px-2 py-0.5 rounded transition-opacity">
-                            Buka
-                          </span>
+                        <div className="text-sm font-semibold text-gray-800 leading-snug mt-0.5 break-words">
+                          {row.value}
                         </div>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-8 text-gray-300 gap-2">
-                    <ImageIcon className="h-10 w-10" />
-                    <p className="text-xs text-gray-400 italic">Tidak ada foto bukti lapangan</p>
-                  </div>
-                )}
+                      </div>
+                    </div>
+                  );
+                })}
               </CardContent>
             </Card>
           )}
@@ -573,11 +553,6 @@ export const ReportDetailPage: React.FC = () => {
           </div>
         </div>
       </Modal>
-      <ImagePreviewModal
-        imageUrl={previewImage?.url ?? null}
-        alt={previewImage?.alt ?? 'Foto dokumentasi laporan'}
-        onClose={() => setPreviewImage(null)}
-      />
     </PageTransition>
   );
 };
