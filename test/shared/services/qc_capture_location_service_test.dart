@@ -119,6 +119,30 @@ void main() {
     );
   });
 
+  test(
+    'web skips unsupported cached position and requests a fresh one',
+    () async {
+      final client = _FakeGeolocationClient()
+        ..freshPosition = QCCapturePosition(
+          latitude: -6.2088,
+          longitude: 106.8456,
+          accuracyMeters: 4,
+          timestamp: referenceTime,
+        );
+      final service = GeolocatorQCCaptureLocationService(
+        client: client,
+        clock: () => referenceTime,
+        isWeb: true,
+      );
+
+      final result = await service.captureLocation();
+
+      expect(result.isAvailable, isTrue);
+      expect(client.cachedPositionRequests, 0);
+      expect(client.freshPositionRequests, 1);
+    },
+  );
+
   test('fresh location timeout returns the timeout failure reason', () async {
     final pendingPosition = Completer<QCCapturePosition>();
     final client = _FakeGeolocationClient()
