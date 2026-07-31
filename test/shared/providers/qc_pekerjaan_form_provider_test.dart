@@ -12,6 +12,7 @@ import 'package:mobile/shared/models/qc_checklist_answer_model.dart';
 import 'package:mobile/shared/models/qc_report_model.dart';
 import 'package:mobile/shared/models/template_choice_option.dart';
 import 'package:mobile/shared/providers/qc_pekerjaan_form_provider.dart';
+import 'package:mobile/shared/services/qc_capture_location_service.dart';
 import 'package:mobile/shared/services/qc_photo_processor.dart';
 import 'package:mobile/shared/utils/qc_photo_validation.dart';
 
@@ -32,15 +33,31 @@ class _FailingPhotoProcessor implements QCPhotoProcessor {
 
 class _ControlledPhotoProcessor implements QCPhotoProcessor {
   final Completer<QCProcessedPhoto> completer = Completer<QCProcessedPhoto>();
+  QCEvidenceCaptureMetadata? receivedCaptureMetadata;
 
   @override
   Future<QCProcessedPhoto> process(
     XFile photo, {
     QCEvidenceCaptureMetadata? captureMetadata,
-  }) => completer.future;
+  }) {
+    receivedCaptureMetadata = captureMetadata;
+    return completer.future;
+  }
 
   @override
   Future<void> deleteGeneratedFile(XFile photo) async {}
+}
+
+class _AvailableLocationService implements QCCaptureLocationService {
+  @override
+  Future<QCCaptureLocationResult> captureLocation() async {
+    return const QCCaptureLocationResult.available(
+      latitude: -6.2,
+      longitude: 106.816666,
+      accuracyMeters: 4.5,
+      locationLabel: 'Jakarta',
+    );
+  }
 }
 
 void main() {
@@ -77,6 +94,7 @@ void main() {
         photoProcessor: _FailingPhotoProcessor(
           const QCPhotoProcessingException(),
         ),
+        captureLocationService: _AvailableLocationService(),
       )..init(template);
       addTearDown(provider.dispose);
 
@@ -119,6 +137,8 @@ void main() {
       final provider = QCPekerjaanFormProvider(
         photoPicker: (_) async => captured,
         photoProcessor: processor,
+        captureLocationService: _AvailableLocationService(),
+        clock: () => DateTime(2026, 7, 31, 9, 15, 30),
       )..init(template);
       addTearDown(provider.dispose);
 
@@ -126,10 +146,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(provider.processingItemPhotos[0], hasLength(1));
-      expect(
-        provider.processingItemPhotos[0].single.canPreviewSource,
-        isTrue,
-      );
+      expect(provider.processingItemPhotos[0].single.canPreviewSource, isTrue);
       expect(provider.pendingItemPhotos[0], isEmpty);
       provider.updateResult(0, 'Masih dapat diedit');
       expect(provider.itemResults[0], 'Masih dapat diedit');
@@ -154,6 +171,12 @@ void main() {
       );
 
       expect(await addFuture, PhotoAddResult.added);
+      expect(processor.receivedCaptureMetadata?.latitude, -6.2);
+      expect(processor.receivedCaptureMetadata?.longitude, 106.816666);
+      expect(
+        processor.receivedCaptureMetadata?.capturedAt,
+        startsWith('2026-07-31T09:15:30'),
+      );
       expect(provider.processingItemPhotos[0], isEmpty);
       expect(provider.pendingItemPhotos[0], [same(captured)]);
       expect(provider.pendingItemPhotoBytes[0], [capturedBytes]);
@@ -311,6 +334,9 @@ void main() {
     );
     final provider = QCPekerjaanFormProvider()..init(template);
     addTearDown(provider.dispose);
+    provider.areaController.text = 'Area A';
+    provider.locationDetailController.text = 'Titik 1';
+    provider.mitraController.text = 'Mitra A';
 
     provider.updateResult(0, 'CUSTOM_FAIL');
     expect(provider.validateForm(), contains('keterangan masalah'));
@@ -321,5 +347,33 @@ void main() {
     provider.updateResult(0, 'CUSTOM_PASS');
     expect(provider.itemIssues.single, isEmpty);
     expect(provider.validateForm(), isNull);
+  });
+
+  test('pekerjaan uses two validated form steps', () {
+    final template = PekerjaanModel(
+      id: 'WRK-TWO-STEP',
+      name: 'Two step work',
+      segment: WorkSegment.construction,
+      description: '',
+      checklistItems: const [],
+      status: 'Aktif',
+    );
+    final provider = QCPekerjaanFormProvider()..init(template);
+    addTearDown(provider.dispose);
+
+    expect(provider.currentStep, 0);
+    expect(provider.goToChecklistStep(), 'Area / zona kerja wajib diisi.');
+
+    provider.areaController.text = 'Area A';
+    provider.locationDetailController.text = 'Titik 1';
+    provider.mitraController.text = 'Mitra A';
+
+    expect(provider.goToChecklistStep(), isNull);
+    expect(provider.currentStep, 1);
+    expect(provider.isChecklistStep, isTrue);
+
+    provider.goToInformationStep();
+    expect(provider.currentStep, 0);
+    expect(provider.isInformationStep, isTrue);
   });
 }
