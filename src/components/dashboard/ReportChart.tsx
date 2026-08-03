@@ -70,6 +70,8 @@ export const ReportChart: React.FC = () => {
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
           <XAxis 
             dataKey="name" 
+            interval="preserveStartEnd"
+            minTickGap={24}
             axisLine={false} 
             tickLine={false} 
             tick={{ fill: '#9CA3AF', fontSize: 11 }}

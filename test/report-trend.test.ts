@@ -4,30 +4,32 @@ import test from 'node:test';
 
 import {
   buildRecentWeeklyReportTrend,
-  RECENT_REPORT_WEEK_COUNT,
   type ReportTrendInput,
 } from '../src/utils/reportTrend.ts';
 
-const referenceDate = new Date(2026, 6, 28, 12);
+const referenceDate = new Date('2026-08-03T12:00:00+07:00');
 
 const report = (
   submittedAt: string,
-  status: ReportTrendInput['status'] = 'SUBMITTED'
-): ReportTrendInput => ({ submittedAt, status });
+  status: ReportTrendInput['status'] = 'SUBMITTED',
+  reviewedAt?: string
+): ReportTrendInput => ({
+  submittedAt,
+  status,
+  ...(reviewedAt === undefined
+    ? {}
+    : { admin_review: { reviewed_at: reviewedAt } }),
+});
 
-test('empty reports produce six forward-looking zero-value Indonesian week labels', () => {
+test('range starts on 20 July 2026 and includes every week through the current week', () => {
   const trend = buildRecentWeeklyReportTrend([], referenceDate);
 
-  assert.equal(trend.length, RECENT_REPORT_WEEK_COUNT);
   assert.deepEqual(
     trend.map(point => point.name),
     [
+      'Mgu 20/07',
       'Mgu 27/07',
       'Mgu 03/08',
-      'Mgu 10/08',
-      'Mgu 17/08',
-      'Mgu 24/08',
-      'Mgu 31/08',
     ]
   );
   assert.equal(new Set(trend.map(point => point.name)).size, trend.length);
@@ -36,36 +38,29 @@ test('empty reports produce six forward-looking zero-value Indonesian week label
   ));
 });
 
-test('reports in the current week populate the first bucket', () => {
-  const trend = buildRecentWeeklyReportTrend(
-    [
-      report('2026-07-28T09:00:00+07:00'),
-      report('2026-07-30T09:00:00+07:00', 'APPROVED'),
-    ],
-    referenceDate
+test('advancing the current date appends one week without generating future weeks', () => {
+  const august3 = buildRecentWeeklyReportTrend([], referenceDate);
+  const august10 = buildRecentWeeklyReportTrend(
+    [],
+    new Date('2026-08-10T12:00:00+07:00')
   );
 
-  assert.deepEqual(trend[0], {
-    name: 'Mgu 27/07',
-    Laporan: 2,
-    Disetujui: 1,
+  assert.deepEqual(august10.slice(0, -1), august3);
+  assert.deepEqual(august10.at(-1), {
+    name: 'Mgu 10/08',
+    Laporan: 0,
+    Disetujui: 0,
   });
-  assert.ok(trend.slice(1).every(point =>
-    point.Laporan === 0 && point.Disetujui === 0
-  ));
 });
 
-test('future weeks aggregate reports while past, out-of-range, and invalid dates are ignored', () => {
+test('reports use Monday-to-Sunday Jakarta buckets and empty weeks remain zero', () => {
   const trend = buildRecentWeeklyReportTrend(
     [
-      report('2026-07-28T10:00:00+07:00', 'APPROVED'),
-      report('2026-08-03T10:00:00+07:00'),
-      report('2026-08-09T10:00:00+07:00', 'APPROVED'),
-      report('2026-08-17T10:00:00+07:00', 'APPROVED'),
-      report('2026-08-30T10:00:00+07:00'),
-      report('2026-07-20T10:00:00+07:00', 'APPROVED'),
-      report('2026-09-07T10:00:00+07:00', 'APPROVED'),
-      report('invalid-date', 'APPROVED'),
+      report('2026-07-20T00:00:00+07:00'),
+      report('2026-07-26T23:59:59+07:00'),
+      report('2026-08-02T23:59:59+07:00'),
+      report('2026-08-03T00:00:00+07:00'),
+      report('2026-08-02T17:00:00Z'),
     ],
     referenceDate
   );
@@ -73,15 +68,82 @@ test('future weeks aggregate reports while past, out-of-range, and invalid dates
   assert.deepEqual(
     trend.map(({ Laporan, Disetujui }) => [Laporan, Disetujui]),
     [
-      [1, 1],
-      [2, 1],
-      [0, 0],
-      [1, 1],
+      [2, 0],
       [1, 0],
+      [2, 0],
+    ]
+  );
+});
+
+test('pre-start, invalid, and future reports neither count nor alter the range', () => {
+  const trend = buildRecentWeeklyReportTrend(
+    [
+      report('2026-07-19T23:59:59+07:00', 'APPROVED'),
+      report('invalid-date', 'APPROVED'),
+      report('2026-08-10T13:00:00+07:00'),
+      report('2026-08-17T00:00:00+07:00'),
+    ],
+    new Date('2026-08-10T12:00:00+07:00')
+  );
+
+  assert.deepEqual(
+    trend.map(point => point.name),
+    [
+      'Mgu 20/07',
+      'Mgu 27/07',
+      'Mgu 03/08',
+      'Mgu 10/08',
+    ]
+  );
+  assert.ok(trend.every(point =>
+    point.Laporan === 0 && point.Disetujui === 0
+  ));
+});
+
+test('approvals use reviewed_at with the documented legacy fallback', () => {
+  const trend = buildRecentWeeklyReportTrend(
+    [
+      report('2026-07-20T10:00:00+07:00', 'APPROVED', '2026-07-30T11:00:00+07:00'),
+      report('2026-07-21T10:00:00+07:00', 'APPROVED'),
+      report('2026-07-22T10:00:00+07:00', 'APPROVED', 'invalid-date'),
+      report('2026-07-23T10:00:00+07:00', 'SUBMITTED', '2026-07-30T10:00:00+07:00'),
+      report('2026-07-19T10:00:00+07:00', 'APPROVED', '2026-07-30T10:00:00+07:00'),
+      report('2026-07-24T10:00:00+07:00', 'APPROVED', '2026-08-04T10:00:00+07:00'),
+    ],
+    referenceDate
+  );
+
+  assert.deepEqual(
+    trend.map(({ Laporan, Disetujui }) => [Laporan, Disetujui]),
+    [
+      [5, 2],
+      [0, 1],
       [0, 0],
     ]
   );
-  assert.equal(new Set(trend.map(point => point.name)).size, trend.length);
+});
+
+test('range and bucketing remain stable across month and year boundaries', () => {
+  const trend = buildRecentWeeklyReportTrend(
+    [
+      report('2026-12-27T23:59:59+07:00'),
+      report('2026-12-28T00:00:00+07:00', 'APPROVED'),
+      report('2027-01-03T23:59:59+07:00'),
+      report('2027-01-04T00:00:00+07:00', 'APPROVED'),
+    ],
+    new Date('2027-01-04T12:00:00+07:00')
+  );
+
+  assert.equal(trend.length, 25);
+  assert.equal(trend[0].name, 'Mgu 20/07');
+  assert.deepEqual(
+    trend.slice(-3),
+    [
+      { name: 'Mgu 21/12', Laporan: 1, Disetujui: 0 },
+      { name: 'Mgu 28/12', Laporan: 2, Disetujui: 1 },
+      { name: 'Mgu 04/01', Laporan: 1, Disetujui: 1 },
+    ]
+  );
 });
 
 test('chart renders gradient areas and smooth lines for both series', () => {
@@ -97,4 +159,6 @@ test('chart renders gradient areas and smooth lines for both series', () => {
   assert.match(source, /<Area[\s\S]*dataKey="Disetujui"/);
   assert.match(source, /<Line\s+type="monotone"\s+dataKey="Laporan"/);
   assert.match(source, /<Line\s+type="monotone"\s+dataKey="Disetujui"/);
+  assert.match(source, /interval="preserveStartEnd"/);
+  assert.match(source, /minTickGap=\{24\}/);
 });
