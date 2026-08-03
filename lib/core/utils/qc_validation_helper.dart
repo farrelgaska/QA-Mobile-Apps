@@ -49,7 +49,7 @@ class QCValidationHelper {
       }
     }
 
-    final lowerVal = valStr.trim().toLowerCase();
+    valStr.trim().toLowerCase();
 
     // 2. If it's a choice or booleanCheck — staff selects the option, Admin evaluates standard compliance
     if (item.inputType == QCInputType.choice || item.inputType == QCInputType.booleanCheck) {
