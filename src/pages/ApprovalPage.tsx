@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReports } from '../app/ReportsContext';
 import { PageTransition } from '../components/layout/PageTransition';
-import type { QCReport, ChecklistItem } from '../types/report';
+import type { QCReport } from '../types/report';
 import { Card, CardContent } from '../components/ui/Card';
 import { motion } from 'framer-motion';
 import { Table, TableHeader, TableBody, TableRow, TableCell } from '../components/ui/Table';
@@ -11,7 +11,13 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Modal } from '../components/ui/Modal';
 import { StandardResultBadge } from '../components/reports/StandardResultBadge';
-import { isAdminDecisionProcessable } from '../utils/materialReportPresentation';
+import { IncompleteAdminDecisionModal } from '../components/reports/IncompleteAdminDecisionModal';
+import {
+  adminDecisionValidationError,
+  adminReviewReadiness,
+  isAdminDecisionProcessable,
+  sampleAdminReviewItems,
+} from '../utils/materialReportPresentation';
 import {
   Search,
   CheckCircle,
@@ -51,6 +57,7 @@ export const ApprovalPage: React.FC = () => {
   // Revision modal state
   const [revisionTarget, setRevisionTarget] = useState<QCReport | null>(null);
   const [revisionNote, setRevisionNote] = useState('');
+  const [isIncompleteDecisionModalOpen, setIsIncompleteDecisionModalOpen] = useState(false);
 
   // Toast feedback
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -74,21 +81,80 @@ export const ApprovalPage: React.FC = () => {
   });
 
   // Handle Approve
-  const handleApproveConfirm = () => {
-    if (!approveTarget) return;
-    approveReport(approveTarget.id, approveNote || undefined);
-    showToast('success', `Laporan ${approveTarget.id} berhasil disetujui.`);
-    setApproveTarget(null);
+  const reviewItemsForReport = (report: QCReport) =>
+    report.type === 'material' && (report.samples?.length ?? 0) > 0
+      ? sampleAdminReviewItems(report)
+      : report.checklistItems;
+
+  const hasIncompleteDecision = (report: QCReport) =>
+    adminReviewReadiness(reviewItemsForReport(report), '').pendingItems.length > 0;
+
+  const openApproveTarget = (report: QCReport) => {
+    if (hasIncompleteDecision(report)) {
+      setIsIncompleteDecisionModalOpen(true);
+      return;
+    }
+    setApproveTarget(report);
     setApproveNote('');
   };
 
-  // Handle Revision
-  const handleRevisionConfirm = () => {
-    if (!revisionTarget || !revisionNote.trim()) return;
-    requestRevision(revisionTarget.id, revisionNote.trim());
-    showToast('error', `Laporan ${revisionTarget.id} dikembalikan untuk perbaikan.`);
-    setRevisionTarget(null);
+  const openRevisionTarget = (report: QCReport) => {
+    if (hasIncompleteDecision(report)) {
+      setIsIncompleteDecisionModalOpen(true);
+      return;
+    }
+    setRevisionTarget(report);
     setRevisionNote('');
+  };
+
+  const handleApproveConfirm = async () => {
+    if (!approveTarget) return;
+    const validationError = adminDecisionValidationError(
+      reviewItemsForReport(approveTarget),
+      'approve'
+    );
+    if (hasIncompleteDecision(approveTarget)) {
+      setIsIncompleteDecisionModalOpen(true);
+      return;
+    }
+    if (validationError) {
+      showToast('error', validationError);
+      return;
+    }
+    try {
+      await approveReport(approveTarget.id, approveNote || undefined);
+      showToast('success', `Laporan ${approveTarget.id} berhasil disetujui.`);
+      setApproveTarget(null);
+      setApproveNote('');
+    } catch (error) {
+      showToast('error', error instanceof Error ? error.message : 'Gagal menyetujui laporan.');
+    }
+  };
+
+  // Handle Revision
+  const handleRevisionConfirm = async () => {
+    if (!revisionTarget) return;
+    const validationError = adminDecisionValidationError(
+      reviewItemsForReport(revisionTarget),
+      'requestRevision',
+      revisionNote
+    );
+    if (hasIncompleteDecision(revisionTarget)) {
+      setIsIncompleteDecisionModalOpen(true);
+      return;
+    }
+    if (validationError) {
+      showToast('error', validationError);
+      return;
+    }
+    try {
+      await requestRevision(revisionTarget.id, revisionNote.trim());
+      showToast('success', `Laporan ${revisionTarget.id} dikembalikan untuk perbaikan.`);
+      setRevisionTarget(null);
+      setRevisionNote('');
+    } catch (error) {
+      showToast('error', error instanceof Error ? error.message : 'Gagal meminta perbaikan.');
+    }
   };
 
   return (
@@ -214,7 +280,7 @@ export const ApprovalPage: React.FC = () => {
                   </TableRow>
                 ) : (
                   filtered.map((rep) => {
-                    const hasFailures = rep.checklistItems.some(c => c.result === 'FAIL');
+                    const hasFailures = reviewItemsForReport(rep).some(c => c.result === 'FAIL');
                     return (
                       <TableRow key={rep.id} className="hover:bg-amber-50/30 group">
                         {/* ID */}
@@ -281,7 +347,7 @@ export const ApprovalPage: React.FC = () => {
                             {/* Approve */}
                             <button
                               id={`approve-${rep.id}`}
-                              onClick={() => { setApproveTarget(rep); setApproveNote(''); }}
+                              onClick={() => openApproveTarget(rep)}
                               className="p-1.5 rounded-lg text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 transition-all"
                               title="Setujui"
                             >
@@ -290,7 +356,7 @@ export const ApprovalPage: React.FC = () => {
                             {/* Revision */}
                             <button
                               id={`revise-${rep.id}`}
-                              onClick={() => { setRevisionTarget(rep); setRevisionNote(''); }}
+                              onClick={() => openRevisionTarget(rep)}
                               className="p-1.5 rounded-lg text-rose-400 hover:text-rose-700 hover:bg-rose-50 transition-all"
                               title="Minta Perbaikan"
                             >
@@ -356,7 +422,7 @@ export const ApprovalPage: React.FC = () => {
             </div>
 
             {/* Checklist outcomes inform the Admin decision without blocking it. */}
-            {approveTarget.checklistItems.some((c: ChecklistItem) => c.result === 'FAIL') && (
+            {reviewItemsForReport(approveTarget).some(c => c.result === 'FAIL') && (
               <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 leading-relaxed">
                 <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
                 <span>
@@ -364,12 +430,10 @@ export const ApprovalPage: React.FC = () => {
                 </span>
               </div>
             )}
-            {approveTarget.checklistItems.some((c: ChecklistItem) => c.result === 'NEEDS_REVIEW') && (
-              <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800 leading-relaxed">
-                <AlertCircle className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
-                <span>
-                  Terdapat parameter yang masih berstatus Review. Status ini tetap ditampilkan sebagai informasi dan tidak membatasi keputusan akhir Admin.
-                </span>
+            {adminReviewReadiness(reviewItemsForReport(approveTarget), approveNote).failedItemsMissingAdminNote.length > 0 && (
+              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 leading-relaxed">
+                <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <span>Semua parameter Gagal harus memiliki Catatan Admin.</span>
               </div>
             )}
 
@@ -409,8 +473,10 @@ export const ApprovalPage: React.FC = () => {
               onClick={handleRevisionConfirm}
               disabled={
                 !revisionNote.trim() ||
-                (revisionTarget !== null && !revisionTarget.checklistItems.some(i => i.result === 'FAIL')) ||
-                (revisionTarget !== null && revisionTarget.checklistItems.some(i => i.result === 'FAIL' && !i.adminNote?.trim()))
+                (revisionTarget !== null && !adminReviewReadiness(
+                  reviewItemsForReport(revisionTarget),
+                  revisionNote
+                ).canRequestRevision)
               }
             >
               <RefreshCw className="h-4 w-4 mr-1.5" />
@@ -456,13 +522,14 @@ export const ApprovalPage: React.FC = () => {
                 }`}
                 required
               />
-              {revisionTarget !== null && !revisionTarget.checklistItems.some(i => i.result === 'FAIL') && (
+              {adminReviewReadiness(reviewItemsForReport(revisionTarget), revisionNote).pendingItems.length === 0 &&
+                !reviewItemsForReport(revisionTarget).some(i => i.result === 'FAIL') && (
                 <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   Minta Perbaikan ditolak: minimal harus ada satu parameter yang ditandai Gagal.
                 </p>
               )}
-              {revisionTarget !== null && revisionTarget.checklistItems.some(i => i.result === 'FAIL' && !i.adminNote?.trim()) && (
+              {adminReviewReadiness(reviewItemsForReport(revisionTarget), revisionNote).failedItemsMissingAdminNote.length > 0 && (
                 <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   Minta Perbaikan ditolak: semua parameter Gagal harus memiliki Catatan Admin.
@@ -478,6 +545,11 @@ export const ApprovalPage: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      <IncompleteAdminDecisionModal
+        isOpen={isIncompleteDecisionModalOpen}
+        onClose={() => setIsIncompleteDecisionModalOpen(false)}
+      />
     </PageTransition>
   );
 };

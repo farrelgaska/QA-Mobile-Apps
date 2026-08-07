@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import type { QCReport, StandardResult } from '../types/report';
 import { mapToSharedReport } from '../utils/status';
 import {
+  executeValidatedAdminDecision,
   isAdminDecisionProcessable,
   sampleAdminReviewItems,
   updateSampleAdminReview,
@@ -202,13 +203,18 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Commit the workflow status only after the backend accepts the PATCH.
     try {
-      const updated = await approveReportApi(
-        id,
-        note,
-        'Admin',
-        updatedChecklist,
-        updatedSamples,
-        signedUrlsRef.current
+      const updated = await executeValidatedAdminDecision(
+        reviewItemsForReport(report),
+        'approve',
+        '',
+        () => approveReportApi(
+          id,
+          note,
+          'Admin',
+          updatedChecklist,
+          updatedSamples,
+          signedUrlsRef.current
+        )
       );
       applyLocalUpdate(mapToSharedReport(updated));
     } catch (err) {
@@ -228,37 +234,23 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error(`Laporan berstatus "${report.status}" tidak dapat dimintakan tindak lanjut.`);
     }
 
-    if (!adminNote?.trim()) {
-      throw new Error('Catatan instruksi tindak lanjut wajib diisi.');
-    }
-
-    // Enforce: at least one FAIL item must exist
-    const failItems = reviewItemsForReport(report).filter(
-      item => item.result === 'FAIL'
-    );
-    if (failItems.length === 0) {
-      throw new Error('Tindak lanjut diblokir: harus ada minimal satu parameter yang ditandai Gagal.');
-    }
-
-    // Enforce: every FAIL item must have an Admin note
-    const failedWithoutNotes = failItems.filter(i => !i.adminNote?.trim());
-    if (failedWithoutNotes.length > 0) {
-      const names = failedWithoutNotes.map(i => i.name).join(', ');
-      throw new Error(`Setiap parameter Gagal harus memiliki Catatan Admin (${names}).`);
-    }
-
     const updatedChecklist = buildApiChecklistItems(report);
     const updatedSamples = buildApiSamples(report);
 
     // Commit the workflow status only after the backend accepts the PATCH.
     try {
-      const updated = await requestFollowUpApi(
-        id,
+      const updated = await executeValidatedAdminDecision(
+        reviewItemsForReport(report),
+        'requestRevision',
         adminNote,
-        'Admin',
-        updatedChecklist,
-        updatedSamples,
-        signedUrlsRef.current
+        () => requestFollowUpApi(
+          id,
+          adminNote,
+          'Admin',
+          updatedChecklist,
+          updatedSamples,
+          signedUrlsRef.current
+        )
       );
       applyLocalUpdate(mapToSharedReport(updated));
     } catch (err) {

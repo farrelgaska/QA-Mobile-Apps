@@ -8,7 +8,10 @@ import {
   requestFollowUpApi,
 } from '../src/services/reportApi.ts';
 import {
+  ADMIN_DECISIONS_REQUIRED_MESSAGE,
+  adminDecisionValidationError,
   adminReviewReadiness,
+  executeValidatedAdminDecision,
   hasPersistedOutOfStandard,
   inspectionInformationRows,
   isAdminDecisionProcessable,
@@ -155,6 +158,26 @@ test('shows one sorted sample page with previous/next boundaries and indicator',
   assert.equal(lastPage.nextSampleId, null);
 });
 
+test('incomplete Admin decisions do not block forward or backward sample navigation', () => {
+  const samples = [
+    sample('sample-1', 1, 'WITHIN_STANDARD', 'NEEDS_REVIEW'),
+    sample('sample-2', 2, 'OUT_OF_STANDARD', 'NEEDS_REVIEW'),
+  ];
+
+  const sampleOne = persistedSamplePage(samples, 'sample-1');
+  assert.equal(sampleOne.nextSampleId, 'sample-2');
+
+  const sampleTwo = persistedSamplePage(samples, sampleOne.nextSampleId!);
+  assert.equal(sampleTwo.currentSample?.id, 'sample-2');
+  assert.equal(sampleTwo.previousSampleId, 'sample-1');
+
+  const backToSampleOne = persistedSamplePage(
+    samples,
+    sampleTwo.previousSampleId!
+  );
+  assert.equal(backToSampleOne.currentSample?.id, 'sample-1');
+});
+
 test('identical checklist IDs use independent sample-scoped Admin review keys', () => {
   const report = materialReport({
     checklistItems: [{
@@ -236,7 +259,7 @@ test('editing one sample never mutates another sample or a shared answer referen
   );
 });
 
-test('sample navigation restores each sample local Admin decision and note', () => {
+test('forward and backward navigation preserve each sample Admin decision and note', () => {
   let samples = [
     sample('sample-1', 1, 'WITHIN_STANDARD'),
     {
@@ -332,7 +355,7 @@ test('failed parameters require a non-whitespace Admin note', () => {
   assert.equal(parameterAdminNoteState('PASS', '').missing, false);
 });
 
-test('PASS, FAIL, and NEEDS_REVIEW parameters remain approvable', () => {
+test('approval and revision require complete decisions and notes for failures', () => {
   const item = {
     id: 'parameter-1',
     name: 'Dimensi',
@@ -346,13 +369,14 @@ test('PASS, FAIL, and NEEDS_REVIEW parameters remain approvable', () => {
   const empty = adminReviewReadiness([item], 'Perbaiki pengiriman');
   assert.equal(empty.canRequestRevision, false);
   assert.equal(empty.failedItemsMissingAdminNote.length, 1);
-  assert.equal(empty.canApprove, true);
+  assert.equal(empty.canApprove, false);
 
   const whitespace = adminReviewReadiness(
     [{ ...item, adminNote: '   ' }],
     'Perbaiki pengiriman'
   );
   assert.equal(whitespace.canRequestRevision, false);
+  assert.equal(whitespace.canApprove, false);
 
   const complete = adminReviewReadiness(
     [{ ...item, adminNote: 'Ukur ulang dimensi material.' }],
@@ -380,8 +404,196 @@ test('PASS, FAIL, and NEEDS_REVIEW parameters remain approvable', () => {
     [{ ...item, result: 'NEEDS_REVIEW', adminNote: '' }],
     ''
   );
-  assert.equal(pending.canApprove, true);
+  assert.equal(pending.canApprove, false);
   assert.equal(pending.canRequestRevision, false);
+});
+
+test('both actions are blocked when one Admin decision is missing in any sample', () => {
+  const report = materialReport({
+    checklistItems: [{
+      id: 'parameter-1',
+      name: 'Dimensi',
+      standardLabel: '10 mm',
+      actualValue: '8.9',
+      result: 'NEEDS_REVIEW',
+      photoUrls: [],
+    }],
+    samples: [
+      sample('sample-1', 1, 'WITHIN_STANDARD', 'PASS'),
+      {
+        ...sample('sample-2', 2, 'OUT_OF_STANDARD'),
+        checklist_answers: [{
+          ...sample('sample-2', 2, 'OUT_OF_STANDARD').checklist_answers[0],
+          checklist_item_id: 'parameter-1',
+          admin_evaluation: undefined,
+        }],
+      },
+    ],
+  });
+  const items = sampleAdminReviewItems(report);
+
+  assert.equal(items.length, 2);
+  assert.equal(items[0].result, 'PASS');
+  assert.equal(items[1].result, 'NEEDS_REVIEW');
+  assert.equal(
+    adminDecisionValidationError(items, 'approve'),
+    ADMIN_DECISIONS_REQUIRED_MESSAGE
+  );
+  assert.equal(
+    adminDecisionValidationError(items, 'requestRevision', 'Perbaiki sampel'),
+    ADMIN_DECISIONS_REQUIRED_MESSAGE
+  );
+});
+
+test('both actions proceed when all decisions and required notes are complete', async () => {
+  const items = [{
+    id: 'parameter-1',
+    name: 'Dimensi',
+    standardLabel: '10 mm',
+    actualValue: '8.9',
+    result: 'FAIL' as const,
+    photoUrls: [],
+    adminNote: 'Ukur ulang dimensi.',
+  }];
+  let mutations = 0;
+  const mutation = async () => {
+    mutations += 1;
+    return 'sent';
+  };
+
+  assert.equal(
+    await executeValidatedAdminDecision(items, 'approve', '', mutation),
+    'sent'
+  );
+  assert.equal(
+    await executeValidatedAdminDecision(
+      items,
+      'requestRevision',
+      'Perbaiki pengiriman',
+      mutation
+    ),
+    'sent'
+  );
+  assert.equal(mutations, 2);
+});
+
+test('no API mutation is sent when ordered Admin validation fails', async () => {
+  const incomplete = [{
+    id: 'parameter-1',
+    name: 'Dimensi',
+    standardLabel: '10 mm',
+    actualValue: '8.9',
+    result: 'NEEDS_REVIEW' as const,
+    photoUrls: [],
+  }];
+  let mutations = 0;
+  const mutation = async () => {
+    mutations += 1;
+  };
+
+  await assert.rejects(
+    executeValidatedAdminDecision(incomplete, 'approve', '', mutation),
+    new RegExp(ADMIN_DECISIONS_REQUIRED_MESSAGE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  );
+  await assert.rejects(
+    executeValidatedAdminDecision(
+      incomplete,
+      'requestRevision',
+      'Perbaiki pengiriman',
+      mutation
+    ),
+    new RegExp(ADMIN_DECISIONS_REQUIRED_MESSAGE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  );
+  assert.equal(mutations, 0);
+});
+
+test('incomplete decision pop-up is wired to both Admin actions', () => {
+  const dialogSource = fs.readFileSync(new URL(
+    '../src/components/reports/IncompleteAdminDecisionModal.tsx',
+    import.meta.url
+  ), 'utf8');
+  const detailSource = fs.readFileSync(new URL(
+    '../src/pages/ReportDetailPage.tsx',
+    import.meta.url
+  ), 'utf8');
+  const approvalSource = fs.readFileSync(new URL(
+    '../src/pages/ApprovalPage.tsx',
+    import.meta.url
+  ), 'utf8');
+
+  assert.match(dialogSource, /title="Keputusan Admin Belum Lengkap"/);
+  assert.match(
+    dialogSource,
+    /Lengkapi seluruh Keputusan Admin pada setiap parameter di semua sampel[\s\S]*dengan status Lulus atau Gagal sebelum melanjutkan\./
+  );
+  assert.match(dialogSource, />\s*Mengerti\s*</);
+  assert.match(detailSource, /openApproveModal[\s\S]*validateAction\('approve'\)/);
+  assert.match(detailSource, /openRevisionModal[\s\S]*validateAction\('requestRevision'\)/);
+  assert.match(
+    detailSource,
+    /pendingItems\.length > 0[\s\S]*setIsIncompleteDecisionModalOpen\(true\)/
+  );
+  assert.match(approvalSource, /openApproveTarget[\s\S]*hasIncompleteDecision/);
+  assert.match(approvalSource, /openRevisionTarget[\s\S]*hasIncompleteDecision/);
+});
+
+test('dismissing the incomplete decision pop-up changes only pop-up visibility', () => {
+  const dialogSource = fs.readFileSync(new URL(
+    '../src/components/reports/IncompleteAdminDecisionModal.tsx',
+    import.meta.url
+  ), 'utf8');
+  const detailSource = fs.readFileSync(new URL(
+    '../src/pages/ReportDetailPage.tsx',
+    import.meta.url
+  ), 'utf8');
+  const approvalSource = fs.readFileSync(new URL(
+    '../src/pages/ApprovalPage.tsx',
+    import.meta.url
+  ), 'utf8');
+
+  assert.match(dialogSource, /onClick=\{onClose\}/);
+  assert.match(
+    detailSource,
+    /onClose=\{\(\) => setIsIncompleteDecisionModalOpen\(false\)\}/
+  );
+  assert.match(
+    approvalSource,
+    /onClose=\{\(\) => setIsIncompleteDecisionModalOpen\(false\)\}/
+  );
+  assert.doesNotMatch(
+    dialogSource,
+    /adminFeedback|approveNote|revisionNote|updateSampleAdminReview/
+  );
+});
+
+test('incomplete decision pop-up condition is false when all decisions are complete', () => {
+  const completeItems = [{
+    id: 'parameter-1',
+    name: 'Dimensi',
+    standardLabel: '10 mm',
+    actualValue: '10',
+    result: 'PASS' as const,
+    photoUrls: [],
+  }, {
+    id: 'parameter-2',
+    name: 'Kemasan',
+    standardLabel: 'Utuh',
+    actualValue: 'Retak',
+    result: 'FAIL' as const,
+    photoUrls: [],
+    adminNote: 'Kemasan harus diganti.',
+  }];
+
+  assert.equal(adminReviewReadiness(completeItems, '').pendingItems.length, 0);
+  assert.equal(adminDecisionValidationError(completeItems, 'approve'), null);
+  assert.equal(
+    adminDecisionValidationError(
+      completeItems,
+      'requestRevision',
+      'Ganti kemasan retak.'
+    ),
+    null
+  );
 });
 
 test('only SUBMITTED reports are processable for an Admin decision', () => {
@@ -391,7 +603,7 @@ test('only SUBMITTED reports are processable for an Admin decision', () => {
   assert.equal(isAdminDecisionProcessable('APPROVED'), false);
 });
 
-test('report decision UI treats failed and pending parameters as informational', () => {
+test('report decision UI and context enforce complete Admin decisions', () => {
   const detailSource = fs.readFileSync(new URL(
     '../src/pages/ReportDetailPage.tsx',
     import.meta.url
@@ -408,14 +620,17 @@ test('report decision UI treats failed and pending parameters as informational',
     'Terdapat parameter yang ditandai Gagal. Admin tetap dapat meminta perbaikan atau menyetujui laporan berdasarkan hasil evaluasi.';
 
   assert.match(detailSource, new RegExp(informationalMessage));
-  assert.match(detailSource, /disabled=\{!isEditable \|\| isApproving \|\| isRequestingRevision\}/);
-  assert.match(detailSource, /tidak membatasi keputusan akhir Admin/);
+  assert.match(detailSource, /validateAction\('approve'\)/);
+  assert.match(detailSource, /validateAction\('requestRevision'\)/);
+  assert.doesNotMatch(detailSource, /focusSampleId/);
   assert.doesNotMatch(detailSource, /ubah ke Lulus atau minta perbaikan/);
   assert.match(
     approvalSource,
     /!isAdminDecisionProcessable\(approveTarget\.status\)/
   );
-  assert.match(approvalSource, /tidak membatasi keputusan akhir Admin/);
+  assert.match(approvalSource, /adminDecisionValidationError/);
+  assert.match(approvalSource, /await approveReport/);
+  assert.match(approvalSource, /await requestRevision/);
   assert.doesNotMatch(approvalSource, /Persetujuan Ditolak/);
   const approveContext = contextSource.slice(
     contextSource.indexOf('const approveReport ='),
@@ -425,8 +640,27 @@ test('report decision UI treats failed and pending parameters as informational',
     approveContext,
     /!isAdminDecisionProcessable\(report\.status\)/
   );
-  assert.doesNotMatch(approveContext, /\.result/);
-  assert.doesNotMatch(contextSource, /item\.result !== 'PASS'/);
+  assert.match(approveContext, /executeValidatedAdminDecision/);
+  assert.match(contextSource, /reviewItemsForReport\(report\)/);
+});
+
+test('sample pager is independent from Admin action validation', () => {
+  const sampleSource = fs.readFileSync(new URL(
+    '../src/components/reports/MaterialSampleEvaluation.tsx',
+    import.meta.url
+  ), 'utf8');
+
+  assert.match(
+    sampleSource,
+    /onClick=\{\(\) => page\.previousSampleId &&[\s\S]*setSelectedSampleId\(page\.previousSampleId\)\}/
+  );
+  assert.match(
+    sampleSource,
+    /onClick=\{\(\) => page\.nextSampleId &&[\s\S]*setSelectedSampleId\(page\.nextSampleId\)\}/
+  );
+  assert.match(sampleSource, /disabled=\{!page\.previousSampleId\}/);
+  assert.match(sampleSource, /disabled=\{!page\.nextSampleId\}/);
+  assert.doesNotMatch(sampleSource, /validateAction|adminDecisionValidation|focusSampleId/);
 });
 
 test('multi-sample presentation provides separate Staff and editable Admin notes', () => {
@@ -636,7 +870,7 @@ test('action eligibility evaluates Admin decisions across every sample', () => {
     sampleAdminReviewItems(report),
     'Perbaiki sampel gagal'
   );
-  assert.equal(missingNote.canApprove, true);
+  assert.equal(missingNote.canApprove, false);
   assert.equal(missingNote.canRequestRevision, false);
   assert.equal(missingNote.failedItemsMissingAdminNote.length, 1);
 
@@ -971,7 +1205,7 @@ test('failed review PATCH cannot leave an optimistic revision status', () => {
   );
   assert.match(
     requestRevisionSource,
-    /await requestFollowUpApi[\s\S]*applyLocalUpdate/
+    /await executeValidatedAdminDecision[\s\S]*requestFollowUpApi[\s\S]*applyLocalUpdate/
   );
   assert.match(
     requestRevisionSource,

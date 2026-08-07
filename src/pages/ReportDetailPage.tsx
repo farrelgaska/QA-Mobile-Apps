@@ -11,9 +11,11 @@ import { StandardResultBadge } from '../components/reports/StandardResultBadge';
 import { ChecklistEvaluationTable } from '../components/reports/ChecklistEvaluationTable';
 import { InspectionInformation } from '../components/reports/InspectionInformation';
 import { MaterialSampleEvaluation } from '../components/reports/MaterialSampleEvaluation';
+import { IncompleteAdminDecisionModal } from '../components/reports/IncompleteAdminDecisionModal';
 import { getReportStatusLabel } from '../utils/status';
 import { workQcDataRows } from '../utils/workReportPresentation';
 import {
+  adminDecisionValidationError,
   adminReviewReadiness,
   isAdminDecisionProcessable,
   sampleAdminReviewItems,
@@ -50,6 +52,7 @@ export const ReportDetailPage: React.FC = () => {
   // Modals state
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
+  const [isIncompleteDecisionModalOpen, setIsIncompleteDecisionModalOpen] = useState(false);
   // Action loading states
   const [isApproving, setIsApproving] = useState(false);
   const [isRequestingRevision, setIsRequestingRevision] = useState(false);
@@ -65,8 +68,42 @@ export const ReportDetailPage: React.FC = () => {
     }
   }, [report?.adminNote]);
 
+  const validateAction = (action: 'approve' | 'requestRevision'): boolean => {
+    if (!report) return false;
+    const items =
+      report.type === 'material' && (report.samples?.length ?? 0) > 0
+        ? sampleAdminReviewItems(report)
+        : report.checklistItems;
+    const readiness = adminReviewReadiness(items, adminFeedback);
+    if (readiness.pendingItems.length > 0) {
+      setIsIncompleteDecisionModalOpen(true);
+      return false;
+    }
+    const validationError = adminDecisionValidationError(
+      items,
+      action,
+      adminFeedback
+    );
+    if (!validationError) return true;
+
+    setActionError(validationError);
+    return false;
+  };
+
+  const openApproveModal = () => {
+    if (validateAction('approve')) setIsApproveModalOpen(true);
+  };
+
+  const openRevisionModal = () => {
+    if (validateAction('requestRevision')) setIsRevisionModalOpen(true);
+  };
+
   const handleApprove = async () => {
     if (!report) return;
+    if (!validateAction('approve')) {
+      setIsApproveModalOpen(false);
+      return;
+    }
     setIsApproving(true);
     setActionError(null);
     try {
@@ -82,6 +119,10 @@ export const ReportDetailPage: React.FC = () => {
 
   const handleRequestRevision = async () => {
     if (!report) return;
+    if (!validateAction('requestRevision')) {
+      setIsRevisionModalOpen(false);
+      return;
+    }
     setIsRequestingRevision(true);
     setActionError(null);
     try {
@@ -138,7 +179,6 @@ export const ReportDetailPage: React.FC = () => {
     failedItems: failItems,
     failedItemsMissingAdminNote: failItemsMissingNote,
     pendingItems,
-    canRequestRevision,
   } = reviewReadiness;
   const hasFailures = failItems.length > 0;
   const hasPendingReviews = pendingItems.length > 0;
@@ -404,18 +444,8 @@ export const ReportDetailPage: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  {hasPendingReviews && (
-                    <div className="p-3.5 bg-blue-50 border border-blue-200 text-blue-800 text-xs rounded-xl leading-relaxed">
-                      <div className="flex items-start gap-2">
-                        <Info className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
-                        <span>
-                          Terdapat {pendingItems.length} parameter yang masih berstatus Review. Status ini tetap ditampilkan sebagai informasi dan tidak membatasi keputusan akhir Admin.
-                        </span>
-                      </div>
-                    </div>
-                  )}
                   {/* Follow-up validation block — only show when relevant */}
-                  {revisionBlockReasons.length > 0 && hasFailures && (
+                  {revisionBlockReasons.length > 0 && (
                     <div className="p-3.5 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl leading-relaxed">
                       <div className="flex items-center gap-2 font-bold mb-1.5">
                         <Info className="h-4 w-4 text-amber-500 flex-shrink-0" />
@@ -445,9 +475,9 @@ export const ReportDetailPage: React.FC = () => {
                     <Button
                       id="btn-request-revision"
                       variant="danger"
-                      onClick={() => setIsRevisionModalOpen(true)}
+                      onClick={openRevisionModal}
                       className="flex-1 shadow-sm"
-                      disabled={!canRequestRevision || isApproving || isRequestingRevision}
+                      disabled={isApproving || isRequestingRevision}
                     >
                       {isRequestingRevision
                         ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -457,7 +487,7 @@ export const ReportDetailPage: React.FC = () => {
                     <Button
                       id="btn-approve"
                       variant="primary"
-                      onClick={() => setIsApproveModalOpen(true)}
+                      onClick={openApproveModal}
                       className="flex-1 bg-[#006B5A] hover:bg-[#005244] shadow-sm shadow-[#006B5A]/20"
                       disabled={!isEditable || isApproving || isRequestingRevision}
                     >
@@ -553,6 +583,11 @@ export const ReportDetailPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      <IncompleteAdminDecisionModal
+        isOpen={isIncompleteDecisionModalOpen}
+        onClose={() => setIsIncompleteDecisionModalOpen(false)}
+      />
     </PageTransition>
   );
 };

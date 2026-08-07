@@ -37,6 +37,11 @@ export interface AdminReviewReadiness {
   canRequestRevision: boolean;
 }
 
+export type AdminDecisionAction = 'approve' | 'requestRevision';
+
+export const ADMIN_DECISIONS_REQUIRED_MESSAGE =
+  'Lengkapi seluruh Keputusan Admin pada setiap parameter di semua sampel dengan status Lulus atau Gagal sebelum melanjutkan.';
+
 export interface EvidenceCapturePresentation {
   hasMetadata: boolean;
   capturedAt: string | null;
@@ -322,17 +327,62 @@ export const adminReviewReadiness = (
   const failedItemsMissingAdminNote = failedItems.filter(item =>
     parameterAdminNoteState(item.result, item.adminNote).missing
   );
-  const pendingItems = items.filter(item => item.result === 'NEEDS_REVIEW');
+  const pendingItems = items.filter(
+    item => item.result !== 'PASS' && item.result !== 'FAIL'
+  );
   return {
     failedItems,
     failedItemsMissingAdminNote,
     pendingItems,
-    canApprove: true,
+    canApprove:
+      pendingItems.length === 0 &&
+      failedItemsMissingAdminNote.length === 0,
     canRequestRevision:
+      pendingItems.length === 0 &&
       failedItems.length > 0 &&
       failedItemsMissingAdminNote.length === 0 &&
       reportLevelRevisionNote.trim().length > 0,
   };
+};
+
+export const adminDecisionValidationError = (
+  items: readonly ChecklistItem[],
+  action: AdminDecisionAction,
+  reportLevelRevisionNote = ''
+): string | null => {
+  const readiness = adminReviewReadiness(items, reportLevelRevisionNote);
+
+  if (readiness.pendingItems.length > 0) {
+    return ADMIN_DECISIONS_REQUIRED_MESSAGE;
+  }
+  if (readiness.failedItemsMissingAdminNote.length > 0) {
+    const names = readiness.failedItemsMissingAdminNote
+      .map(item => item.name)
+      .join(', ');
+    return `Setiap parameter Gagal harus memiliki Catatan Admin (${names}).`;
+  }
+  if (action === 'requestRevision' && readiness.failedItems.length === 0) {
+    return 'Tindak lanjut diblokir: harus ada minimal satu parameter yang ditandai Gagal.';
+  }
+  if (action === 'requestRevision' && !reportLevelRevisionNote.trim()) {
+    return 'Catatan instruksi tindak lanjut wajib diisi.';
+  }
+  return null;
+};
+
+export const executeValidatedAdminDecision = async <T>(
+  items: readonly ChecklistItem[],
+  action: AdminDecisionAction,
+  reportLevelRevisionNote: string,
+  mutation: () => Promise<T>
+): Promise<T> => {
+  const validationError = adminDecisionValidationError(
+    items,
+    action,
+    reportLevelRevisionNote
+  );
+  if (validationError) throw new Error(validationError);
+  return mutation();
 };
 
 export const isAdminDecisionProcessable = (
