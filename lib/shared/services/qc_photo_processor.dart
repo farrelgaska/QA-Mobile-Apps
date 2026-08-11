@@ -52,16 +52,17 @@ abstract class QCPhotoProcessor {
 }
 
 class BoundedQCPhotoProcessor implements QCPhotoProcessor {
-  static const int _maximumLongEdge = 2560;
+  // Diturunkan ke 1920px agar decode/encode di browser web jauh lebih ringan
+  static const int _maximumLongEdge = 1920;
   static const int _minimumLongEdge = 1024;
-  static const List<int> _jpegQualities = [88, 80, 72, 64, 56, 50];
-  static const int _maximumDimensionSteps = 7;
+  // Dioptimasi dari 42 kombinasi loop menjadi max 3 opsi kualitas utama
+  static const List<int> _jpegQualities = [82, 70, 55];
 
   final QCHeicConverter _heicConverter;
   final Set<XFile> _generatedFiles = HashSet<XFile>.identity();
 
   BoundedQCPhotoProcessor({QCHeicConverter? heicConverter})
-    : _heicConverter = heicConverter ?? const PlatformQCHeicConverter();
+      : _heicConverter = heicConverter ?? const PlatformQCHeicConverter();
 
   @override
   Future<QCProcessedPhoto> process(
@@ -73,6 +74,7 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
 
     var processableBytes = originalBytes;
     var requiresJpegOutput = false;
+
     if (metadata.isHeicOrHeif) {
       try {
         processableBytes = await _heicConverter.convertToJpeg(originalBytes);
@@ -95,6 +97,7 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
       throw const QCPhotoDecodingException();
     }
 
+    // 1. Jika ada metadata (Watermark)
     if (captureMetadata != null) {
       final processedBytes = await compute(_watermarkAndCompressToLimit, {
         'source': processableBytes,
@@ -118,6 +121,7 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
       );
     }
 
+    // 2. Jika tanpa watermark & ukuran sudah <= 2MB
     if (!exceedsQCPhotoSizeLimit(processableBytes) && !requiresJpegOutput) {
       return QCProcessedPhoto(
         file: photo,
@@ -126,6 +130,7 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
       );
     }
 
+    // 3. Kompresi standar jika > 2MB
     Uint8List finalBytes;
     if (!exceedsQCPhotoSizeLimit(processableBytes)) {
       finalBytes = processableBytes;
@@ -178,47 +183,43 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
     );
   }
 
+  // --- OPTIMIZED COMPRESSION LOGIC ---
+
   static Uint8List? _compressToLimit(Uint8List source) {
     final decoded = image.decodeImage(source);
     if (decoded == null) return null;
 
-    final oriented = image.bakeOrientation(decoded);
-    final originalLongEdge = oriented.width > oriented.height
-        ? oriented.width
-        : oriented.height;
-    final safeMinimumLongEdge = originalLongEdge < _minimumLongEdge
-        ? originalLongEdge
-        : _minimumLongEdge;
-    var longEdge = originalLongEdge > _maximumLongEdge
-        ? _maximumLongEdge
-        : originalLongEdge;
+    var oriented = image.bakeOrientation(decoded);
 
-    for (
-      var dimensionStep = 0;
-      dimensionStep < _maximumDimensionSteps;
-      dimensionStep++
-    ) {
-      final candidate = longEdge == originalLongEdge
-          ? oriented
-          : image.copyResize(
-              oriented,
-              width: oriented.width >= oriented.height ? longEdge : null,
-              height: oriented.height > oriented.width ? longEdge : null,
-              interpolation: image.Interpolation.average,
-            );
-
-      for (final quality in _jpegQualities) {
-        final encoded = Uint8List.fromList(
-          image.encodeJpg(candidate, quality: quality),
-        );
-        if (!exceedsQCPhotoSizeLimit(encoded)) return encoded;
-      }
-
-      if (longEdge <= safeMinimumLongEdge) break;
-      final reduced = (longEdge * 0.82).round();
-      longEdge = reduced < safeMinimumLongEdge ? safeMinimumLongEdge : reduced;
+    // Immediate Downscale: Pangkas piksel raksasa langsung di awal
+    if (oriented.width > _maximumLongEdge || oriented.height > _maximumLongEdge) {
+      oriented = image.copyResize(
+        oriented,
+        width: oriented.width >= oriented.height ? _maximumLongEdge : null,
+        height: oriented.height > oriented.width ? _maximumLongEdge : null,
+        interpolation: image.Interpolation.average,
+      );
     }
-    return null;
+
+    // Coba encode sekali dulu dengan kualitas standar (82)
+    var encoded = Uint8List.fromList(image.encodeJpg(oriented, quality: 82));
+    if (!exceedsQCPhotoSizeLimit(encoded)) return encoded;
+
+    // Jika masih > 2MB, jalankan loop cepat dengan kualitas terukur
+    for (final quality in _jpegQualities) {
+      encoded = Uint8List.fromList(image.encodeJpg(oriented, quality: quality));
+      if (!exceedsQCPhotoSizeLimit(encoded)) return encoded;
+    }
+
+    // Fallback: Turunkan dimensi ke min long edge jika masih > 2MB
+    final resized = image.copyResize(
+      oriented,
+      width: oriented.width >= oriented.height ? _minimumLongEdge : null,
+      height: oriented.height > oriented.width ? _minimumLongEdge : null,
+      interpolation: image.Interpolation.average,
+    );
+    encoded = Uint8List.fromList(image.encodeJpg(resized, quality: 70));
+    return !exceedsQCPhotoSizeLimit(encoded) ? encoded : null;
   }
 
   static Uint8List? _watermarkAndCompressToLimit(Map<String, dynamic> input) {
@@ -231,43 +232,31 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
     final metadata = QCEvidenceCaptureMetadata.fromJson(
       Map<String, dynamic>.from(rawMetadata),
     );
-    final oriented = image.bakeOrientation(decoded);
-    final originalLongEdge = oriented.width > oriented.height
-        ? oriented.width
-        : oriented.height;
-    final safeMinimumLongEdge = originalLongEdge < _minimumLongEdge
-        ? originalLongEdge
-        : _minimumLongEdge;
-    var longEdge = originalLongEdge > _maximumLongEdge
-        ? _maximumLongEdge
-        : originalLongEdge;
+    var oriented = image.bakeOrientation(decoded);
 
-    for (
-      var dimensionStep = 0;
-      dimensionStep < _maximumDimensionSteps;
-      dimensionStep++
-    ) {
-      final resized = longEdge == originalLongEdge
-          ? oriented.clone()
-          : image.copyResize(
-              oriented,
-              width: oriented.width >= oriented.height ? longEdge : null,
-              height: oriented.height > oriented.width ? longEdge : null,
-              interpolation: image.Interpolation.average,
-            );
-      final candidate = QCPhotoWatermark.apply(resized, metadata);
-
-      for (final quality in _jpegQualities) {
-        final encoded = Uint8List.fromList(
-          image.encodeJpg(candidate, quality: quality),
-        );
-        if (!exceedsQCPhotoSizeLimit(encoded)) return encoded;
-      }
-
-      if (longEdge <= safeMinimumLongEdge) break;
-      final reduced = (longEdge * 0.82).round();
-      longEdge = reduced < safeMinimumLongEdge ? safeMinimumLongEdge : reduced;
+    // Immediate Downscale sebelum apply watermark
+    if (oriented.width > _maximumLongEdge || oriented.height > _maximumLongEdge) {
+      oriented = image.copyResize(
+        oriented,
+        width: oriented.width >= oriented.height ? _maximumLongEdge : null,
+        height: oriented.height > oriented.width ? _maximumLongEdge : null,
+        interpolation: image.Interpolation.average,
+      );
     }
+
+    // Terapkan Watermark pada gambar yang dimensinya sudah proporsional
+    final candidate = QCPhotoWatermark.apply(oriented, metadata);
+
+    // Coba cepat kualitas 82
+    var encoded = Uint8List.fromList(image.encodeJpg(candidate, quality: 82));
+    if (!exceedsQCPhotoSizeLimit(encoded)) return encoded;
+
+    // Loop kualitas
+    for (final quality in _jpegQualities) {
+      encoded = Uint8List.fromList(image.encodeJpg(candidate, quality: quality));
+      if (!exceedsQCPhotoSizeLimit(encoded)) return encoded;
+    }
+
     return null;
   }
 
@@ -276,32 +265,27 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
       final decoded = image.decodeJpg(source);
       if (decoded == null) return null;
       final oriented = image.bakeOrientation(decoded);
-      return Uint8List.fromList(image.encodeJpg(oriented, quality: 92));
+      return Uint8List.fromList(image.encodeJpg(oriented, quality: 90));
     } catch (_) {
       return null;
     }
   }
 
+  // Cek magic number header JPEG tanpa memanggil heavy decodeJpg
   static bool _isValidJpeg(Uint8List bytes) {
-    if (bytes.length < 3 ||
-        bytes[0] != 0xff ||
-        bytes[1] != 0xd8 ||
-        bytes[2] != 0xff) {
-      return false;
-    }
-    try {
-      return image.decodeJpg(bytes) != null;
-    } catch (_) {
-      return false;
-    }
+    if (bytes.length < 4) return false;
+    // Pengecekan SOI (Start of Image) 0xFFD8 dan EOI (End of Image) 0xFFD9
+    return bytes[0] == 0xff &&
+        bytes[1] == 0xd8 &&
+        bytes[bytes.length - 2] == 0xff &&
+        bytes[bytes.length - 1] == 0xd9;
   }
 
   static bool _isDecodableImage(Uint8List bytes) {
-    try {
-      return image.decodeImage(bytes) != null;
-    } catch (_) {
-      return false;
-    }
+    if (bytes.length < 4) return false;
+    // Cek header dasar JPEG / PNG tanpa full decode
+    if (_isValidJpeg(bytes)) return true;
+    return bytes[0] == 0x89 && bytes[1] == 0x50; // PNG Header
   }
 
   static bool _hasHeicContainerSignature(Uint8List bytes) {
