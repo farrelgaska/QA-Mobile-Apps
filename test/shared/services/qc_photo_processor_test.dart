@@ -200,6 +200,24 @@ void main() {
       );
     },
   );
+
+  test('downscales large images exceeding 2048px to max edge 2048px prior to compression', () async {
+    final bytes = _jpeg(width: 3000, height: 2200);
+    final original = XFile.fromData(
+      bytes,
+      name: 'very_large.jpg',
+      mimeType: 'image/jpeg',
+    );
+
+    final result = await processor.process(original);
+    addTearDown(() => processor.deleteGeneratedFile(result.file));
+
+    final decoded = image.decodeJpg(result.bytes);
+    expect(decoded, isNotNull);
+    expect(decoded!.width, lessThanOrEqualTo(2048));
+    expect(decoded.height, lessThanOrEqualTo(2048));
+    expect(result.bytes.length, lessThanOrEqualTo(maxQCPhotoSizeBytes));
+  });
 }
 
 final class _FakeHeicConverter implements QCHeicConverter {
