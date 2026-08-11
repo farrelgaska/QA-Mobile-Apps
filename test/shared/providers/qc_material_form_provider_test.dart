@@ -1148,4 +1148,38 @@ void main() {
     expect(provider.localItemPhotos[1], isEmpty);
     expect(provider.localItemPhotoBytes[1], isEmpty);
   });
+
+  test(
+    'sample step validation prevents advancing to next step when mandatory parameters are unanswered',
+    () async {
+      final template = _draftTemplate();
+      final provider = QCMaterialFormProvider()
+        ..init(template.id, template: template);
+      addTearDown(provider.dispose);
+
+      final step0Error = await provider.nextStep();
+      expect(step0Error, isNull);
+      expect(provider.currentStep, 1);
+      expect(provider.isGeneralStep, isFalse);
+
+      expect(provider.isCurrentSampleComplete(), isFalse);
+      expect(
+        provider.validateCurrentSampleStep(),
+        contains('isi nilai pengujian terlebih dahulu'),
+      );
+
+      final step1Error = await provider.nextStep();
+      expect(step1Error, isNotNull);
+      expect(step1Error, contains('isi nilai pengujian terlebih dahulu'));
+      expect(provider.currentStep, 1);
+
+      provider.updateAnswer(0, '100');
+      provider.updateAnswer(1, 'Ya');
+      provider.updateAnswer(2, 'Sesuai');
+      provider.updateAnswer(3, 'Catatan ok');
+
+      expect(provider.isCurrentSampleComplete(), isTrue);
+      expect(provider.validateCurrentSampleStep(), isNull);
+    },
+  );
 }
