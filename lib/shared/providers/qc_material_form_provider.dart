@@ -1185,7 +1185,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
         }
       }
 
-      if (item.inputType == QCInputType.number) {
+      if (item.inputType == QCInputType.number && valStr.isNotEmpty) {
         if (!QCValidators.isValidNumber(valStr)) {
           return 'Form ${i + 1} - ${item.label}: masukkan angka yang valid';
         }
@@ -1212,6 +1212,18 @@ class QCMaterialFormProvider extends ChangeNotifier {
     return null;
   }
 
+  /// Validates the current sample step parameters.
+  /// Returns an error message if incomplete or invalid, or null if all parameters are filled.
+  String? validateCurrentSampleStep() {
+    if (isGeneralStep || currentSampleIndex == null) return null;
+    return validateSample(currentSampleIndex!);
+  }
+
+  /// Returns true if all mandatory parameters for the current sample step are completed.
+  bool isCurrentSampleComplete() {
+    return validateCurrentSampleStep() == null;
+  }
+
   String? validateCurrentStep() {
     if (isGeneralStep) {
       final generalError = validateGeneralInformation();
@@ -1223,7 +1235,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
       }
       return sampleCountError;
     }
-    return validateSample(currentSampleIndex!);
+    return validateCurrentSampleStep();
   }
 
   String? validateForm() {

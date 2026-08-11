@@ -887,6 +887,12 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
                       onPressed: navigationDisabled
                           ? null
                           : () async {
+                              if (!p.isGeneralStep && !p.isCurrentSampleComplete()) {
+                                final sampleError = p.validateCurrentSampleStep() ??
+                                    'Harap lengkapi semua parameter pada sampel saat ini.';
+                                AppSnackbar.warning(context, sampleError);
+                                return;
+                              }
                               final previousStep = p.currentStep;
                               final error = await p.nextStep();
                               if (!mounted) return;
