@@ -14,9 +14,25 @@ const errorHandlerMiddleware = require('./middleware/error-handler');
 
 const app = express();
 
-// Configure CORS
+// Dynamic CORS origin handler supporting Vercel previews & production
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  if (Array.isArray(CORS_ORIGINS)) {
+    if (CORS_ORIGINS.includes('*') || CORS_ORIGINS.includes(origin)) return true;
+  }
+  if (origin.endsWith('.vercel.app')) return true;
+  if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return true;
+  return false;
+};
+
 app.use(cors({
-  origin: CORS_ORIGINS,
+  origin: (origin, callback) => {
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, false);
+    }
+  },
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   credentials: true
 }));
