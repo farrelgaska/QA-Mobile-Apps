@@ -2,7 +2,10 @@
 require('./instrument');
 
 const express = require('express');
-const Sentry = require('@sentry/node'); // Import Sentry SDK
+let Sentry;
+try {
+  Sentry = require('@sentry/node');
+} catch (_) {}
 const cors = require('cors');
 const { CORS_ORIGINS } = require('./config/env');
 const healthRoutes = require('./routes/health.routes');
@@ -59,7 +62,9 @@ app.use('/uploads', uploadRoutes);
 app.use(notFoundMiddleware);
 
 // 2. PASANG SENTRY ERROR HANDLER DI SINI (SEBELUM ERROR HANDLER UTAMA LU)
-Sentry.setupExpressErrorHandler(app);
+if (Sentry && typeof Sentry.setupExpressErrorHandler === 'function') {
+  Sentry.setupExpressErrorHandler(app);
+}
 
 // Custom Error Handler Middleware lu
 app.use(errorHandlerMiddleware);

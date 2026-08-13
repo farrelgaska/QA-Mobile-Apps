@@ -17,6 +17,7 @@
     "normalize:reports": "node scripts/normalize-reports.js"
   },
   "dependencies": {
+    "@sentry/node": "^8.55.2",
     "@supabase/supabase-js": "^2.110.5",
     "@vercel/functions": "^3.7.5",
     "cors": "^2.8.5",
