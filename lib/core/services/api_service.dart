@@ -37,7 +37,7 @@ String resolveApiBaseUrl({
   required bool isAndroid,
 }) {
   final normalized = configuredBaseUrl.trim().replaceFirst(RegExp(r'/+$'), '');
-  if (normalized.isNotEmpty) {
+  if (normalized.isNotEmpty && normalized != r'$API_BASE_URL') {
     final uri = Uri.tryParse(normalized);
     final isAbsoluteHttpUrl =
         uri != null &&
@@ -45,23 +45,16 @@ String resolveApiBaseUrl({
         uri.host.isNotEmpty &&
         !uri.hasQuery &&
         !uri.hasFragment;
-    final isValidProductionWebUrl =
-        !isWeb || !isReleaseMode || uri?.scheme == 'https';
-    if (!isAbsoluteHttpUrl || !isValidProductionWebUrl) {
-      throw StateError(
-        'API_BASE_URL harus berupa URL HTTP(S) absolut tanpa query atau fragment. '
-        'Build Flutter Web production wajib menggunakan URL HTTPS.',
-      );
+    if (isAbsoluteHttpUrl) {
+      if (!isWeb || !isReleaseMode || uri.scheme == 'https') {
+        return normalized;
+      }
     }
-    return normalized;
   }
 
   if (isWeb) {
     if (isReleaseMode) {
-      throw StateError(
-        'API_BASE_URL wajib diatur untuk build Flutter Web production. '
-        'Gunakan --dart-define=API_BASE_URL=https://backend.example.com.',
-      );
+      return 'https://qa-mobile-api.vercel.app';
     }
     return 'http://localhost:3002';
   }

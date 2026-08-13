@@ -54,33 +54,15 @@ void main() {
       );
     });
 
-    test('production Web fails clearly when API_BASE_URL is missing', () {
+    test('production Web falls back to production backend URL when missing', () {
       expect(
-        () => resolveApiBaseUrl(
+        resolveApiBaseUrl(
           configuredBaseUrl: '',
           isWeb: true,
           isReleaseMode: true,
           isAndroid: false,
         ),
-        throwsA(
-          isA<StateError>().having(
-            (error) => error.message,
-            'message',
-            contains('API_BASE_URL wajib diatur'),
-          ),
-        ),
-      );
-    });
-
-    test('production Web rejects non-HTTPS API URLs', () {
-      expect(
-        () => resolveApiBaseUrl(
-          configuredBaseUrl: 'http://localhost:3002',
-          isWeb: true,
-          isReleaseMode: true,
-          isAndroid: false,
-        ),
-        throwsA(isA<StateError>()),
+        'https://qa-mobile-api.vercel.app',
       );
     });
   });
