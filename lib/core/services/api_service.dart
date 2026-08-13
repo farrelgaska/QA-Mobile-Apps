@@ -1,9 +1,8 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart'
-    show debugPrint, kIsWeb, kReleaseMode, visibleForTesting;
+    show TargetPlatform, defaultTargetPlatform, debugPrint, kIsWeb, kReleaseMode, visibleForTesting;
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
@@ -87,10 +86,7 @@ class ApiService {
 
   static bool get _isAndroid {
     if (kIsWeb) return false;
-    try {
-      return Platform.isAndroid;
-    } catch (_) {}
-    return false;
+    return defaultTargetPlatform == TargetPlatform.android;
   }
 
   String get baseUrl => resolveApiBaseUrl(
