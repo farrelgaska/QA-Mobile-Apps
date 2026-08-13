@@ -3,8 +3,8 @@ import '../core/constants/app_strings.dart';
 import '../core/theme/app_theme.dart';
 import 'router.dart';
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
