@@ -4,10 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   file_selector_linux
-<<<<<<< HEAD
   sentry_flutter
-=======
->>>>>>> 8602557114f17fb0a9c151afc5909dc6e4baf394
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
