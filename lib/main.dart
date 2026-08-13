@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'app/app.dart';
 import 'core/services/api_service.dart';
+<<<<<<< HEAD
 import 'package:sentry_flutter/sentry_flutter.dart'; // 1. Import Sentry
+=======
+>>>>>>> 8602557114f17fb0a9c151afc5909dc6e4baf394
 
 // ... import file lu yang lain ...
 
@@ -9,6 +12,7 @@ import 'package:sentry_flutter/sentry_flutter.dart'; // 1. Import Sentry
 Future<void> main() async {
   // Wajib dipanggil sebelum runApp karena main() pake async
   WidgetsFlutterBinding.ensureInitialized();
+<<<<<<< HEAD
 
   // 3. Inisialisasi Sentry
   await SentryFlutter.init(
@@ -18,4 +22,8 @@ Future<void> main() async {
     },
     appRunner: () => runApp(const MyApp()), 
   );
+=======
+  ApiService.validateConfiguration();
+  runApp(const MainApp());
+>>>>>>> 8602557114f17fb0a9c151afc5909dc6e4baf394
 }
