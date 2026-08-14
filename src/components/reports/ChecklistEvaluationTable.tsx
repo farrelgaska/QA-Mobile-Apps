@@ -101,23 +101,6 @@ export const ChecklistEvaluationTable: React.FC<ChecklistEvaluationTableProps> =
                         <X className="h-3.5 w-3.5" />
                         <span>Gagal</span>
                       </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          onUpdateItem(item.id, 'NEEDS_REVIEW', item.adminNote || '');
-                        }}
-                        className={`p-1.5 rounded-lg border transition-all duration-150 flex items-center gap-1 text-xs font-semibold ${
-                          item.result === 'NEEDS_REVIEW'
-                            ? 'bg-amber-50 border-amber-300 text-amber-750 shadow-sm'
-                            : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-600'
-                        }`}
-                        title="Set Perlu Review"
-                      >
-                        <AlertCircle className="h-3.5 w-3.5" />
-                        <span>Review</span>
-                      </button>
                     </div>
                   ) : (
                     <StandardResultBadge result={item.result} />

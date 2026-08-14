@@ -427,7 +427,6 @@ export const MaterialSampleEvaluation: React.FC<MaterialSampleEvaluationProps> =
                               {([
                                 ['PASS', 'Lulus', Check],
                                 ['FAIL', 'Gagal', X],
-                                ['NEEDS_REVIEW', 'Review', AlertCircle],
                               ] as const).map(([result, label, Icon]) => (
                                 <button
                                   key={result}
