@@ -77,7 +77,8 @@ const parseEnvironment = (environment) => {
       'DATABASE_SSL_REJECT_UNAUTHORIZED',
       environment.DATABASE_SSL_REJECT_UNAUTHORIZED,
       true
-    )
+    ),
+    ADMIN_DEMO_TOKEN: environment.ADMIN_DEMO_TOKEN?.trim() || null
   };
 };
 

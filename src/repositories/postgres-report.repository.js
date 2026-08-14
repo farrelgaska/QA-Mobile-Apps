@@ -13,6 +13,30 @@ const {
 const {
   normalizeQCEvidenceCaptureMetadata
 } = require('../contracts/qc-evidence-capture-metadata');
+const { getQCEvidenceStorage } = require('../storage/qc-evidence-storage');
+
+/**
+ * Collect all canonical object paths stored in a report aggregate.
+ * Covers: general_photos, checklist item item_photos, and sample photo_paths
+ * plus per-answer photo_paths.
+ * @param {object} report
+ * @returns {string[]}
+ */
+function collectReportPhotoPaths(report) {
+  const paths = [];
+  for (const p of report.general_photos ?? []) paths.push(p);
+  for (const item of report.checklist_items ?? []) {
+    for (const p of item.item_photos ?? []) paths.push(p);
+  }
+  for (const sample of report.samples ?? []) {
+    for (const p of sample.photo_paths ?? []) paths.push(p);
+    for (const answer of sample.checklist_answers ?? []) {
+      for (const p of answer.photo_paths ?? []) paths.push(p);
+    }
+  }
+  // Deduplicate
+  return [...new Set(paths)].filter(p => typeof p === 'string' && p.startsWith('reports/'));
+}
 
 const ROOT_COLUMNS = `id, type, template_id, form_code, title, status, staff_name,
   staff_nik, site_id, site_name, area, detail_location, general_info, staff_note,
@@ -326,14 +350,36 @@ class PostgresReportRepository {
     }
   }
 
-  async delete(id) {
-    return this._transaction(async client => {
+  async delete(id, { storageProvider = getQCEvidenceStorage } = {}) {
+    // 1. Fetch the report first so we know which photo paths to clean up.
+    const report = await this.findById(id);
+    if (!report) throw notFound(`Report with ID ${id} not found`);
+
+    const photoPaths = collectReportPhotoPaths(report);
+
+    // 2. Delete from database (CASCADE removes child rows).
+    await this._transaction(async client => {
       const result = await client.query(
         'delete from public.qc_reports where id = $1 returning id',
         [id]
       );
       if (result.rowCount === 0) throw notFound(`Report with ID ${id} not found`);
     });
+
+    // 3. Remove evidence objects from Storage (best-effort).
+    //    If Storage is unavailable or not configured, log a warning but do NOT
+    //    re-throw — the DB record is already gone and the caller should not see
+    //    a 500 for a successful delete.
+    if (photoPaths.length > 0) {
+      try {
+        await storageProvider().remove(photoPaths);
+      } catch (storageErr) {
+        console.warn(
+          `[Storage] Failed to remove ${photoPaths.length} evidence object(s) for report ${id}:`,
+          storageErr.message
+        );
+      }
+    }
   }
 }
 

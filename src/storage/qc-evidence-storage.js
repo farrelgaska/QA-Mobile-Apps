@@ -22,6 +22,14 @@ const createQCEvidenceStorage = supabaseClient => ({
     if (error) throw storageFailure('QC evidence storage upload failed');
   },
 
+  async remove(paths) {
+    if (!Array.isArray(paths) || paths.length === 0) return;
+    const { error } = await supabaseClient.storage
+      .from(QC_EVIDENCE_BUCKET)
+      .remove(paths);
+    if (error) throw storageFailure('QC evidence storage remove failed');
+  },
+
   async createSignedUrls(paths) {
     const response = await supabaseClient.storage
       .from(QC_EVIDENCE_BUCKET)

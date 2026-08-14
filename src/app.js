@@ -14,6 +14,7 @@ const templateRoutes = require('./routes/template.routes');
 const uploadRoutes = require('./routes/upload.routes');
 const notFoundMiddleware = require('./middleware/not-found');
 const errorHandlerMiddleware = require('./middleware/error-handler');
+const demoAuthMiddleware = require('./middleware/auth');
 
 const app = express();
 
@@ -54,9 +55,9 @@ app.get('/', (req, res) => {
 
 // App routes
 app.use('/health', healthRoutes);
-app.use('/reports', reportRoutes);
-app.use('/templates', templateRoutes);
-app.use('/uploads', uploadRoutes);
+app.use('/reports', demoAuthMiddleware, reportRoutes);
+app.use('/templates', demoAuthMiddleware, templateRoutes);
+app.use('/uploads', demoAuthMiddleware, uploadRoutes);
 
 // Fallbacks
 app.use(notFoundMiddleware);
