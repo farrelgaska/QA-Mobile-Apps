@@ -135,7 +135,7 @@ export const ReportsPage: React.FC = () => {
       </div>
 
       {/* Filter Card */}
-      <Card className="overflow-visible">
+      <Card className="overflow-visible relative">
         <CardContent className="py-4">
           <div className="flex items-center gap-2 mb-3">
             <Filter className="h-4 w-4 text-gray-400" />

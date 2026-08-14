@@ -206,7 +206,7 @@ export const ApprovalPage: React.FC = () => {
       </div>
 
       {/* ── Filters ──────────────────────────────── */}
-      <Card className="overflow-visible">
+      <Card className="overflow-visible relative">
         <CardContent className="py-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="md:col-span-2">
