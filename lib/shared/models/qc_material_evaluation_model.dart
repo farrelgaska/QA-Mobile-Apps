@@ -55,7 +55,7 @@ class QCMaterialSamplingDecision {
     this.stopReason,
   });
 
-  void writeToGeneralInfo(Map<String, String> generalInfo) {
+  void writeToGeneralInfo(Map<String, dynamic> generalInfo) {
     generalInfo[decisionKey] = type.apiValue;
     generalInfo[decidedAtKey] = decidedAt.toIso8601String();
     generalInfo[stopReasonKey] = stopReason ?? '';
@@ -139,7 +139,7 @@ class QCMaterialReviewRequest {
     required this.failedSampleNumbers,
   });
 
-  void writeToGeneralInfo(Map<String, String> generalInfo) {
+  void writeToGeneralInfo(Map<String, dynamic> generalInfo) {
     generalInfo[requestedKey] = 'true';
     generalInfo[requestedAtKey] = requestedAt.toIso8601String();
     generalInfo[failedSampleIdsKey] = jsonEncode(failedSampleIds);

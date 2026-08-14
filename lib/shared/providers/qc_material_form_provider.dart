@@ -1413,7 +1413,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
       note: isCustomLocation ? customLocNoteController.text : '',
       isCustom: isCustomLocation,
     );
-    final Map<String, String> genInfo = {
+    final Map<String, dynamic> genInfo = {
       'poNumber': poNumberController.text.trim(),
       'poDate': poDateController.text.trim(),
       'doNumber': doNumberController.text.trim(),
@@ -1437,10 +1437,12 @@ class QCMaterialFormProvider extends ChangeNotifier {
       _reviewEligibleKey: isSamplingWarningActive.toString(),
     };
     if (captureMetadataByPath.isNotEmpty) {
-      genInfo[_evidenceCaptureMetadataKey] = jsonEncode({
+      // Store as a nested object (Map), not a JSON-encoded String,
+      // so the backend receives { key: {...} } instead of the string "\"{ ... }\""
+      genInfo[_evidenceCaptureMetadataKey] = {
         for (final entry in captureMetadataByPath.entries)
           entry.key: entry.value.toJson(),
-      });
+      };
     }
     _samplingDecision?.writeToGeneralInfo(genInfo);
     if (_samplingDecision case final decision?
