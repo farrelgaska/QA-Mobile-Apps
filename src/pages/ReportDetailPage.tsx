@@ -204,19 +204,19 @@ export const ReportDetailPage: React.FC = () => {
   if (!adminFeedback.trim()) {
     revisionBlockReasons.push('Catatan instruksi tindak lanjut wajib diisi.');
   }
+  if (!hasFailures) {
+    revisionBlockReasons.push('Harus ada minimal satu parameter yang ditandai Gagal.');
+  }
+  if (failItemsMissingNote.length > 0) {
+    revisionBlockReasons.push(`${failItemsMissingNote.length} parameter Gagal belum memiliki Catatan Admin.`);
+  }
+  if (!adminFeedback.trim()) {
+    revisionBlockReasons.push('Catatan instruksi tindak lanjut wajib diisi.');
+  }
 
   // ─── Main render ──────────────────────────────────────────────────────────
   return (
     <PageTransition className="space-y-6 max-w-7xl mx-auto">
-
-      {/* Action error banner */}
-      {actionError && (
-        <div className="flex items-start gap-3 p-3.5 rounded-xl border bg-rose-50 border-rose-200 text-rose-800 text-sm">
-          <AlertTriangle className="h-4 w-4 text-rose-500 flex-shrink-0 mt-0.5" />
-          <span>{actionError}</span>
-          <button onClick={() => setActionError(null)} className="ml-auto text-rose-400 hover:text-rose-600 text-xs font-bold">×</button>
-        </div>
-      )}
 
       {/* ── Top Nav Bar ─────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -588,6 +588,63 @@ export const ReportDetailPage: React.FC = () => {
         isOpen={isIncompleteDecisionModalOpen}
         onClose={() => setIsIncompleteDecisionModalOpen(false)}
       />
+
+      {/* ── Centered Action Warning Popup Modal ────────────── */}
+      <Modal
+        isOpen={!!actionError}
+        onClose={() => setActionError(null)}
+        title="Peringatan Evaluasi Admin"
+        footer={
+          <div className="flex w-full justify-center">
+            <Button
+              variant="primary"
+              onClick={() => setActionError(null)}
+              className="w-full sm:w-auto px-8 bg-[#006B5A] hover:bg-[#005244]"
+            >
+              Saya Mengerti
+            </Button>
+          </div>
+        }
+      >
+        <div className="flex flex-col items-center text-center py-2 space-y-4">
+          <div className="h-14 w-14 rounded-full bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600 shadow-sm">
+            <AlertTriangle className="h-7 w-7" />
+          </div>
+          <div className="space-y-3 w-full">
+            <h4 className="text-base font-bold text-gray-900">
+              {actionError?.includes('Catatan Admin')
+                ? 'Catatan Admin Belum Lengkap'
+                : 'Peringatan Evaluasi'}
+            </h4>
+            {(() => {
+              if (!actionError) return null;
+              const match = actionError.match(/^(.*?)\((.*?)\)\.?$/);
+              if (match) {
+                const mainText = match[1].trim();
+                const items = match[2].split(',').map(s => s.trim()).filter(Boolean);
+                return (
+                  <div className="space-y-2 text-left bg-rose-50/60 p-3.5 rounded-xl border border-rose-100">
+                    <p className="text-xs font-semibold text-rose-900">{mainText}:</p>
+                    <ul className="space-y-1.5 pl-1">
+                      {items.map((item, idx) => (
+                        <li key={idx} className="text-xs text-rose-700 flex items-start gap-2">
+                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500 mt-1 flex-shrink-0" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              }
+              return (
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  {actionError}
+                </p>
+              );
+            })()}
+          </div>
+        </div>
+      </Modal>
     </PageTransition>
   );
 };
