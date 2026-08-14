@@ -62,6 +62,19 @@ function saveToStorage(reports: QCReport[]): void {
   }
 }
 
+function loadFromStorage(): QCReport[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return [];
+}
+
 /** Map QCReport's shared checklist_items back to ApiChecklistItem format for PATCH. */
 function buildApiChecklistItems(report: QCReport): ApiChecklistItem[] {
   return (report.checklist_items ?? []).map(item => ({
@@ -124,7 +137,7 @@ function applySignedUrls(
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [reports, setReports] = useState<QCReport[]>([]);
+  const [reports, setReports] = useState<QCReport[]>(loadFromStorage);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const signedUrlsRef = useRef<Record<string, string>>({});
@@ -155,7 +168,6 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       saveToStorage(mapped);
     } catch (err) {
       console.warn('[Mock API offline] Failed to fetch reports from server.', err);
-      setReports([]);
       setError('Tidak dapat terhubung ke server.');
     } finally {
       setLoading(false);
