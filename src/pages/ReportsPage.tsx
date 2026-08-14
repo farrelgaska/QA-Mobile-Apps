@@ -71,14 +71,12 @@ export const ReportsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
-  const [standardFilter, setStandardFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
 
   const clearFilters = () => {
     setSearchQuery('');
     setStatusFilter('');
     setTypeFilter('');
-    setStandardFilter('');
     setLocationFilter('');
   };
 
@@ -97,13 +95,12 @@ export const ReportsPage: React.FC = () => {
 
     const matchesStatus = statusFilter === '' || rep.status === statusFilter;
     const matchesType = typeFilter === '' || rep.type === typeFilter;
-    const matchesStandard = standardFilter === '' || rep.standardResult === standardFilter;
     const matchesLocation = locationFilter === '' || rep.locationName === locationFilter;
 
-    return matchesSearch && matchesStatus && matchesType && matchesStandard && matchesLocation;
+    return matchesSearch && matchesStatus && matchesType && matchesLocation;
   });
 
-  const activeFilterCount = [statusFilter, typeFilter, standardFilter, locationFilter].filter(Boolean).length;
+  const activeFilterCount = [statusFilter, typeFilter, locationFilter].filter(Boolean).length;
   const hasFilters = activeFilterCount > 0 || searchQuery !== '';
 
   return (
@@ -138,7 +135,7 @@ export const ReportsPage: React.FC = () => {
       </div>
 
       {/* Filter Card */}
-      <Card className="overflow-visible relative z-30">
+      <Card className="overflow-visible">
         <CardContent className="py-4">
           <div className="flex items-center gap-2 mb-3">
             <Filter className="h-4 w-4 text-gray-400" />
@@ -149,7 +146,7 @@ export const ReportsPage: React.FC = () => {
               </span>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
             {/* Search */}
             <div className="xl:col-span-2">
               <Input
@@ -189,21 +186,6 @@ export const ReportsPage: React.FC = () => {
                 ]}
               />
             </div>
-            {/* Standard result filter */}
-            <div>
-              <Select
-                id="standard-filter"
-                placeholder="Hasil Standar"
-                value={standardFilter}
-                onChange={(val) => setStandardFilter(val)}
-                options={[
-                  { value: '', label: 'Semua Hasil' },
-                  { value: 'Lulus', label: 'Lulus' },
-                  { value: 'Tidak Lulus', label: 'Tidak Lulus' },
-                  { value: 'Perlu Review', label: 'Perlu Review' }
-                ]}
-              />
-            </div>
           </div>
           {/* Location filter row */}
           <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -239,7 +221,7 @@ export const ReportsPage: React.FC = () => {
           <ErrorState message={error} onRetry={refetch} />
         ) : (
           <motion.div
-            key={`${statusFilter}-${typeFilter}-${standardFilter}-${locationFilter}-${searchQuery}`}
+            key={`${statusFilter}-${typeFilter}-${locationFilter}-${searchQuery}`}
             className="w-full"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}

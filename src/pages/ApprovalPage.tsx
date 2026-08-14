@@ -206,7 +206,7 @@ export const ApprovalPage: React.FC = () => {
       </div>
 
       {/* ── Filters ──────────────────────────────── */}
-      <Card className="overflow-visible relative z-30">
+      <Card className="overflow-visible">
         <CardContent className="py-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="md:col-span-2">
@@ -236,7 +236,7 @@ export const ApprovalPage: React.FC = () => {
       </Card>
 
       {/* ── Table ────────────────────────────────── */}
-      <Card className="relative z-0">
+      <Card>
         <CardContent className="p-0">
           <motion.div
             key={`${typeFilter}-${searchQuery}`}

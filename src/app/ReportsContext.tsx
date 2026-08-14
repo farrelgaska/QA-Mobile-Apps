@@ -147,9 +147,10 @@ export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ child
       } catch (signedUrlError) {
         console.warn('Failed to resolve private QC evidence URLs.', signedUrlError);
       }
-      const mapped = apiData.map(r =>
-        applySignedUrls(mapToSharedReport(r), signedUrlsRef.current)
-      );
+      // Sort newest-first as a client-side fallback (backend also receives sort=desc)
+      const mapped = apiData
+        .map(r => applySignedUrls(mapToSharedReport(r), signedUrlsRef.current))
+        .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
       setReports(mapped);
       saveToStorage(mapped);
     } catch (err) {

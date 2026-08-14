@@ -122,9 +122,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
-/** Fetch all reports. Admin sees SUBMITTED, NEEDS_FOLLOW_UP and APPROVED — not DRAFT. */
+/** Fetch all reports, newest first. Admin sees SUBMITTED, NEEDS_FOLLOW_UP and APPROVED — not DRAFT. */
 export async function fetchReports(): Promise<ApiReport[]> {
-  const all = await request<ApiReport[]>('/reports');
+  const all = await request<ApiReport[]>('/reports?sort=desc');
   return all.filter(r => r.status !== 'DRAFT');
 }
 
