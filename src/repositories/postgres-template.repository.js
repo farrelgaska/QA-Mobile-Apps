@@ -6,7 +6,7 @@ const {
   mapTemplateItemRow,
   mergeTemplateItemPatch
 } = require('./postgres/mappers');
-const { conflict, notFound, translatePostgresError } = require('./repository-errors');
+const { conflict, notFound, translatePostgresError, isTransientPostgresError } = require('./repository-errors');
 
 const ROOT_COLUMNS = `id, type, name, description, form_code, category, segment,
   standard_code, is_active, workflow_status, version, migration_metadata, created_at, updated_at`;
@@ -26,17 +26,27 @@ class PostgresTemplateRepository {
   }
 
   async _transaction(work) {
-    const client = await this.pool.connect();
-    try {
-      await client.query('BEGIN');
-      const result = await work(client);
-      await client.query('COMMIT');
-      return result;
-    } catch (error) {
-      try { await client.query('ROLLBACK'); } catch (_) {}
-      throw error;
-    } finally {
-      client.release();
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let client;
+      let releaseError;
+      try {
+        client = await this.pool.connect();
+        await client.query('BEGIN');
+        const result = await work(client);
+        await client.query('COMMIT');
+        return result;
+      } catch (error) {
+        if (client) {
+          try { await client.query('ROLLBACK'); } catch (_) {}
+        }
+        if (isTransientPostgresError(error)) {
+          releaseError = error;
+          if (attempt === 0) continue;
+        }
+        throw error;
+      } finally {
+        if (client) client.release(releaseError);
+      }
     }
   }
 

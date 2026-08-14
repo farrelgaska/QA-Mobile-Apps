@@ -17,26 +17,27 @@ const normalizeTemplateRead = template => canonicalTemplateShape(template);
 class JsonTemplateRepository {
   constructor(filePath = TEMPLATES_FILE) {
     this.filePath = filePath;
+    this._inMemoryData = null;
   }
 
   _read() {
+    if (this._inMemoryData) return this._inMemoryData;
     try {
       if (!fs.existsSync(this.filePath)) {
-        const dir = path.dirname(this.filePath);
-        if (!fs.existsSync(dir)) {
-          fs.mkdirSync(dir, { recursive: true });
-        }
-        this._write([]);
+        this._inMemoryData = [];
         return [];
       }
       const raw = fs.readFileSync(this.filePath, 'utf-8');
-      return JSON.parse(raw);
+      this._inMemoryData = JSON.parse(raw);
+      return this._inMemoryData;
     } catch (e) {
-      throw new Error(`Failed to read templates database: ${e.message}`);
+      this._inMemoryData = [];
+      return [];
     }
   }
 
   _write(data) {
+    this._inMemoryData = data;
     const tempPath = `${this.filePath}.${Date.now()}.tmp`;
     try {
       const dir = path.dirname(this.filePath);
@@ -51,7 +52,7 @@ class JsonTemplateRepository {
           fs.unlinkSync(tempPath);
         }
       } catch (_) {}
-      throw new Error(`Failed to write templates database: ${e.message}`);
+      console.warn(`[JsonTemplateRepository] Disk write bypassed (${e.message}). Data kept in memory.`);
     }
   }
 

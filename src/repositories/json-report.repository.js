@@ -15,32 +15,32 @@ class JsonReportRepository {
   constructor(filePath = REPORTS_FILE, { now = () => new Date() } = {}) {
     this.filePath = filePath;
     this.now = now;
+    this._inMemoryData = null;
   }
 
   _read() {
+    if (this._inMemoryData) return this._inMemoryData;
     let reports;
     try {
       if (!fs.existsSync(this.filePath)) {
-        const dir = path.dirname(this.filePath);
-        if (!fs.existsSync(dir)) {
-          fs.mkdirSync(dir, { recursive: true });
-        }
-        this._write([]);
-        return [];
+        reports = [];
+      } else {
+        const raw = fs.readFileSync(this.filePath, 'utf-8');
+        reports = JSON.parse(raw);
       }
-      const raw = fs.readFileSync(this.filePath, 'utf-8');
-      reports = JSON.parse(raw);
     } catch (e) {
-      throw new Error(`Failed to read reports database: ${e.message}`);
+      reports = [];
     }
-    return reports.map(report => ({
+    this._inMemoryData = reports.map(report => ({
       ...report,
       ...normalizeReportSampleFields(report),
       ...normalizeReportReviewRequestFields(report, { tolerateInvalidLegacy: true })
     }));
+    return this._inMemoryData;
   }
 
   _write(data) {
+    this._inMemoryData = data;
     const tempPath = `${this.filePath}.${Date.now()}.tmp`;
     try {
       const dir = path.dirname(this.filePath);
@@ -55,7 +55,7 @@ class JsonReportRepository {
           fs.unlinkSync(tempPath);
         }
       } catch (_) {}
-      throw new Error(`Failed to write reports database: ${e.message}`);
+      console.warn(`[JsonReportRepository] Disk write bypassed (${e.message}). Data kept in memory.`);
     }
   }
 

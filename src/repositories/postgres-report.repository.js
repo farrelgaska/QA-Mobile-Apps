@@ -52,17 +52,27 @@ class PostgresReportRepository {
   }
 
   async _transaction(work) {
-    const client = await this.pool.connect();
-    try {
-      await client.query('BEGIN');
-      const result = await work(client);
-      await client.query('COMMIT');
-      return result;
-    } catch (error) {
-      try { await client.query('ROLLBACK'); } catch (_) {}
-      throw error;
-    } finally {
-      client.release();
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let client;
+      let releaseError;
+      try {
+        client = await this.pool.connect();
+        await client.query('BEGIN');
+        const result = await work(client);
+        await client.query('COMMIT');
+        return result;
+      } catch (error) {
+        if (client) {
+          try { await client.query('ROLLBACK'); } catch (_) {}
+        }
+        if (isTransientPostgresError(error)) {
+          releaseError = error;
+          if (attempt === 0) continue;
+        }
+        throw error;
+      } finally {
+        if (client) client.release(releaseError);
+      }
     }
   }
 
