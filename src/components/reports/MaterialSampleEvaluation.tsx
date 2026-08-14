@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  AlertCircle,
   AlertTriangle,
   Check,
   ChevronLeft,

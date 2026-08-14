@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { ChecklistItem, ChecklistResult } from '../../types/report';
 import { Table, TableHeader, TableRow, TableCell, TableBody } from '../ui/Table';
 import { StandardResultBadge } from './StandardResultBadge';
-import { Image as ImageIcon, MessageSquare, Check, X, AlertCircle } from 'lucide-react';
+import { Image as ImageIcon, MessageSquare, Check, X } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { ImagePreviewModal } from './ImagePreviewModal';
 
