@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../../shared/models/qc_report_model.dart';
 import '../../shared/models/enums.dart';
 import '../../shared/models/qc_material_template_model.dart';
@@ -9,7 +10,7 @@ import '../../shared/models/site_model.dart';
 import 'dummy_sites.dart';
 import '../services/api_service.dart';
 
-class DummyState {
+class DummyState extends ChangeNotifier {
   static final DummyState _instance = DummyState._internal();
   factory DummyState() => _instance;
   DummyState._internal();
@@ -66,6 +67,7 @@ class DummyState {
       if (!keepNewerLocalDraft) reports[index] = serverReport;
     }
     reports.sort((a, b) => b.submittedAt.compareTo(a.submittedAt));
+    notifyListeners();
   }
 
   void addReport(QCReportModel report) {
@@ -81,6 +83,7 @@ class DummyState {
     } else {
       reports.insert(0, report);
     }
+    notifyListeners();
   }
 
   void updateReport(QCReportModel report) {
@@ -96,5 +99,6 @@ class DummyState {
     } else {
       reports.insert(0, report);
     }
+    notifyListeners();
   }
 }

@@ -53,7 +53,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
         _selectedTab = mappedInit;
       }
     }
+    _state.addListener(_onStateChanged);
     _fetchData();
+  }
+
+  void _onStateChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _state.removeListener(_onStateChanged);
+    super.dispose();
   }
 
   Future<void> _fetchData() async {

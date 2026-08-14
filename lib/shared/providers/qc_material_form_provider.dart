@@ -166,7 +166,7 @@ class QCMaterialSampleState {
 }
 
 class QCMaterialFormProvider extends ChangeNotifier {
-  static const int _maximumConcurrentPhotoUploads = 3;
+  static const int _maximumConcurrentPhotoUploads = 5;
 
   // Dependencies
   final DummyState _state = DummyState();

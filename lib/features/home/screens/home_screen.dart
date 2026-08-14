@@ -31,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _photoController = ProfilePhotoController(nik: _state.currentUser.nik)
       ..addListener(_onPhotoChanged)
       ..restore();
+    _state.addListener(_onStateChanged);
     _fetchData();
   }
 
@@ -38,8 +39,13 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() {});
   }
 
+  void _onStateChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
+    _state.removeListener(_onStateChanged);
     _photoController
       ..removeListener(_onPhotoChanged)
       ..dispose();
