@@ -68,9 +68,10 @@ class ApiService {
   static const String _configuredBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
   );
+  static final http.Client _sharedClient = http.Client();
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
-  ApiService._internal() : _client = null;
+  ApiService._internal() : _client = _sharedClient;
 
   @visibleForTesting
   ApiService.withClient(http.Client client) : _client = client;
@@ -336,8 +337,9 @@ class ApiService {
               ),
             );
 
-      final streamedResponse = await request.send().timeout(
-        const Duration(seconds: 30),
+      final client = _client ?? _sharedClient;
+      final streamedResponse = await client.send(request).timeout(
+        const Duration(seconds: 15),
       );
       final response = await http.Response.fromStream(streamedResponse);
       final body = _decodeObject(response.body);
