@@ -1,0 +1,19 @@
+[
+  {
+    "id": "production-draft",
+    "type": "MATERIAL",
+    "title": "Production draft",
+    "status": "DRAFT",
+    "checklist_items": [],
+    "admin_review": {
+      "conclusion": "Belum Lengkap"
+    }
+  },
+  {
+    "id": "fixture-approved-missing-conclusion",
+    "type": "WORK",
+    "title": "Quarantined test report",
+    "status": "APPROVED",
+    "checklist_items": []
+  }
+]

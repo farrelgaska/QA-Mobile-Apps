@@ -50,3 +50,5 @@ app.*.map.json
 
 # Chrome Device cache
 chrome-device/
+.vercel
+.env*

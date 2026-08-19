@@ -1,0 +1,180 @@
+const assert = require('assert');
+const { templateSchema } = require('../src/contracts/template.contract');
+const { reportSchema } = require('../src/contracts/report.contract');
+
+console.log('Validating Zod contract schemas...');
+
+// 1. Validate a mock template
+const mockTemplate = {
+  id: "test_temp_id",
+  type: "MATERIAL",
+  name: "Test Template",
+  description: "Test Description",
+  form_code: "FORM-TEST",
+  category: "Test Cat",
+  segment: "construction",
+  standard_code: "STD-123",
+  is_active: true,
+  version: 1,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  checklist_items: [
+    {
+      id: "item-1",
+      parameter_name: "Thickness",
+      input_type: "number",
+      standard_text: ">= 5mm",
+      unit: "mm",
+      is_required: true,
+      required_photo: false,
+      is_active: true,
+      is_critical: true,
+      position: 1,
+      choices: [],
+      validation_rule: {
+        type: "range",
+        min_value: 5,
+        max_value: 10,
+        exact_value: null
+      }
+    }
+  ]
+};
+
+try {
+  templateSchema.parse(mockTemplate);
+  console.log('[PASS] templateSchema parsed mockTemplate successfully!');
+} catch (e) {
+  console.error('[FAIL] templateSchema failed to parse mockTemplate:', e.message);
+  process.exit(1);
+}
+
+// 2. Validate a mock report
+const mockReport = {
+  id: "QC-REP-123",
+  type: "MATERIAL",
+  template_id: "test_temp_id",
+  form_code: "FORM-TEST",
+  title: "Test Report",
+  status: "SUBMITTED",
+  staff: {
+    name: "Staff Name",
+    nik: "NIK-123"
+  },
+  location: {
+    site_id: "site-123",
+    site_name: "Site A",
+    area: "Zone B",
+    detail_location: "Corner"
+  },
+  general_info: {},
+  checklist_items: [
+    {
+      id: "item-1",
+      parameter_name: "Thickness",
+      input_type: "number",
+      standard_text: ">= 5mm",
+      unit: "mm",
+      actual_value: "6",
+      staff_note: "Looks good",
+      item_photos: [],
+      admin_evaluation: "PASS",
+      admin_note: ""
+    }
+  ],
+  staff_note: "Done",
+  submitted_at: new Date().toISOString(),
+  admin_review: {
+    admin_note: "Reviewing...",
+    conclusion: "PASSED",
+    reviewed_at: new Date().toISOString()
+  },
+  general_photos: [],
+  sample_count: 2,
+  samples: [
+    {
+      id: 'sample-001',
+      sample_number: 1,
+      inspection_status: 'COMPLETED',
+      checklist_answers: [
+        {
+          checklist_item_id: 'item-1',
+          input_type: 'number',
+          actual_value: 6,
+          note: 'Measured',
+          photo_paths: [
+            'reports/QC-REP-123/checklist/item-1/123e4567-e89b-42d3-a456-426614174000.jpg'
+          ],
+          standard_text: '>= 5mm',
+          standard_value: 5,
+          unit: 'mm',
+          upper_tolerance: null,
+          lower_tolerance: null,
+          minimum_value: 5,
+          maximum_value: 10,
+          evaluation_status: 'WITHIN_STANDARD'
+        }
+      ],
+      notes: '',
+      photo_paths: [],
+      created_at: '2026-07-23T01:00:00.000Z',
+      updated_at: '2026-07-23T01:05:00.000Z'
+    },
+    {
+      id: 'sample-002',
+      sample_number: 2,
+      inspection_status: 'NOT_STARTED',
+      checklist_answers: [],
+      notes: '',
+      photo_paths: [],
+      created_at: '2026-07-23T01:10:00.000Z',
+      updated_at: '2026-07-23T01:10:00.000Z'
+    }
+  ],
+  revision_number: 1,
+  migration_metadata: {
+    legacy_revision_history: []
+  }
+};
+
+try {
+  reportSchema.parse(mockReport);
+  console.log('[PASS] reportSchema parsed mockReport successfully!');
+} catch (e) {
+  console.error('[FAIL] reportSchema failed to parse mockReport:', e.message);
+  process.exit(1);
+}
+
+const submittedWithoutReview = {
+  ...mockReport,
+  id: 'QC-REP-SUBMITTED-WITHOUT-REVIEW',
+  status: 'SUBMITTED',
+  admin_review: null
+};
+assert.strictEqual(reportSchema.safeParse(submittedWithoutReview).success, true);
+
+for (const status of ['APPROVED', 'NEEDS_FOLLOW_UP']) {
+  const missingConclusion = {
+    ...mockReport,
+    id: `QC-REP-${status}-WITHOUT-CONCLUSION`,
+    status,
+    admin_review: null
+  };
+  assert.strictEqual(
+    reportSchema.safeParse(missingConclusion).success,
+    false,
+    `${status} without a conclusion must fail contract validation`
+  );
+}
+
+const approvedNotPassed = {
+  ...mockReport,
+  id: 'QC-REP-APPROVED-NOT-PASSED',
+  status: 'APPROVED',
+  admin_review: { ...mockReport.admin_review, conclusion: 'NOT_PASSED' }
+};
+assert.strictEqual(reportSchema.safeParse(approvedNotPassed).success, true);
+console.log('[PASS] Report lifecycle matrix accepts waiting review and rejects missing final conclusions.');
+
+console.log('All Zod contracts check passed successfully!');
+process.exit(0);

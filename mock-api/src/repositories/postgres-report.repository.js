@@ -1,0 +1,398 @@
+const { getPool } = require('../database/postgres');
+const { canonicalReportInput, mapReportAggregate } = require('./postgres/mappers');
+const {
+  notFound,
+  translatePostgresError,
+  isTransientPostgresError,
+  databaseUnavailable
+} = require('./repository-errors');
+const {
+  mergeReportReviewRequestPatch,
+  mergeReportSamplePatch
+} = require('../contracts/report.contract');
+const {
+  normalizeQCEvidenceCaptureMetadata
+} = require('../contracts/qc-evidence-capture-metadata');
+const { getQCEvidenceStorage } = require('../storage/qc-evidence-storage');
+
+/**
+ * Collect all canonical object paths stored in a report aggregate.
+ * Covers: general_photos, checklist item item_photos, and sample photo_paths
+ * plus per-answer photo_paths.
+ * @param {object} report
+ * @returns {string[]}
+ */
+function collectReportPhotoPaths(report) {
+  const paths = [];
+  for (const p of report.general_photos ?? []) paths.push(p);
+  for (const item of report.checklist_items ?? []) {
+    for (const p of item.item_photos ?? []) paths.push(p);
+  }
+  for (const sample of report.samples ?? []) {
+    for (const p of sample.photo_paths ?? []) paths.push(p);
+    for (const answer of sample.checklist_answers ?? []) {
+      for (const p of answer.photo_paths ?? []) paths.push(p);
+    }
+  }
+  // Deduplicate
+  return [...new Set(paths)].filter(p => typeof p === 'string' && p.startsWith('reports/'));
+}
+
+const ROOT_COLUMNS = `id, type, template_id, form_code, title, status, staff_name,
+  staff_nik, site_id, site_name, area, detail_location, general_info, staff_note,
+  submitted_at, revision_number, migration_metadata, sample_count,
+  review_requested, review_requested_at, review_requested_by_role,
+  review_failed_sample_count, review_failed_sample_ids, review_failed_sample_numbers,
+  created_at, updated_at`;
+
+class PostgresReportRepository {
+  constructor(pool = getPool(), { now = () => new Date() } = {}) {
+    this.pool = pool;
+    this.now = now;
+  }
+
+  async _transaction(work) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let client;
+      let releaseError;
+      try {
+        client = await this.pool.connect();
+        await client.query('BEGIN');
+        const result = await work(client);
+        await client.query('COMMIT');
+        return result;
+      } catch (error) {
+        if (client) {
+          try { await client.query('ROLLBACK'); } catch (_) {}
+        }
+        if (isTransientPostgresError(error)) {
+          releaseError = error;
+          if (attempt === 0) continue;
+        }
+        throw error;
+      } finally {
+        if (client) client.release(releaseError);
+      }
+    }
+  }
+
+  async _readWithTransientRetry(work) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let client;
+      let releaseError;
+      try {
+        client = await this.pool.connect();
+        return await work(client);
+      } catch (error) {
+        if (!isTransientPostgresError(error)) throw error;
+        releaseError = error;
+        if (attempt === 1) throw databaseUnavailable(error);
+      } finally {
+        if (client) client.release(releaseError);
+      }
+    }
+  }
+
+  async _findById(executor, id, lock = false) {
+    const rootResult = await executor.query(
+      `select ${ROOT_COLUMNS} from public.qc_reports where id = $1${lock ? ' for update' : ''}`,
+      [id]
+    );
+    if (!rootResult.rows[0]) return undefined;
+    const items = await executor.query(
+      'select * from public.qc_report_items where report_id = $1 order by id',
+      [id]
+    );
+    const reviews = await executor.query(
+      'select * from public.qc_report_admin_reviews where report_id = $1',
+      [id]
+    );
+    const attachments = await executor.query(
+      'select * from public.qc_report_attachments where report_id = $1 order by sort_order, id',
+      [id]
+    );
+    const samples = await executor.query(
+      'select * from public.qc_report_samples where report_id = $1 order by position',
+      [id]
+    );
+    const sampleAnswers = await executor.query(
+      'select * from public.qc_report_sample_answers where report_id = $1 order by sample_id, position',
+      [id]
+    );
+    return mapReportAggregate(
+      rootResult.rows[0],
+      items.rows,
+      reviews.rows[0] || null,
+      attachments.rows,
+      samples.rows,
+      sampleAnswers.rows
+    );
+  }
+
+  async _findAll(executor) {
+    const roots = await executor.query(
+      `select ${ROOT_COLUMNS} from public.qc_reports order by created_at, id`
+    );
+    if (roots.rows.length === 0) return [];
+    const ids = roots.rows.map(row => row.id);
+    const items = await executor.query(
+      'select * from public.qc_report_items where report_id = any($1::text[]) order by report_id, id',
+      [ids]
+    );
+    const reviews = await executor.query(
+      'select * from public.qc_report_admin_reviews where report_id = any($1::text[])',
+      [ids]
+    );
+    const attachments = await executor.query(
+      'select * from public.qc_report_attachments where report_id = any($1::text[]) order by report_id, sort_order, id',
+      [ids]
+    );
+    const samples = await executor.query(
+      'select * from public.qc_report_samples where report_id = any($1::text[]) order by report_id, position',
+      [ids]
+    );
+    const sampleAnswers = await executor.query(
+      'select * from public.qc_report_sample_answers where report_id = any($1::text[]) order by report_id, sample_id, position',
+      [ids]
+    );
+    const itemMap = new Map(ids.map(id => [id, []]));
+    const reviewMap = new Map();
+    const attachmentMap = new Map(ids.map(id => [id, []]));
+    const sampleMap = new Map(ids.map(id => [id, []]));
+    const sampleAnswerMap = new Map(ids.map(id => [id, []]));
+    for (const item of items.rows) itemMap.get(item.report_id).push(item);
+    for (const review of reviews.rows) reviewMap.set(review.report_id, review);
+    for (const attachment of attachments.rows) attachmentMap.get(attachment.report_id).push(attachment);
+    for (const sample of samples.rows) sampleMap.get(sample.report_id).push(sample);
+    for (const answer of sampleAnswers.rows) sampleAnswerMap.get(answer.report_id).push(answer);
+    return roots.rows.map(row => mapReportAggregate(
+      row,
+      itemMap.get(row.id),
+      reviewMap.get(row.id) || null,
+      attachmentMap.get(row.id),
+      sampleMap.get(row.id),
+      sampleAnswerMap.get(row.id)
+    ));
+  }
+
+  findAll() {
+    return this._readWithTransientRetry(client => this._findAll(client));
+  }
+
+  findById(id) {
+    return this._readWithTransientRetry(client => this._findById(client, id));
+  }
+
+  async _writeRoot(client, report, update = false) {
+    const values = [
+      report.id, report.type, report.template_id || null, report.form_code,
+      report.title, report.status, report.staff?.name || '', report.staff?.nik || '',
+      report.location?.site_id || '', report.location?.site_name || '',
+      report.location?.area || '', report.location?.detail_location || '',
+      report.general_info, report.staff_note, report.submitted_at,
+      report.revision_number, report.migration_metadata, report.sample_count,
+      report.review_requested, report.review_requested_at,
+      report.review_requested_by_role, report.review_failed_sample_count,
+      report.review_failed_sample_ids, report.review_failed_sample_numbers
+    ];
+    if (update) {
+      await client.query(
+        `update public.qc_reports set type=$2, template_id=$3, form_code=$4, title=$5,
+          status=$6, staff_name=$7, staff_nik=$8, site_id=$9, site_name=$10,
+          area=$11, detail_location=$12, general_info=$13, staff_note=$14,
+          submitted_at=$15, revision_number=$16, migration_metadata=$17,
+          sample_count=$18, review_requested=$19, review_requested_at=$20,
+          review_requested_by_role=$21, review_failed_sample_count=$22,
+          review_failed_sample_ids=$23, review_failed_sample_numbers=$24,
+          updated_at=now()
+         where id=$1`,
+        values
+      );
+    } else {
+      await client.query(
+        `insert into public.qc_reports (
+          id,type,template_id,form_code,title,status,staff_name,staff_nik,site_id,
+          site_name,area,detail_location,general_info,staff_note,submitted_at,
+          revision_number,migration_metadata,sample_count,review_requested,
+          review_requested_at,review_requested_by_role,review_failed_sample_count,
+          review_failed_sample_ids,review_failed_sample_numbers
+        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
+        values
+      );
+    }
+  }
+
+  async _writeChildren(client, report) {
+    for (const item of report.checklist_items) {
+      await client.query(
+        `insert into public.qc_report_items (
+          report_id,id,parameter_name,input_type,standard_text,unit,actual_value,
+          staff_note,staff_evaluation,admin_evaluation,admin_note
+        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+        [
+          report.id, item.id, item.parameter_name, item.input_type, item.standard_text,
+          item.unit, item.actual_value, item.staff_note, item.staff_evaluation,
+          item.admin_evaluation, item.admin_note
+        ]
+      );
+    }
+
+    for (let sampleIndex = 0; sampleIndex < report.samples.length; sampleIndex++) {
+      const sample = report.samples[sampleIndex];
+      await client.query(
+        `insert into public.qc_report_samples (
+          report_id,id,sample_number,inspection_status,notes,photo_paths,position,
+          created_at,updated_at
+        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [
+          report.id, sample.id, sample.sample_number, sample.inspection_status,
+          sample.notes, sample.photo_paths, sampleIndex, sample.created_at, sample.updated_at
+        ]
+      );
+      for (let answerIndex = 0; answerIndex < sample.checklist_answers.length; answerIndex++) {
+        const answer = sample.checklist_answers[answerIndex];
+        await client.query(
+          `insert into public.qc_report_sample_answers (
+            report_id,sample_id,checklist_item_id,input_type,actual_value,note,
+            photo_paths,standard_text,standard_value,unit,upper_tolerance,
+            lower_tolerance,minimum_value,maximum_value,evaluation_status,
+            admin_evaluation,admin_note,position
+          ) values ($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+          [
+            report.id, sample.id, answer.checklist_item_id, answer.input_type,
+            JSON.stringify(answer.actual_value), answer.note, answer.photo_paths,
+            answer.standard_text, answer.standard_value, answer.unit,
+            answer.upper_tolerance, answer.lower_tolerance, answer.minimum_value,
+            answer.maximum_value, answer.evaluation_status,
+            answer.admin_evaluation, answer.admin_note, answerIndex
+          ]
+        );
+      }
+    }
+
+    const review = report.admin_review;
+    const reviewedBy = review?.reviewed_by ?? review?.reviewedBy ?? '';
+    const conclusion = review?.conclusion ?? null;
+    const hasAdminReview = typeof reviewedBy === 'string'
+      && reviewedBy.trim() !== ''
+      && ['PASSED', 'NOT_PASSED'].includes(conclusion);
+    if (hasAdminReview) {
+      await client.query(
+        `insert into public.qc_report_admin_reviews
+          (report_id,admin_note,conclusion,reviewed_at,reviewed_by)
+         values ($1,$2,$3,$4,$5)`,
+        [
+          report.id, review.admin_note ?? review.adminNote ?? '', conclusion,
+          review.reviewed_at ?? review.reviewedAt ?? null,
+          reviewedBy
+        ]
+      );
+    }
+
+    for (let index = 0; index < report.general_photos.length; index++) {
+      await client.query(
+        `insert into public.qc_report_attachments
+          (report_id,report_item_id,attachment_scope,uri,sort_order)
+         values ($1,null,'GENERAL',$2,$3)`,
+        [report.id, report.general_photos[index], index]
+      );
+    }
+    for (const item of report.checklist_items) {
+      for (let index = 0; index < item.item_photos.length; index++) {
+        await client.query(
+          `insert into public.qc_report_attachments
+            (report_id,report_item_id,attachment_scope,uri,sort_order)
+           values ($1,$2,'ITEM',$3,$4)`,
+          [report.id, item.id, item.item_photos[index], index]
+        );
+      }
+    }
+  }
+
+  async create(input) {
+    const report = canonicalReportInput(normalizeQCEvidenceCaptureMetadata(input, {
+      now: this.now
+    }));
+    try {
+      return await this._transaction(async client => {
+        await this._writeRoot(client, report, false);
+        await this._writeChildren(client, report);
+        return this._findById(client, report.id);
+      });
+    } catch (error) {
+      throw translatePostgresError(error, 'Report', report.id);
+    }
+  }
+
+  async update(id, patch) {
+    try {
+      return await this._transaction(async client => {
+        const current = await this._findById(client, id, true);
+        if (!current) throw notFound(`Report with ID ${id} not found`);
+        const merged = { ...current, ...patch, id };
+        const aliases = [
+          ['templateId', 'template_id'], ['formCode', 'form_code'],
+          ['checklistItems', 'checklist_items'], ['staffNote', 'staff_note'],
+          ['submittedAt', 'submitted_at'], ['adminReview', 'admin_review'],
+          ['generalPhotos', 'general_photos'], ['revisionNumber', 'revision_number'],
+          ['sampleCount', 'sample_count']
+        ];
+        for (const [legacy, canonical] of aliases) {
+          if (patch[legacy] !== undefined && patch[canonical] === undefined) merged[canonical] = patch[legacy];
+        }
+        if (patch.samples !== undefined) {
+          merged.samples = mergeReportSamplePatch(current.samples, patch.samples);
+        }
+        Object.assign(merged, mergeReportReviewRequestPatch(current, patch));
+        const report = canonicalReportInput(normalizeQCEvidenceCaptureMetadata(merged, {
+          existingReport: current,
+          now: this.now
+        }));
+        await this._writeRoot(client, report, true);
+        await client.query('delete from public.qc_report_attachments where report_id = $1', [id]);
+        await client.query('delete from public.qc_report_admin_reviews where report_id = $1', [id]);
+        await client.query('delete from public.qc_report_samples where report_id = $1', [id]);
+        await client.query('delete from public.qc_report_items where report_id = $1', [id]);
+        await this._writeChildren(client, report);
+        return this._findById(client, id);
+      });
+    } catch (error) {
+      throw translatePostgresError(error, 'Report', id);
+    }
+  }
+
+  async delete(id, { storageProvider = getQCEvidenceStorage } = {}) {
+    let photoPaths = [];
+
+    // Fetch and delete in one transaction so the evidence snapshot cannot race
+    // with a concurrent report update. CASCADE removes the child rows.
+    await this._transaction(async client => {
+      const report = await this._findById(client, id, true);
+      if (!report) throw notFound(`Report with ID ${id} not found`);
+      photoPaths = collectReportPhotoPaths(report);
+
+      const result = await client.query(
+        'delete from public.qc_reports where id = $1 returning id',
+        [id]
+      );
+      if (result.rowCount === 0) throw notFound(`Report with ID ${id} not found`);
+    });
+
+    // Remove evidence objects from Storage after the database commit (best-effort).
+    //    If Storage is unavailable or not configured, log a warning but do NOT
+    //    re-throw — the DB record is already gone and the caller should not see
+    //    a 500 for a successful delete.
+    if (photoPaths.length > 0) {
+      try {
+        await storageProvider().remove(photoPaths);
+      } catch (storageErr) {
+        console.warn(
+          `[Storage] Failed to remove ${photoPaths.length} evidence object(s) for report ${id}:`,
+          storageErr.message
+        );
+      }
+    }
+  }
+}
+
+module.exports = { PostgresReportRepository };

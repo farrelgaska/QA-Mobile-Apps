@@ -1,0 +1,26 @@
+[
+  {
+    "id": "approved-missing-conclusion",
+    "type": "WORK",
+    "title": "Approved report requiring manual conclusion resolution",
+    "status": "APPROVED",
+    "checklist_items": []
+  },
+  {
+    "id": "follow-up-missing-conclusion",
+    "type": "WORK",
+    "title": "Follow-up report requiring manual conclusion resolution",
+    "status": "NEEDS_FOLLOW_UP",
+    "checklist_items": []
+  },
+  {
+    "id": "approved-incomplete-placeholder",
+    "type": "MATERIAL",
+    "title": "Invalid approved placeholder",
+    "status": "APPROVED",
+    "checklist_items": [],
+    "admin_review": {
+      "conclusion": "Belum Lengkap"
+    }
+  }
+]

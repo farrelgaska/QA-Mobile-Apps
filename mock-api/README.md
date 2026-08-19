@@ -1,44 +1,334 @@
-# Prototype QC Reports Mock API Backend
+# QA Mobile Apps
 
-This is a lightweight local mock API server designed to simulate storage and retrieval of QC reports conforming to the shared data contract.
+QA Mobile Apps is an integrated Quality Assurance system designed to manage **QC Material** and **QC Pekerjaan** workflows.
 
----
+The system consists of a Flutter application for Staff Warehouse, a React-based Admin Dashboard, an Express API, PostgreSQL, and private object storage.
 
-## 🚀 Getting Started
+> **Project status:** Active prototype and pilot-candidate development. The current deployments are not production-ready.
 
-### 1. Install dependencies
-From this directory, run:
-```bash
-npm install
+## Live Demo
+
+| Application | User | Demo |
+|---|---|---|
+| Staff Warehouse Mobile App | Staff Warehouse | [Open Mobile Demo](https://qa-mobile-app.vercel.app/) |
+| Web Admin Dashboard | Administrator | [Open Admin Demo](https://qa-mobile-web.vercel.app/) |
+
+Demo credentials are displayed on each application's login page.
+
+> The deployments are intended for demonstration and testing. Authentication, account management, security hardening, and several production requirements are still under development.
+
+## System Overview
+
+QA Mobile Apps supports two main actors:
+
+### Staff Warehouse
+
+Staff Warehouse users use the Flutter application to:
+
+- View available QC Material and QC Pekerjaan templates.
+- Fill numeric, boolean, choice, and text checklist items.
+- Capture camera-only evidence photos and add notes to checklist items.
+- Complete multi-step QC Material inspections with independent data for each sample.
+- Save inspections as drafts.
+- Restore and continue previously saved drafts.
+- Submit completed inspection reports.
+- Receive synchronized revision requests, Admin notes, and report statuses.
+- View report history and report details.
+- Monitor inspection summaries through the dashboard.
+- Manage basic profile information.
+
+Staff Warehouse record inspection data but do not determine the final pass or fail result.
+
+### Administrator
+
+Administrators use the React Web Dashboard to:
+
+- Monitor Quality Control activity.
+- Manage QC Material and QC Pekerjaan templates.
+- Review reports submitted by Staff Warehouse.
+- Inspect sample-scoped checklist answers, notes, statuses, and evidence photos.
+- Record review decisions and notes independently for each QC Material sample.
+- Request a revision, approve, or reject inspection reports.
+- Determine the final inspection result.
+- Filter reports by location, QC type, status, and standard result.
+- View report statistics and dashboard summaries.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Mobile["Flutter Staff Warehouse App"]
+    Admin["React Web Admin"]
+    API["Express REST API"]
+    Database["Supabase PostgreSQL"]
+    Storage["Private Supabase Storage"]
+    JSON["JSON Local Fallback"]
+
+    Mobile --> API
+    Admin --> API
+    API --> Database
+    API --> Storage
+    API -. Local development .-> JSON
 ```
 
-### 2. Start the server
-Run:
-```bash
-npm start
+The mobile and web applications must not access PostgreSQL tables or private storage credentials directly. Database and object-storage credentials are only configured in the Express backend environment.
+
+## Technology Stack
+
+| Layer | Technology |
+|---|---|
+| Staff Warehouse Application | Flutter / Dart |
+| Admin Dashboard | React / TypeScript |
+| Backend API | Node.js / Express |
+| Database | Supabase PostgreSQL |
+| Evidence Storage | Private Supabase Storage |
+| Local Data Fallback | JSON |
+| Frontend Deployment | Vercel |
+| Version Control | Git / GitHub |
+
+## Repository Structure
+
+```text
+QA-APPS-MOBILE/
+├── apps/
+│   ├── mobile/          # Flutter application for Staff Warehouse
+│   └── web/             # React Admin Dashboard
+├── mock-api/            # Canonical Express API
+├── docs/                # Project and integration documentation
+└── README.md
 ```
-The server will be available at `http://localhost:3002`.
 
----
+The deprecated backend previously located at `apps/mobile/mock-api` must not be used. The canonical backend is located at the repository root in `mock-api`.
 
-## 📡 API Endpoints
+## Main Workflows
 
-All endpoints use JSON payloads for request/response bodies and enable CORS out-of-the-box.
+### QC Material
 
-### 1. `GET /reports`
-Retrieves all QC reports.
+```text
+Admin creates a template
+        ↓
+Staff Warehouse selects the material
+        ↓
+Step 1: Staff Warehouse fills general procurement information
+        ↓
+Step 2 through Step N+1: Staff Warehouse inspects Sample 1 through Sample N
+        ↓
+Report is saved as Draft or Submitted
+        ↓
+Admin reviews each persisted sample
+        ↓
+Admin requests revision, approves, or rejects the report
+```
 
-### 2. `GET /reports/:id`
-Retrieves a specific QC report by ID. Returns a `404` error if not found.
+QC Material uses a multi-step, multi-sample form:
 
-### 3. `POST /reports`
-Submits a new QC report. 
-* Auto-generates a report ID if not present in the body.
-* Overwrites/updates if a report with the same ID already exists (upsert behavior).
-* Returns `201 Created` for new reports or `200 OK` for updates.
+- Step 1 contains general procurement and inspection information.
+- The following steps contain Sample 1 through Sample N.
+- Every sample maintains independent checklist answers, inspection notes, evaluation statuses, and evidence photos.
+- Moving between sample steps does not copy or overwrite another sample's data.
+- Draft and submitted reports preserve the sample number and the association between every answer, note, status, and photo.
 
-### 4. `PATCH /reports/:id`
-Updates fields of an existing report.
-* Returns `404` if the target ID does not exist.
-* Performs a partial update (patch merge) on root-level fields and persists them back to `data/reports.json`.
-* Validates report status against permitted lifecycle states: `DRAFT`, `SUBMITTED`, `NEEDS_FOLLOW_UP`, `APPROVED`.
+### QC Pekerjaan
+
+```text
+Admin creates a work template
+        ↓
+Staff Warehouse selects the work inspection
+        ↓
+Staff Warehouse fills checklist items and evidence
+        ↓
+Report is saved as Draft or Submitted
+        ↓
+Admin reviews the submitted report
+        ↓
+Admin determines the final result
+```
+
+## Evidence Photo Management
+
+Evidence photos can be attached to individual checklist items.
+
+The current implementation supports:
+
+- Camera-only capture in the Mobile application; gallery selection is not used for QC evidence.
+- Multiple photos per checklist item.
+- A maximum processed size of 2 MB per image.
+- Automatic image compression when needed to meet the 2 MB limit.
+- Automatic HEIC/HEIF conversion to JPEG before persistence.
+- Draft photo persistence.
+- Upload retry handling.
+- Canonical object-path persistence.
+- Private storage through the backend.
+- Evidence display in report details.
+- Removal of newly selected or restored draft photos.
+
+Stored reports persist canonical object paths instead of temporary signed URLs.
+
+## QC Material Standard Evaluation
+
+The Mobile application automatically evaluates supported QC Material parameters using persisted template standards:
+
+- Numeric standards use the calculated minimum and maximum values derived from the configured standard and tolerances.
+- Staff Warehouse users enter the measured value and do not need to calculate percentage tolerances manually.
+- Persisted evaluation statuses are **Within Standard**, **Out of Standard**, and **Not Evaluated**.
+- Parameters that cannot be evaluated automatically remain **Not Evaluated**.
+- Automatic evaluation is inspection information only and does not replace the Admin's final review decision.
+
+## Review Warning and Admin Workflow
+
+A QC Material report becomes eligible for a review warning when at least two samples are **Out of Standard**.
+
+The warning is informational:
+
+- It does not block draft saving.
+- It does not block navigation between steps or samples.
+- It does not block report submission.
+- The final approve, reject, or revision decision remains with Admin.
+
+Admin review data is stored per sample so identical checklist parameters in different samples retain independent Admin decisions and notes. Admin can request a revision, approve the report, or reject it. Revision notes, sample-scoped Admin notes, and the resulting report workflow status are synchronized back to Mobile when the report is refreshed.
+
+Sampling warnings and sampling-stop information remain separate from the Admin workflow status and final decision.
+
+## Production Login and Staff Access
+
+The current demo login is not the final production authentication or access model.
+
+Production access for Staff Warehouse will depend on verified completion of the required integrity agreement. The verification mechanism, identity integration, account provisioning, and enforcement controls must be finalized before production rollout. Demo credentials and prototype account behavior must not be treated as production access controls.
+
+## Planned AI Integration
+
+AI integration is planned for the final project phase as an assistive inspection capability. The intended scope is to:
+
+- Read measuring-tool values from submitted photos.
+- Compare extracted values with the applicable standards and tolerances.
+- Return a recommendation with a confidence score.
+- Flag photos that are blurred, incomplete, unreadable, or otherwise unsuitable for reliable evaluation.
+
+AI output must remain advisory. It must not silently change persisted measurements, sampling decisions, Admin evaluations, or final conclusions. Admin retains authority over the final report decision.
+
+## Local Development
+
+### Prerequisites
+
+Install the following tools:
+
+- Node.js and npm
+- Flutter SDK
+- Android SDK for Android development
+- A supported web browser
+- Supabase project access when using PostgreSQL and Storage
+
+### Backend API
+
+```powershell
+cd mock-api
+npm.cmd install
+npm.cmd start
+```
+
+The canonical backend runs on:
+
+```text
+http://localhost:3002
+```
+
+### Web Admin
+
+```powershell
+cd apps/web
+npm.cmd install
+npm.cmd run dev
+```
+
+### Flutter Application
+
+```powershell
+cd apps/mobile
+flutter pub get
+flutter run
+```
+
+To run the Flutter application in Chrome:
+
+```powershell
+flutter run -d chrome
+```
+
+## API Access
+
+The API base URL depends on the target platform:
+
+| Platform | Backend URL |
+|---|---|
+| Flutter Web / Desktop | `http://localhost:3002` |
+| Android Emulator | `http://10.0.2.2:3002` |
+| Deployed Demo | Configured deployment API URL |
+
+## Environment Configuration
+
+Create the required environment files from the provided examples.
+
+Do not commit:
+
+- Database passwords.
+- Supabase service-role keys.
+- Storage credentials.
+- Access tokens.
+- Production secrets.
+
+All database and private storage operations must go through the Express API.
+
+## Current Development Status
+
+Completed or integrated:
+
+- Canonical Express API foundation.
+- PostgreSQL schema and repair migrations.
+- JSON fallback for local development.
+- QC Material and QC Pekerjaan template integration.
+- Mobile draft persistence.
+- Checklist answer restoration.
+- Multiple evidence photos per checklist item.
+- Private evidence upload integration.
+- Mobile report details.
+- Admin report review and approval foundation.
+- Flutter and React demo deployments.
+
+Currently being stabilized:
+
+- Mobile report submission timeout handling.
+- Duplicate submission prevention.
+- End-to-end report synchronization.
+- Admin template editing consistency.
+- Authentication and account management.
+- Production environment configuration.
+- Final mobile, web, and backend regression testing.
+
+## Production Readiness
+
+The current deployments are prototype/pilot candidates and are not production-ready. Production release still requires:
+
+- Production-grade authentication.
+- Backend-enforced role-based authorization.
+- Secure session management.
+- Request rate limiting.
+- Monitoring and centralized logging.
+- Backup and recovery procedures.
+- Final security review.
+- Full end-to-end and device testing.
+- Load testing.
+- Deployment and operational documentation.
+
+## Documentation
+
+Project documentation is available in the [`docs`](docs/) directory.
+
+Start with the [documentation index](docs/README.md) for architecture, database, storage, integration, and workflow references.
+
+## Project Purpose
+
+This project was developed as an internship project to demonstrate an integrated Quality Assurance workflow across mobile, web, backend, database, and private evidence storage systems.
+
+## License
+
+This repository is currently intended for internal development, demonstration, and evaluation.

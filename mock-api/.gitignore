@@ -1,2 +1,12 @@
 node_modules/
-npm-debug.log
+*.tmp
+*.log
+tmp/
+test/.tmp/
+*.normalization.tmp
+test/fixtures/*.canonical.json
+
+supabase/.temp/
+.vercel
+.env*
+.local-storage/
