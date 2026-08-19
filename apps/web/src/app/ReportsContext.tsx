@@ -1,0 +1,339 @@
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import type { QCReport, StandardResult } from '../types/report';
+import { mapToSharedReport } from '../utils/status';
+import {
+  executeValidatedAdminDecision,
+  isAdminDecisionProcessable,
+  sampleAdminReviewItems,
+  updateSampleAdminReview,
+  withEvidenceDisplayUrls,
+} from '../utils/materialReportPresentation';
+import {
+  fetchReports,
+  approveReportApi,
+  requestFollowUpApi,
+  resolveQCEvidenceSignedUrls,
+  type ApiReport,
+  type ApiChecklistItem,
+  type ApiReportSample,
+} from '../services/reportApi';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface ReportsContextValue {
+  reports: QCReport[];
+  loading: boolean;
+  error: string | null;
+  refetch: () => void;
+  getReport: (id: string) => QCReport | undefined;
+  approveReport: (id: string, adminNote?: string) => Promise<void>;
+  requestRevision: (id: string, adminNote: string) => Promise<void>;
+  updateChecklistItem: (
+    reportId: string,
+    itemId: string,
+    result:
+      | 'PASS'
+      | 'FAIL'
+      | 'NEEDS_REVIEW',
+    adminNote: string
+  ) => void;
+  updateSampleChecklistAnswer: (
+    reportId: string,
+    sampleId: string,
+    checklistItemId: string,
+    result: 'PASS' | 'FAIL' | 'NEEDS_REVIEW',
+    adminNote: string
+  ) => void;
+}
+
+// ─── Context ─────────────────────────────────────────────────────────────────
+
+const ReportsContext = createContext<ReportsContextValue | null>(null);
+
+// ─── Local-state helpers (fallback) ──────────────────────────────────────────
+
+/** Map QCReport's shared checklist_items back to ApiChecklistItem format for PATCH. */
+function buildApiChecklistItems(report: QCReport): ApiChecklistItem[] {
+  return (report.checklist_items ?? []).map(item => ({
+    id: item.id,
+    parameter_name: item.parameter_name,
+    input_type: item.input_type,
+    standard_text: item.standard_text,
+    unit: item.unit,
+    actual_value: item.actual_value,
+    staff_note: item.staff_note,
+    staff_evaluation: item.staff_evaluation,
+    item_photos: item.item_photos,
+    // Preserve Admin evaluation — never trust mobile pass/fail
+    admin_evaluation: item.admin_evaluation as 'PASS' | 'FAIL' | 'NEEDS_REVIEW',
+    admin_note: item.admin_note,
+  }));
+}
+
+function buildApiSamples(report: QCReport): ApiReportSample[] {
+  return report.samples ?? [];
+}
+
+function reviewItemsForReport(report: QCReport) {
+  return report.type === 'material' && (report.samples?.length ?? 0) > 0
+    ? sampleAdminReviewItems(report)
+    : report.checklistItems;
+}
+
+function collectEvidencePaths(reports: ApiReport[]): string[] {
+  return reports.flatMap(report => [
+    ...(report.general_photos ?? []),
+    ...(report.checklist_items ?? []).flatMap(item => item.item_photos ?? []),
+    ...(report.samples ?? []).flatMap(sample => [
+      ...(sample.photo_paths ?? []),
+      ...(sample.checklist_answers ?? []).flatMap(answer => answer.photo_paths ?? []),
+    ]),
+  ]);
+}
+
+function applySignedUrls(
+  report: QCReport,
+  signedUrls: Readonly<Record<string, string>>
+): QCReport {
+  return withEvidenceDisplayUrls(report, signedUrls);
+}
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
+export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [reports, setReports] = useState<QCReport[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const signedUrlsRef = useRef<Record<string, string>>({});
+
+  // Keep a stable ref to current reports for use inside callbacks
+  const reportsRef = useRef<QCReport[]>(reports);
+  useEffect(() => { reportsRef.current = reports; }, [reports]);
+
+  // ── Load reports from API ──────────────────────────────────────────────────
+  const loadReports = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const apiData = await fetchReports();
+      try {
+        signedUrlsRef.current = {
+          ...signedUrlsRef.current,
+          ...await resolveQCEvidenceSignedUrls(collectEvidencePaths(apiData)),
+        };
+      } catch (signedUrlError) {
+        console.warn('Failed to resolve private QC evidence URLs.', signedUrlError);
+      }
+      // Sort newest-first as a client-side fallback (backend also receives sort=desc)
+      const mapped = apiData
+        .map(r => applySignedUrls(mapToSharedReport(r), signedUrlsRef.current))
+        .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+      setReports(mapped);
+    } catch (err) {
+      console.warn('[Mock API offline] Failed to fetch reports from server.', err);
+      setReports([]);
+      setError('Tidak dapat terhubung ke server.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadReports();
+  }, [loadReports]);
+
+  // ── Local optimistic update helper ────────────────────────────────────────
+
+  const applyLocalUpdate = useCallback((updatedReport: QCReport) => {
+    const mapped = applySignedUrls(
+      mapToSharedReport(updatedReport),
+      signedUrlsRef.current
+    );
+    setReports(prev => {
+      const next = prev.map(r => r.id === mapped.id ? mapped : r);
+      return next;
+    });
+  }, []);
+
+  // ── Selectors ─────────────────────────────────────────────────────────────
+
+  const getReport = useCallback(
+    (id: string) => reports.find(r => r.id === id),
+    [reports]
+  );
+
+  // ── Approve report ────────────────────────────────────────────────────────
+
+  const approveReport = useCallback(async (id: string, adminNote?: string) => {
+    const report = reportsRef.current.find(r => r.id === id);
+    if (!report) throw new Error('Report not found.');
+
+    // Workflow status is the only approval eligibility gate.
+    if (!isAdminDecisionProcessable(report.status)) {
+      throw new Error(`Laporan berstatus "${report.status}" tidak dapat disetujui. Hanya laporan SUBMITTED yang bisa diproses.`);
+    }
+
+    const updatedChecklist = buildApiChecklistItems(report);
+    const updatedSamples = buildApiSamples(report);
+    const note = adminNote || 'Laporan disetujui. Semua kriteria memenuhi standar teknis.';
+
+    // Commit the workflow status only after the backend accepts the PATCH.
+    try {
+      const updated = await executeValidatedAdminDecision(
+        reviewItemsForReport(report),
+        'approve',
+        '',
+        () => approveReportApi(
+          id,
+          note,
+          'Admin',
+          updatedChecklist,
+          updatedSamples,
+          signedUrlsRef.current
+        )
+      );
+      applyLocalUpdate(mapToSharedReport(updated));
+    } catch (err) {
+      console.warn('Approval was not persisted.', err);
+      throw err;
+    }
+  }, [applyLocalUpdate]);
+
+  // ── Request follow-up ─────────────────────────────────────────────────────
+
+  const requestRevision = useCallback(async (id: string, adminNote: string) => {
+    const report = reportsRef.current.find(r => r.id === id);
+    if (!report) throw new Error('Report not found.');
+
+    // Guard: only SUBMITTED reports can be sent for follow-up
+    if (report.status !== 'SUBMITTED') {
+      throw new Error(`Laporan berstatus "${report.status}" tidak dapat dimintakan tindak lanjut.`);
+    }
+
+    const updatedChecklist = buildApiChecklistItems(report);
+    const updatedSamples = buildApiSamples(report);
+
+    // Commit the workflow status only after the backend accepts the PATCH.
+    try {
+      const updated = await executeValidatedAdminDecision(
+        reviewItemsForReport(report),
+        'requestRevision',
+        adminNote,
+        () => requestFollowUpApi(
+          id,
+          adminNote,
+          'Admin',
+          updatedChecklist,
+          updatedSamples,
+          signedUrlsRef.current
+        )
+      );
+      applyLocalUpdate(mapToSharedReport(updated));
+    } catch (err) {
+      console.warn('Follow-up request was not persisted.', err);
+      throw err;
+    }
+  }, [applyLocalUpdate]);
+
+  // ── Update single checklist item (local only, stays until approve/revision) ─
+
+  const updateChecklistItem = useCallback((
+    reportId: string,
+    itemId: string,
+    result:
+      | 'PASS'
+      | 'FAIL'
+      | 'NEEDS_REVIEW',
+    adminNote: string
+  ) => {
+    const report = reportsRef.current.find(r => r.id === reportId);
+    if (!report) return;
+
+    const updatedItems = report.checklistItems.map(item =>
+      item.id === itemId ? { ...item, result, adminNote } : item
+    );
+
+    // Also update shared checklist_items so buildApiChecklistItems picks up changes
+    const updatedSharedItems = (report.checklist_items ?? []).map(item =>
+      item.id === itemId
+        ? { ...item, admin_evaluation: result as 'PASS' | 'FAIL' | 'NEEDS_REVIEW', admin_note: adminNote }
+        : item
+    );
+
+    // Auto-recalculate standardResult
+    let newStandardResult: StandardResult = 'Lulus';
+    if (updatedItems.some(i => i.result === 'FAIL')) {
+      newStandardResult = 'Tidak Lulus';
+    } else if (updatedItems.some(i => i.result === 'NEEDS_REVIEW')) {
+      newStandardResult = 'Perlu Review';
+    }
+
+    applyLocalUpdate({
+      ...report,
+      checklistItems: updatedItems,
+      checklist_items: updatedSharedItems,
+      standardResult: newStandardResult,
+    });
+  }, [applyLocalUpdate]);
+
+  const updateSampleChecklistAnswer = useCallback((
+    reportId: string,
+    sampleId: string,
+    checklistItemId: string,
+    result: 'PASS' | 'FAIL' | 'NEEDS_REVIEW',
+    adminNote: string
+  ) => {
+    const report = reportsRef.current.find(entry => entry.id === reportId);
+    if (!report) return;
+
+    const samples = updateSampleAdminReview(
+      report.samples ?? [],
+      sampleId,
+      checklistItemId,
+      result,
+      adminNote
+    );
+    const reviewItems = sampleAdminReviewItems({ ...report, samples });
+    let standardResult: StandardResult = 'Lulus';
+    if (reviewItems.some(item => item.result === 'FAIL')) {
+      standardResult = 'Tidak Lulus';
+    } else if (reviewItems.some(item => item.result === 'NEEDS_REVIEW')) {
+      standardResult = 'Perlu Review';
+    }
+
+    applyLocalUpdate({
+      ...report,
+      samples,
+      standardResult,
+    });
+  }, [applyLocalUpdate]);
+
+  // ─── Context value ────────────────────────────────────────────────────────
+
+  const value: ReportsContextValue = {
+    reports,
+    loading,
+    error,
+    refetch: loadReports,
+    getReport,
+    approveReport,
+    requestRevision,
+    updateChecklistItem,
+    updateSampleChecklistAnswer,
+  };
+
+  return <ReportsContext.Provider value={value}>{children}</ReportsContext.Provider>;
+};
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
+// This hook intentionally shares the provider module so their private context
+// cannot be consumed without the matching public API.
+// eslint-disable-next-line react/only-export-components
+export function useReports(): ReportsContextValue {
+  const ctx = useContext(ReportsContext);
+  if (!ctx) {
+    throw new Error('useReports must be used within a ReportsProvider');
+  }
+  return ctx;
+}
