@@ -19,16 +19,19 @@ class WorkStatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final lowerStatus = status.toLowerCase().trim();
     final style = StatusStyleMapper.getStyle(status);
-    
+
     String displayStatus = status;
-    if (lowerStatus == 'selesai' || lowerStatus == 'disetujui' || lowerStatus == 'lulus') {
+    if (lowerStatus == 'selesai' ||
+        lowerStatus == 'disetujui' ||
+        lowerStatus == 'lulus') {
       displayStatus = 'Selesai';
-    } else if (lowerStatus == 'perlu perbaikan' || lowerStatus == 'tidak sesuai') {
+    } else if (lowerStatus == 'perlu perbaikan' ||
+        lowerStatus == 'tidak sesuai') {
       displayStatus = 'Perlu Perbaikan';
     } else {
       displayStatus = 'On Progress';
     }
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: AppCard(
@@ -54,11 +57,13 @@ class WorkStatusCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          const Icon(Icons.location_on, size: 12, color: AppColors.textSoft),
+                          const Icon(Icons.location_on,
+                              size: 12, color: AppColors.textSoft),
                           const SizedBox(width: 2),
                           Text(
                             locationName,
-                            style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                            style: const TextStyle(
+                                color: AppColors.textMuted, fontSize: 11),
                           ),
                         ],
                       ),
@@ -66,7 +71,8 @@ class WorkStatusCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: style.background,
                     borderRadius: BorderRadius.circular(100),

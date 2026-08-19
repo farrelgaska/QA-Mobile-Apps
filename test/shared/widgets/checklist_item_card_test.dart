@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mobile/core/constants/app_colors.dart';
 import 'package:mobile/shared/models/enums.dart';
 import 'package:mobile/shared/models/template_choice_option.dart';
 import 'package:mobile/shared/widgets/checklist_item_card.dart';
@@ -8,7 +7,10 @@ import 'package:mobile/shared/widgets/checklist_item_card.dart';
 Future<void> _pumpNumericCard(
   WidgetTester tester, {
   required String value,
+  required QCResultStatus status,
 }) async {
+  await tester.binding.setSurfaceSize(const Size(320, 800));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
@@ -20,7 +22,7 @@ Future<void> _pumpNumericCard(
           unit: 'mm',
           minValue: 122,
           maxValue: 128,
-          currentStatus: QCResultStatus.notFilled,
+          currentStatus: status,
           resultValue: value,
           issueDescription: '',
           photos: const [],
@@ -54,60 +56,40 @@ void main() {
     ),
   ];
 
-  group('numeric standard compliance indicator', () {
-    final compliantValues = <String, String>{
-      'minimum boundary': '122',
-      'in range': '125',
-      'maximum boundary': '128',
-    };
-    for (final scenario in compliantValues.entries) {
-      testWidgets('${scenario.key} is compliant', (tester) async {
-        await _pumpNumericCard(tester, value: scenario.value);
-
-        expect(find.text('Sesuai Standar'), findsOneWidget);
-        expect(find.text('Tidak Sesuai Standar'), findsNothing);
-        expect(find.text('Standar: 122 - 128 mm'), findsOneWidget);
-        final indicator = tester.widget<Container>(
-          find.byKey(const Key('numeric-standard-compliance')),
-        );
-        expect(
-          (indicator.decoration! as BoxDecoration).color,
-          AppColors.approvedBg,
-        );
-      });
-    }
-
-    final nonCompliantValues = <String, String>{
-      'below minimum': '121.99',
-      'above maximum': '128.01',
-    };
-    for (final scenario in nonCompliantValues.entries) {
-      testWidgets('${scenario.key} is not compliant', (tester) async {
-        await _pumpNumericCard(tester, value: scenario.value);
-
-        expect(find.text('Tidak Sesuai Standar'), findsOneWidget);
-        expect(find.text('Sesuai Standar'), findsNothing);
-        final indicator = tester.widget<Container>(
-          find.byKey(const Key('numeric-standard-compliance')),
-        );
-        expect(
-          (indicator.decoration! as BoxDecoration).color,
-          AppColors.rejectedBg,
-        );
-      });
-    }
-
-    for (final value in ['', 'bukan angka']) {
-      testWidgets(
-        '${value.isEmpty ? 'empty' : 'invalid'} input hides compliance',
-        (tester) async {
-          await _pumpNumericCard(tester, value: value);
-
-          expect(find.text('Sesuai Standar'), findsNothing);
-          expect(find.text('Tidak Sesuai Standar'), findsNothing);
-        },
+  group('parameter status badge', () {
+    testWidgets('shows compliant status with icon at 320 px', (tester) async {
+      await _pumpNumericCard(
+        tester,
+        value: '125',
+        status: QCResultStatus.pass,
       );
-    }
+      expect(find.text('Sesuai Standar'), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+      expect(find.byKey(const Key('parameter-status-1')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('shows non-compliant status and issue input', (tester) async {
+      await _pumpNumericCard(
+        tester,
+        value: '130',
+        status: QCResultStatus.fail,
+      );
+      expect(find.text('Tidak Sesuai Standar'), findsOneWidget);
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.text('Keterangan Masalah *'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('shows neutral Belum Diisi status', (tester) async {
+      await _pumpNumericCard(
+        tester,
+        value: '',
+        status: QCResultStatus.notFilled,
+      );
+      expect(find.text('Belum Diisi'), findsOneWidget);
+      expect(find.byIcon(Icons.radio_button_unchecked), findsOneWidget);
+    });
   });
 
   testWidgets('non-empty choice options take priority over legacy choices', (
@@ -235,7 +217,7 @@ void main() {
     expect(find.text('Pilih Opsi Kriteria'), findsNothing);
   });
 
-  testWidgets('PASS hides issue description based on outcome, not label', (
+  testWidgets('PASS status hides issue description', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -247,7 +229,7 @@ void main() {
             standardText: 'Harus rapi',
             inputType: QCInputType.choice,
             choiceOptions: customOptions,
-            currentStatus: QCResultStatus.notFilled,
+            currentStatus: QCResultStatus.pass,
             resultValue: 'PASS_VALUE',
             issueDescription: '',
             photos: const [],
@@ -266,7 +248,7 @@ void main() {
     expect(find.text('Keterangan Masalah *'), findsNothing);
   });
 
-  testWidgets('FAIL displays issue description based on custom outcome', (
+  testWidgets('FAIL status displays issue description', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -278,7 +260,7 @@ void main() {
             standardText: 'Harus rapi',
             inputType: QCInputType.choice,
             choiceOptions: customOptions,
-            currentStatus: QCResultStatus.notFilled,
+            currentStatus: QCResultStatus.fail,
             resultValue: 'FAIL_VALUE',
             issueDescription: '',
             photos: const [],
@@ -312,7 +294,9 @@ void main() {
               standardText: 'Harus rapi',
               inputType: QCInputType.choice,
               choiceOptions: customOptions,
-              currentStatus: QCResultStatus.notFilled,
+              currentStatus: result == 'PASS_VALUE'
+                  ? QCResultStatus.pass
+                  : QCResultStatus.fail,
               resultValue: result,
               issueDescription: issue,
               photos: const [],
@@ -336,5 +320,46 @@ void main() {
     expect(result, 'PASS_VALUE');
     expect(issue, isEmpty);
     expect(find.text('Keterangan Masalah *'), findsNothing);
+  });
+
+  testWidgets('text parameter provides explicit manual Staff status at 320 px',
+      (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    var status = QCResultStatus.notFilled;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) => Scaffold(
+            body: ChecklistItemCard(
+              itemNumber: 1,
+              title: 'Catatan visual',
+              standardText: 'Diperiksa oleh Staff',
+              inputType: QCInputType.text,
+              currentStatus: status,
+              resultValue: 'Permukaan tergores',
+              issueDescription: '',
+              photos: const [],
+              isLocked: false,
+              onStatusChanged: (value) => setState(() => status = value),
+              onResultValueChanged: (_) {},
+              onIssueDescriptionChanged: (_) {},
+              onAddPhoto: () {},
+              onDeletePhoto: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Status Pemeriksaan Staff *'), findsOneWidget);
+    expect(find.text('Belum Diisi'), findsOneWidget);
+    await tester.tap(find.text('Tidak Sesuai Standar'));
+    await tester.pump();
+    expect(status, QCResultStatus.fail);
+    expect(find.text('Keterangan Masalah *'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

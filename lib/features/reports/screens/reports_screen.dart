@@ -35,9 +35,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   String _mapInputStatus(String input) {
     final norm = input.toLowerCase().trim();
-    if (norm == 'draft') return 'Draft';
-    if (norm == 'disetujui' || norm == 'approved' || norm == 'selesai' || norm == 'lulus') return 'Disetujui';
-    if (norm == 'perlu perbaikan' || norm == 'needfollowup' || norm == 'tidak sesuai' || norm == 'revisi' || norm == 'perlu tindak lanjut') return 'Perlu Tindak Lanjut';
+    if (norm == 'draft') {
+      return 'Draft';
+    }
+    if (norm == 'disetujui' ||
+        norm == 'approved' ||
+        norm == 'selesai' ||
+        norm == 'lulus') {
+      return 'Disetujui';
+    }
+    if (norm == 'perlu perbaikan' ||
+        norm == 'needfollowup' ||
+        norm == 'tidak sesuai' ||
+        norm == 'revisi' ||
+        norm == 'perlu tindak lanjut') {
+      return 'Perlu Tindak Lanjut';
+    }
     return 'Menunggu Review';
   }
 
@@ -89,7 +102,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   void didUpdateWidget(covariant ReportsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialStatus != null && widget.initialStatus != oldWidget.initialStatus) {
+    if (widget.initialStatus != null &&
+        widget.initialStatus != oldWidget.initialStatus) {
       final mappedInit = _mapInputStatus(widget.initialStatus!);
       if (_tabs.contains(mappedInit)) {
         setState(() {
@@ -120,9 +134,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
       // Filter: Staff Warehouse hanya boleh melihat laporan yang dibuat oleh dirinya sendiri
       if (report.createdByNik != DummyAuth.current.nik) return false;
 
-      final matchesSearch = report.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          report.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          report.detailLocation.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchesSearch =
+          report.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              report.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              report.detailLocation
+                  .toLowerCase()
+                  .contains(_searchQuery.toLowerCase());
 
       if (!matchesSearch) return false;
 
@@ -175,7 +192,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
               Expanded(
                 child: _isLoading && filteredReports.isEmpty
                     ? const Center(
-                        child: CircularProgressIndicator(color: AppColors.primary),
+                        child:
+                            CircularProgressIndicator(color: AppColors.primary),
                       )
                     : _errorMessage != null && filteredReports.isEmpty
                         ? Center(
@@ -184,12 +202,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                                  const Icon(Icons.error_outline,
+                                      color: Colors.red, size: 48),
                                   const SizedBox(height: 12),
                                   Text(
                                     _errorMessage!,
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                                    style: const TextStyle(
+                                        color: AppColors.textMuted,
+                                        fontSize: 13),
                                   ),
                                   const SizedBox(height: 16),
                                   SizedBox(
@@ -201,10 +222,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         backgroundColor: AppColors.primary,
                                         foregroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                       ),
-                                      child: const Text('Coba Lagi', style: TextStyle(fontSize: 13)),
+                                      child: const Text('Coba Lagi',
+                                          style: TextStyle(fontSize: 13)),
                                     ),
                                   ),
                                 ],
@@ -216,20 +239,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             color: AppColors.primary,
                             child: filteredReports.isEmpty
                                 ? ListView(
-                                    physics: const AlwaysScrollableScrollPhysics(),
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(),
                                     children: [
-                                      SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                                      SizedBox(
+                                          height: MediaQuery.of(context)
+                                                  .size
+                                                  .height *
+                                              0.2),
                                       Center(
                                         child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
-                                            const Icon(Icons.assignment_outlined, color: AppColors.textSoft, size: 48),
+                                            const Icon(
+                                                Icons.assignment_outlined,
+                                                color: AppColors.textSoft,
+                                                size: 48),
                                             const SizedBox(height: 12),
                                             Text(
                                               _selectedTab == 'Semua'
                                                   ? 'Belum ada laporan'
                                                   : 'Laporan dengan status "$_selectedTab" kosong',
-                                              style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                                              style: const TextStyle(
+                                                  color: AppColors.textMuted,
+                                                  fontSize: 13),
                                             ),
                                           ],
                                         ),
@@ -238,18 +272,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   )
                                 : ListView.builder(
                                     itemCount: filteredReports.length,
-                                    physics: const AlwaysScrollableScrollPhysics(),
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(),
                                     itemBuilder: (context, index) {
                                       final report = filteredReports[index];
                                       return ReportCard(
                                         reportId: report.id,
                                         title: report.title,
                                         date: report.date,
-                                        location: report.detailLocation.isNotEmpty ? report.detailLocation : report.siteName,
+                                        location:
+                                            report.detailLocation.isNotEmpty
+                                                ? report.detailLocation
+                                                : report.siteName,
                                         status: report.status,
                                         type: report.type,
                                         onTap: () async {
-                                          await context.push('/reports/${report.id}');
+                                          await context
+                                              .push('/reports/${report.id}');
                                           _fetchData();
                                         },
                                       );

@@ -11,32 +11,32 @@ import 'package:mobile/shared/providers/qc_material_form_provider.dart';
 import 'package:provider/provider.dart';
 
 QCMaterialTemplate _template() => QCMaterialTemplate(
-  id: 'MAT-REVIEW-SCROLL',
-  name: 'Review Scroll',
-  code: 'MAT-SCROLL',
-  description: '',
-  checklistItems: [
-    QCChecklistItem(
-      id: 'condition',
-      label: 'Kondisi',
-      category: 'Visual',
-      inputType: QCInputType.booleanCheck,
-      standardText: 'Sesuai',
-      required: true,
-    ),
-    ...List.generate(
-      7,
-      (index) => QCChecklistItem(
-        id: 'optional-$index',
-        label: 'Catatan Opsional ${index + 1}',
-        category: 'Tambahan',
-        inputType: QCInputType.text,
-        standardText: '',
-        required: false,
-      ),
-    ),
-  ],
-);
+      id: 'MAT-REVIEW-SCROLL',
+      name: 'Review Scroll',
+      code: 'MAT-SCROLL',
+      description: '',
+      checklistItems: [
+        QCChecklistItem(
+          id: 'condition',
+          label: 'Kondisi',
+          category: 'Visual',
+          inputType: QCInputType.booleanCheck,
+          standardText: 'Sesuai',
+          required: true,
+        ),
+        ...List.generate(
+          7,
+          (index) => QCChecklistItem(
+            id: 'optional-$index',
+            label: 'Catatan Opsional ${index + 1}',
+            category: 'Tambahan',
+            inputType: QCInputType.text,
+            standardText: '',
+            required: false,
+          ),
+        ),
+      ],
+    );
 
 void _fillGeneralInformation(
   QCMaterialFormProvider provider, {
@@ -118,6 +118,9 @@ void _prepareSample(
         ? QCSampleEvaluationStatus.outOfStandard
         : QCSampleEvaluationStatus.withinStandard,
   );
+  if (failed) {
+    provider.samples[sampleIndex].answers[0].issueNote = 'Masalah';
+  }
 }
 
 void main() {

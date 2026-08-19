@@ -125,13 +125,26 @@ class StatusHelper {
     if (status is String) {
       final val = status.toUpperCase().trim();
       if (val == 'DRAFT') return QCReportStatus.DRAFT;
-      if (val == 'SUBMITTED' || val == 'WAITING' || val == 'MENUNGGU' || val == 'MENUNGGU REVIEW' || val == 'PENDING') {
+      if (val == 'SUBMITTED' ||
+          val == 'WAITING' ||
+          val == 'MENUNGGU' ||
+          val == 'MENUNGGU REVIEW' ||
+          val == 'PENDING') {
         return QCReportStatus.SUBMITTED;
       }
-      if (val == 'APPROVED' || val == 'DISETUJUI' || val == 'LULUS' || val == 'SELESAI') {
+      if (val == 'APPROVED' ||
+          val == 'DISETUJUI' ||
+          val == 'LULUS' ||
+          val == 'SELESAI') {
         return QCReportStatus.APPROVED;
       }
-      if (val == 'NEEDS_FOLLOW_UP' || val == 'NEEDFOLLOWUP' || val == 'NEED_FOLLOW_UP' || val == 'REVISI' || val == 'PERLU PERBAIKAN' || val == 'PERLU TINDAK LANJUT' || val == 'DITOLAK') {
+      if (val == 'NEEDS_FOLLOW_UP' ||
+          val == 'NEEDFOLLOWUP' ||
+          val == 'NEED_FOLLOW_UP' ||
+          val == 'REVISI' ||
+          val == 'PERLU PERBAIKAN' ||
+          val == 'PERLU TINDAK LANJUT' ||
+          val == 'DITOLAK') {
         return QCReportStatus.NEEDS_FOLLOW_UP;
       }
     }

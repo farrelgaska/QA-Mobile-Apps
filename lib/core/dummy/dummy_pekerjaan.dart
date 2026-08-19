@@ -8,7 +8,8 @@ final List<PekerjaanModel> dummyPekerjaan = [
     id: 'pek-1',
     name: 'Instalasi ONT',
     segment: WorkSegment.provisioning,
-    description: 'Pemasangan unit ONT dan aktivasi layanan di lokasi pelanggan.',
+    description:
+        'Pemasangan unit ONT dan aktivasi layanan di lokasi pelanggan.',
     status: 'On Progress',
     checklistItems: [
       ChecklistItemModel(
@@ -48,7 +49,8 @@ final List<PekerjaanModel> dummyPekerjaan = [
     id: 'pek-2',
     name: 'Penarikan Kabel Dropcore',
     segment: WorkSegment.provisioning,
-    description: 'Pemasangan kabel dropcore dari ODP terdekat menuju rumah pelanggan.',
+    description:
+        'Pemasangan kabel dropcore dari ODP terdekat menuju rumah pelanggan.',
     status: 'Selesai',
     checklistItems: [
       ChecklistItemModel(
@@ -122,7 +124,8 @@ final List<PekerjaanModel> dummyPekerjaan = [
         id: 'pek-4-c2',
         title: 'Sisa Kabel (Slack)',
         inputType: InputType.text,
-        standard: 'Sisa kabel dropcore digulung rapi dengan diameter min. 30 cm',
+        standard:
+            'Sisa kabel dropcore digulung rapi dengan diameter min. 30 cm',
         requiredPhoto: false,
       ),
     ],

@@ -4,12 +4,12 @@ import 'package:mobile/shared/models/user_model.dart';
 import 'package:mobile/shared/models/user_role.dart';
 
 UserModel _userWithRole(String role) => UserModel(
-  id: 'role-test',
-  name: 'Role Test',
-  role: role,
-  nik: 'ROLE-1',
-  site: dummySites.first,
-);
+      id: 'role-test',
+      name: 'Role Test',
+      role: role,
+      nik: 'ROLE-1',
+      site: dummySites.first,
+    );
 
 void main() {
   test('legacy QA Staff role values remain Staff Warehouse roles', () {

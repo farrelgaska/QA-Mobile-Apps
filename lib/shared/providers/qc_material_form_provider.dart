@@ -81,12 +81,13 @@ class _DefaultQCMaterialPersistenceApi implements QCMaterialPersistenceApi {
     required String reportId,
     required String itemId,
     Uint8List? bytes,
-  }) => _apiService.uploadQCEvidence(
-    file: file,
-    reportId: reportId,
-    itemId: itemId,
-    bytes: bytes,
-  );
+  }) =>
+      _apiService.uploadQCEvidence(
+        file: file,
+        reportId: reportId,
+        itemId: itemId,
+        bytes: bytes,
+      );
 
   @override
   Future<bool> postReport(QCReportModel report, {bool throwOnError = false}) =>
@@ -138,17 +139,17 @@ class QCMaterialSampleState {
     required this.photoPaths,
     required this.createdAt,
     required this.updatedAt,
-  }) : notesController = TextEditingController(text: notes),
-       localItemPhotos = List.generate(answers.length, (_) => <XFile>[]),
-       localItemPhotoBytes = List.generate(
-         answers.length,
-         (_) => <Uint8List>[],
-       ),
-       localPhotoMetadata = <XFile, QCEvidenceCaptureMetadata>{},
-       processingItemPhotos = List.generate(
-         answers.length,
-         (_) => <QCPhotoProcessingEntry>[],
-       );
+  })  : notesController = TextEditingController(text: notes),
+        localItemPhotos = List.generate(answers.length, (_) => <XFile>[]),
+        localItemPhotoBytes = List.generate(
+          answers.length,
+          (_) => <Uint8List>[],
+        ),
+        localPhotoMetadata = <XFile, QCEvidenceCaptureMetadata>{},
+        processingItemPhotos = List.generate(
+          answers.length,
+          (_) => <QCPhotoProcessingEntry>[],
+        );
 
   bool get hasContent =>
       notesController.text.trim().isNotEmpty ||
@@ -166,7 +167,7 @@ class QCMaterialSampleState {
 }
 
 class QCMaterialFormProvider extends ChangeNotifier {
-  static const int _maximumConcurrentPhotoUploads = 5;
+  static const int _maximumConcurrentPhotoUploads = 3;
 
   // Dependencies
   final DummyState _state = DummyState();
@@ -198,12 +199,12 @@ class QCMaterialFormProvider extends ChangeNotifier {
     QCPhotoProcessor? photoProcessor,
     QCCaptureLocationService? captureLocationService,
     DateTime Function()? clock,
-  }) : _imagePicker = imagePicker ?? ImagePicker(),
-       _api = api ?? _DefaultQCMaterialPersistenceApi(),
-       _photoProcessor = photoProcessor ?? BoundedQCPhotoProcessor(),
-       _captureLocationService =
-           captureLocationService ?? GeolocatorQCCaptureLocationService(),
-       _clock = clock ?? DateTime.now;
+  })  : _imagePicker = imagePicker ?? ImagePicker(),
+        _api = api ?? _DefaultQCMaterialPersistenceApi(),
+        _photoProcessor = photoProcessor ?? BoundedQCPhotoProcessor(),
+        _captureLocationService =
+            captureLocationService ?? GeolocatorQCCaptureLocationService(),
+        _clock = clock ?? DateTime.now;
 
   // Template
   late QCMaterialTemplate _template;
@@ -218,8 +219,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
   QCMaterialGeneralField? get firstInvalidGeneralField =>
       _generalFieldErrors.keys.firstOrNull;
   bool get hasProcessingPhotos => samples.any(
-    (sample) => sample.processingItemPhotos.any((photos) => photos.isNotEmpty),
-  );
+        (sample) =>
+            sample.processingItemPhotos.any((photos) => photos.isNotEmpty),
+      );
   String get reportId => _reportId;
   QCMaterialTemplate get template => _template;
   QCMaterialSamplingDecision? get samplingDecision => _samplingDecision;
@@ -596,11 +598,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
           _newSampleState(
             1,
             answers: legacyAnswers,
-            inspectionStatus:
-                legacyAnswers.any(
-                  (answer) =>
-                      answer.value?.toString().trim().isNotEmpty == true,
-                )
+            inspectionStatus: legacyAnswers.any(
+              (answer) => answer.value?.toString().trim().isNotEmpty == true,
+            )
                 ? QCSampleInspectionStatus.inProgress
                 : QCSampleInspectionStatus.notStarted,
           ),
@@ -671,6 +671,11 @@ class QCMaterialFormProvider extends ChangeNotifier {
   }) {
     final sample = samples[sampleIndex];
     sample.answers[answerIndex].evaluationStatus = status.apiValue;
+    sample.answers[answerIndex].status = switch (status) {
+      QCSampleEvaluationStatus.withinStandard => QCResultStatus.pass,
+      QCSampleEvaluationStatus.outOfStandard => QCResultStatus.fail,
+      QCSampleEvaluationStatus.notEvaluated => QCResultStatus.notFilled,
+    };
     sample.updatedAt = DateTime.now();
     notifyListeners();
   }
@@ -720,8 +725,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
       id: '$_reportId-sample-$sampleNumber',
       sampleNumber: sampleNumber,
       inspectionStatus: inspectionStatus,
-      answers:
-          answers ??
+      answers: answers ??
           _template.checklistItems
               .map(_emptyAnswerForItem)
               .toList(growable: false),
@@ -750,37 +754,34 @@ class QCMaterialFormProvider extends ChangeNotifier {
     Map<String, QCEvidenceCaptureMetadata> captureMetadataByPath = const {},
   }) {
     final byItemId = {for (final answer in snapshot) answer.itemId: answer};
-    return _template.checklistItems
-        .map((item) {
-          final matchingAnswer = byItemId[item.id];
-          if (matchingAnswer == null) return _emptyAnswerForItem(item);
-          final value = matchingAnswer.value?.toString() ?? '';
-          final validation = QCValidationHelper.validateChecklistAnswer(
-            item: item,
-            value: value,
-          );
-          return matchingAnswer.copyWith(
-            paramName: item.label,
-            standardText: matchingAnswer.standardText.isEmpty
-                ? item.standardText
-                : matchingAnswer.standardText,
-            unit: matchingAnswer.unit ?? item.unit,
-            inputType: _inputTypeValue(item.inputType),
-            warningMessage: validation.warningMessage,
-            status: validation.status,
-            photoPaths: List<String>.unmodifiable(matchingAnswer.photoPaths),
-            photoMetadataByPath: {
-              for (final path in matchingAnswer.photoPaths)
-                if ((captureMetadataByPath[path] ??
-                        matchingAnswer.photoMetadataByPath[path]) !=
-                    null)
-                  path:
-                      (captureMetadataByPath[path] ??
-                      matchingAnswer.photoMetadataByPath[path])!,
-            },
-          );
-        })
-        .toList(growable: false);
+    return _template.checklistItems.map((item) {
+      final matchingAnswer = byItemId[item.id];
+      if (matchingAnswer == null) return _emptyAnswerForItem(item);
+      final value = matchingAnswer.value?.toString() ?? '';
+      final validation = QCValidationHelper.validateChecklistAnswer(
+        item: item,
+        value: value,
+      );
+      return matchingAnswer.copyWith(
+        paramName: item.label,
+        standardText: matchingAnswer.standardText.isEmpty
+            ? item.standardText
+            : matchingAnswer.standardText,
+        unit: matchingAnswer.unit ?? item.unit,
+        inputType: _inputTypeValue(item.inputType),
+        warningMessage: validation.warningMessage,
+        status: validation.status,
+        photoPaths: List<String>.unmodifiable(matchingAnswer.photoPaths),
+        photoMetadataByPath: {
+          for (final path in matchingAnswer.photoPaths)
+            if ((captureMetadataByPath[path] ??
+                    matchingAnswer.photoMetadataByPath[path]) !=
+                null)
+              path: (captureMetadataByPath[path] ??
+                  matchingAnswer.photoMetadataByPath[path])!,
+        },
+      );
+    }).toList(growable: false);
   }
 
   Map<String, QCEvidenceCaptureMetadata> _captureMetadataFromGeneralInfo(
@@ -804,11 +805,11 @@ class QCMaterialFormProvider extends ChangeNotifier {
   }
 
   String _inputTypeValue(QCInputType inputType) => switch (inputType) {
-    QCInputType.number => 'number',
-    QCInputType.choice => 'choice',
-    QCInputType.booleanCheck => 'boolean',
-    _ => 'text',
-  };
+        QCInputType.number => 'number',
+        QCInputType.choice => 'choice',
+        QCInputType.booleanCheck => 'boolean',
+        _ => 'text',
+      };
 
   void _appendMissingSamples() {
     while (samples.length < _sampleCount) {
@@ -828,9 +829,8 @@ class QCMaterialFormProvider extends ChangeNotifier {
     final incompleteIndex = samples.indexWhere(
       (sample) => sample.inspectionStatus != QCSampleInspectionStatus.completed,
     );
-    final restored = incompleteIndex >= 0
-        ? incompleteIndex + 1
-        : totalSteps - 1;
+    final restored =
+        incompleteIndex >= 0 ? incompleteIndex + 1 : totalSteps - 1;
     return isSamplingStopped ? min(restored, _lastAllowedStep) : restored;
   }
 
@@ -857,83 +857,68 @@ class QCMaterialFormProvider extends ChangeNotifier {
   void updateAnswer(int index, dynamic value) {
     final item = _template.checklistItems[index];
     final valueText = value?.toString() ?? '';
-    final selectedOption = choiceOptionForValue(item.choiceOptions, valueText);
-    if (item.inputType == QCInputType.choice &&
-        selectedOption?.outcome == 'PASS') {
-      answers[index].issueNote = '';
-    }
     answers[index].value = value;
     final valRes = QCValidationHelper.validateChecklistAnswer(
       item: item,
       value: valueText,
     );
     answers[index].warningMessage = valRes.warningMessage;
-    answers[index].status = valRes.status;
-    answers[index].evaluationStatus = _evaluateParameter(
-      item,
-      valueText,
-    ).apiValue;
+    if (item.inputType == QCInputType.text ||
+        item.inputType == QCInputType.photo) {
+      if (valueText.trim().isEmpty &&
+          answers[index].photoPaths.isEmpty &&
+          localItemPhotos[index].isEmpty) {
+        answers[index].status = QCResultStatus.notFilled;
+      }
+    } else {
+      answers[index].status = valRes.status;
+    }
+    if (answers[index].status == QCResultStatus.pass) {
+      answers[index].issueNote = '';
+    }
+    answers[index].evaluationStatus = _evaluationValue(
+      answers[index].status,
+    );
     _markCurrentSampleInProgress();
     notifyListeners();
   }
 
+  void updateStatus(int index, QCResultStatus status) {
+    if (status != QCResultStatus.pass && status != QCResultStatus.fail) return;
+    final item = _template.checklistItems[index];
+    if (item.inputType != QCInputType.text &&
+        item.inputType != QCInputType.photo) {
+      return;
+    }
+    final hasInput =
+        (answers[index].value?.toString().trim().isNotEmpty ?? false) ||
+            answers[index].photoPaths.isNotEmpty ||
+            localItemPhotos[index].isNotEmpty ||
+            processingItemPhotos[index].isNotEmpty;
+    if (!hasInput) return;
+    answers[index].status = status;
+    answers[index].evaluationStatus = _evaluationValue(status);
+    if (status == QCResultStatus.pass) answers[index].issueNote = '';
+    _markCurrentSampleInProgress();
+    notifyListeners();
+  }
+
+  String _evaluationValue(QCResultStatus status) => switch (status) {
+        QCResultStatus.pass => 'WITHIN_STANDARD',
+        QCResultStatus.fail || QCResultStatus.needFollowUp => 'OUT_OF_STANDARD',
+        QCResultStatus.notFilled => 'NOT_EVALUATED',
+      };
+
   bool _isParameterEvaluable(QCChecklistItem item) {
     return switch (item.inputType) {
-      QCInputType.number =>
-        item.minValue != null ||
-            item.maxValue != null ||
-            item.validationRule?.minValue != null ||
-            item.validationRule?.maxValue != null,
+      QCInputType.number => item.minValue != null ||
+          item.maxValue != null ||
+          item.validationRule?.minValue != null ||
+          item.validationRule?.maxValue != null,
       QCInputType.choice => _resolvedChoiceOptions(item).isNotEmpty,
       QCInputType.booleanCheck => true,
       QCInputType.text || QCInputType.photo => false,
     };
-  }
-
-  QCSampleEvaluationStatus _evaluateParameter(
-    QCChecklistItem item,
-    String rawValue,
-  ) {
-    final value = rawValue.trim();
-    if (value.isEmpty || !_isParameterEvaluable(item)) {
-      return QCSampleEvaluationStatus.notEvaluated;
-    }
-
-    switch (item.inputType) {
-      case QCInputType.number:
-        final actual = double.tryParse(value.replaceAll(',', '.'));
-        if (actual == null || !actual.isFinite) {
-          return QCSampleEvaluationStatus.notEvaluated;
-        }
-        final minimum = item.minValue ?? item.validationRule?.minValue;
-        final maximum = item.maxValue ?? item.validationRule?.maxValue;
-        if ((minimum != null && actual < minimum) ||
-            (maximum != null && actual > maximum)) {
-          return QCSampleEvaluationStatus.outOfStandard;
-        }
-        return QCSampleEvaluationStatus.withinStandard;
-      case QCInputType.choice:
-        final option = choiceOptionForValue(
-          _resolvedChoiceOptions(item),
-          value,
-        );
-        return switch (option?.outcome.toUpperCase()) {
-          'PASS' => QCSampleEvaluationStatus.withinStandard,
-          'FAIL' => QCSampleEvaluationStatus.outOfStandard,
-          _ => QCSampleEvaluationStatus.notEvaluated,
-        };
-      case QCInputType.booleanCheck:
-        if (value == 'Tidak' || value == 'Tidak Sesuai') {
-          return QCSampleEvaluationStatus.outOfStandard;
-        }
-        if (value == 'Ya' || value == 'Sesuai' || value == 'OK') {
-          return QCSampleEvaluationStatus.withinStandard;
-        }
-        return QCSampleEvaluationStatus.notEvaluated;
-      case QCInputType.text:
-      case QCInputType.photo:
-        return QCSampleEvaluationStatus.notEvaluated;
-    }
   }
 
   List<TemplateChoiceOption> _resolvedChoiceOptions(QCChecklistItem item) {
@@ -960,9 +945,8 @@ class QCMaterialFormProvider extends ChangeNotifier {
       return QCMaterialPhotoAddResult.cancelled;
     }
     try {
-      final selectedPhoto =
-          await (photoPicker?.call(ImageSource.camera) ??
-              _imagePicker.pickImage(source: ImageSource.camera));
+      final selectedPhoto = await (photoPicker?.call(ImageSource.camera) ??
+          _imagePicker.pickImage(source: ImageSource.camera));
       if (selectedPhoto == null) return QCMaterialPhotoAddResult.cancelled;
       if (_isDisposed) return QCMaterialPhotoAddResult.cancelled;
 
@@ -1058,7 +1042,8 @@ class QCMaterialFormProvider extends ChangeNotifier {
         QCCaptureLocationFailure.positionUnavailable =>
           QCMaterialPhotoAddResult.addedWithoutLocationPositionUnavailable,
         QCCaptureLocationFailure.unexpectedError ||
-        null => QCMaterialPhotoAddResult.addedWithoutLocationUnexpectedError,
+        null =>
+          QCMaterialPhotoAddResult.addedWithoutLocationUnexpectedError,
       };
     } finally {
       _photoCapturesInProgress.remove(captureKey);
@@ -1189,10 +1174,6 @@ class QCMaterialFormProvider extends ChangeNotifier {
         if (!QCValidators.isValidNumber(valStr)) {
           return 'Form ${i + 1} - ${item.label}: masukkan angka yang valid';
         }
-        final valNum = double.tryParse(valStr.replaceAll(',', '.'));
-        if (valNum != null && valNum < 0) {
-          return 'Form ${i + 1} - ${item.label}: nilai tidak boleh negatif';
-        }
       }
 
       if (item.requiredPhoto &&
@@ -1202,9 +1183,19 @@ class QCMaterialFormProvider extends ChangeNotifier {
         return 'Form ${i + 1} - ${item.label}: tambahkan dokumentasi foto terlebih dahulu';
       }
 
-      final isNonIdeal =
-          item.inputType == QCInputType.choice &&
-          choiceOptionForValue(item.choiceOptions, valStr)?.outcome == 'FAIL';
+      final requiresManualStatus = item.inputType == QCInputType.text ||
+          item.inputType == QCInputType.photo;
+      final hasManualInput = valStr.isNotEmpty ||
+          photos.isNotEmpty ||
+          sample.localItemPhotos[i].isNotEmpty;
+      if (requiresManualStatus &&
+          hasManualInput &&
+          sample.answers[i].status != QCResultStatus.pass &&
+          sample.answers[i].status != QCResultStatus.fail) {
+        return 'Form ${i + 1} - ${item.label}: pilih status pemeriksaan Staff';
+      }
+
+      final isNonIdeal = sample.answers[i].status == QCResultStatus.fail;
       if (isNonIdeal && issue.isEmpty) {
         return 'Form ${i + 1} - ${item.label}: isi keterangan masalah terlebih dahulu';
       }
@@ -1239,9 +1230,20 @@ class QCMaterialFormProvider extends ChangeNotifier {
   }
 
   String? validateForm() {
-    final generalError = validateLocation();
+    final generalError = validateGeneralInformation();
     if (generalError != null) return generalError;
+    
+    final sampleCountError = _synchronizeSampleCount();
+    if (sampleCountError != null) return sampleCountError;
+    
+    final locationError = validateLocation();
+    if (locationError != null) return locationError;
+    
     for (var index = 0; index < samples.length; index++) {
+      if (hasSamplingDecision && samplingDecision!.failedSampleIds.contains(samples[index].id)) {
+        // Skip validation for samples that caused inspection stop, as they might be incomplete
+        continue;
+      }
       final error = validateSample(index);
       if (error != null) return 'Sampel ${index + 1}: $error';
     }
@@ -1341,25 +1343,23 @@ class QCMaterialFormProvider extends ChangeNotifier {
     for (var i = 0; i < _template.checklistItems.length; i++) {
       photosByItemId[_template.checklistItems[i].id] = persistedPhotos[i];
     }
-    return _template.checklistItems
-        .map((item) {
-          final answer = answersByItemId[item.id];
-          if (answer != null) {
-            return answer.copyWith(
-              status: QCResultStatus.notFilled,
-              photoPaths: List<String>.unmodifiable(
-                photosByItemId[item.id] ?? const <String>[],
-              ),
-              photoMetadataByPath: {
-                for (final path in photosByItemId[item.id] ?? const <String>[])
-                  if (captureMetadataByPath[path] != null)
-                    path: captureMetadataByPath[path]!,
-              },
-            );
-          }
-          return _emptyAnswerForItem(item);
-        })
-        .toList(growable: false);
+    return _template.checklistItems.map((item) {
+      final answer = answersByItemId[item.id];
+      if (answer != null) {
+        return answer.copyWith(
+          status: answer.status,
+          photoPaths: List<String>.unmodifiable(
+            photosByItemId[item.id] ?? const <String>[],
+          ),
+          photoMetadataByPath: {
+            for (final path in photosByItemId[item.id] ?? const <String>[])
+              if (captureMetadataByPath[path] != null)
+                path: captureMetadataByPath[path]!,
+          },
+        );
+      }
+      return _emptyAnswerForItem(item);
+    }).toList(growable: false);
   }
 
   Future<void> persistReport(QCReportStatus status) async {
@@ -1506,9 +1506,8 @@ class QCMaterialFormProvider extends ChangeNotifier {
         photos: [],
         staffNote: staffNoteController.text,
         adminNote: isRevisionMode ? null : _originalReport!.adminNote,
-        adminReview: isRevisionMode
-            ? AdminReview()
-            : _originalReport!.adminReview,
+        adminReview:
+            isRevisionMode ? AdminReview() : _originalReport!.adminReview,
         formCode: _originalReport!.formCode,
         templateId: _originalReport!.templateId,
         generalInfo: genInfo,
@@ -1593,9 +1592,8 @@ class QCMaterialFormProvider extends ChangeNotifier {
             'Laporan memiliki referensi foto yang tidak valid.',
           );
         }
-        persistedPhotos[itemIndex] = photos
-            .where(_isCanonicalObjectPath)
-            .toList();
+        persistedPhotos[itemIndex] =
+            photos.where(_isCanonicalObjectPath).toList();
 
         final itemId = _template.checklistItems[itemIndex].id;
         final localPhotos = sample.localItemPhotos[itemIndex];
@@ -1611,11 +1609,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
           null,
         );
         final uploadJobIndexSlots = List<int?>.filled(localPhotos.length, null);
-        for (
-          var photoIndex = 0;
-          photoIndex < localPhotos.length;
-          photoIndex++
-        ) {
+        for (var photoIndex = 0;
+            photoIndex < localPhotos.length;
+            photoIndex++) {
           final photo = localPhotos[photoIndex];
           final bytes = retainedBytes[photoIndex];
           if (exceedsQCPhotoSizeLimit(bytes)) {
@@ -1693,28 +1689,21 @@ class QCMaterialFormProvider extends ChangeNotifier {
       );
     }
 
-    for (
-      var sampleIndex = 0;
-      sampleIndex < persistedBySample.length;
-      sampleIndex++
-    ) {
-      for (
-        var itemIndex = 0;
-        itemIndex < persistedBySample[sampleIndex].length;
-        itemIndex++
-      ) {
+    for (var sampleIndex = 0;
+        sampleIndex < persistedBySample.length;
+        sampleIndex++) {
+      for (var itemIndex = 0;
+          itemIndex < persistedBySample[sampleIndex].length;
+          itemIndex++) {
         final persistedPhotos = persistedBySample[sampleIndex][itemIndex];
         final localObjectPaths =
             localObjectPathsBySample[sampleIndex][itemIndex];
         final uploadJobIndices =
             uploadJobIndicesBySample[sampleIndex][itemIndex];
-        for (
-          var photoIndex = 0;
-          photoIndex < localObjectPaths.length;
-          photoIndex++
-        ) {
-          final objectPath =
-              localObjectPaths[photoIndex] ??
+        for (var photoIndex = 0;
+            photoIndex < localObjectPaths.length;
+            photoIndex++) {
+          final objectPath = localObjectPaths[photoIndex] ??
               uploadedObjectPaths[uploadJobIndices[photoIndex]!];
           persistedPhotos.add(objectPath!);
         }
@@ -1732,16 +1721,14 @@ class QCMaterialFormProvider extends ChangeNotifier {
       final answersByItemId = {
         for (final answer in sample.answers) answer.itemId: answer,
       };
-      for (
-        var itemIndex = 0;
-        itemIndex < _template.checklistItems.length;
-        itemIndex++
-      ) {
+      for (var itemIndex = 0;
+          itemIndex < _template.checklistItems.length;
+          itemIndex++) {
         final itemId = _template.checklistItems[itemIndex].id;
         final answer = answersByItemId[itemId];
         final canonicalExistingPaths =
             answer?.photoPaths.where(_isCanonicalObjectPath).toList() ??
-            const <String>[];
+                const <String>[];
         for (final path in canonicalExistingPaths) {
           final metadata = answer?.photoMetadataByPath[path];
           if (metadata != null) captureMetadataByPath[path] = metadata;
@@ -1749,11 +1736,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
 
         final persistedPaths = persistedBySample[sampleIndex][itemIndex];
         final localPhotos = sample.localItemPhotos[itemIndex];
-        for (
-          var localIndex = 0;
-          localIndex < localPhotos.length;
-          localIndex++
-        ) {
+        for (var localIndex = 0;
+            localIndex < localPhotos.length;
+            localIndex++) {
           final metadata = sample.localPhotoMetadata[localPhotos[localIndex]];
           final persistedIndex = canonicalExistingPaths.length + localIndex;
           if (metadata != null && persistedIndex < persistedPaths.length) {
@@ -1773,11 +1758,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
       final sample = samples[sampleIndex];
       final persistedPhotos = persistedBySample[sampleIndex];
       final photosByItemId = <String, List<String>>{};
-      for (
-        var itemIndex = 0;
-        itemIndex < _template.checklistItems.length;
-        itemIndex++
-      ) {
+      for (var itemIndex = 0;
+          itemIndex < _template.checklistItems.length;
+          itemIndex++) {
         photosByItemId[_template.checklistItems[itemIndex].id] =
             persistedPhotos[itemIndex];
         for (final photo in sample.localItemPhotos[itemIndex]) {
@@ -1786,11 +1769,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
         sample.localItemPhotos[itemIndex].clear();
         sample.localItemPhotoBytes[itemIndex].clear();
       }
-      for (
-        var answerIndex = 0;
-        answerIndex < sample.answers.length;
-        answerIndex++
-      ) {
+      for (var answerIndex = 0;
+          answerIndex < sample.answers.length;
+          answerIndex++) {
         final answer = sample.answers[answerIndex];
         sample.answers[answerIndex] = answer.copyWith(
           photoPaths: List<String>.from(
@@ -1810,8 +1791,8 @@ class QCMaterialFormProvider extends ChangeNotifier {
   }
 
   bool _isCanonicalObjectPath(String value) => RegExp(
-    r'^reports/[A-Za-z0-9_-]{1,128}/(?:general/[0-9a-f-]{36}|checklist/[A-Za-z0-9_-]{1,128}/[0-9a-f-]{36})\.(?:jpg|png|webp|heic)$',
-  ).hasMatch(value);
+        r'^reports/[A-Za-z0-9_-]{1,128}/(?:general/[0-9a-f-]{36}|checklist/[A-Za-z0-9_-]{1,128}/[0-9a-f-]{36})\.(?:jpg|png|webp|heic)$',
+      ).hasMatch(value);
 
   bool _isHttpUrl(String value) {
     final uri = Uri.tryParse(value);

@@ -25,7 +25,8 @@ class ScreenHeader extends StatelessWidget {
           children: [
             if (showBackButton) ...[
               IconButton(
-                icon: const Icon(Icons.arrow_back_ios, color: AppColors.textMain, size: 20),
+                icon: const Icon(Icons.arrow_back_ios,
+                    color: AppColors.textMain, size: 20),
                 onPressed: () {
                   if (Navigator.of(context).canPop()) {
                     context.pop();

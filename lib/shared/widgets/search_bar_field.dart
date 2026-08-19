@@ -34,8 +34,10 @@ class SearchBarField extends StatelessWidget {
               cursorColor: const Color(0xFF006B5A),
               decoration: InputDecoration(
                 hintText: placeholder,
-                prefixIcon: const Icon(Icons.search, color: Color(0xFF6B7280), size: 20),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                prefixIcon: const Icon(Icons.search,
+                    color: Color(0xFF6B7280), size: 20),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 hintStyle: const TextStyle(
                   color: Color(0xFF9CA3AF),
                   fontSize: 14,

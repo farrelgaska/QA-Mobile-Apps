@@ -213,20 +213,17 @@ class _QCPekerjaanFormScreenState extends State<QCPekerjaanFormScreen> {
             default:
               qcInputType = QCInputType.text;
           }
-          // Map ChecklistStatus → QCResultStatus (staff-side: neutral states only, no pass/fail)
+          // Map the persisted Staff result independently from Admin review.
           QCResultStatus qcStatus;
           switch (p.itemStatuses[index]) {
-            case ChecklistStatus.inputTidakValid:
-              qcStatus = QCResultStatus
-                  .notFilled; // show as not filled to allow correction
+            case ChecklistStatus.lulus:
+              qcStatus = QCResultStatus.pass;
               break;
-            case ChecklistStatus.perluDilengkapi:
-              qcStatus =
-                  QCResultStatus.notFilled; // incomplete, show as not filled
+            case ChecklistStatus.tidakSesuai:
+              qcStatus = QCResultStatus.fail;
               break;
-            case ChecklistStatus.sudahDiisi:
-              qcStatus = QCResultStatus
-                  .notFilled; // filled but Admin evaluates PASS/FAIL
+            case ChecklistStatus.perluTindakLanjut:
+              qcStatus = QCResultStatus.needFollowUp;
               break;
             default:
               qcStatus = QCResultStatus.notFilled;
@@ -435,9 +432,9 @@ class _QCPekerjaanFormScreenState extends State<QCPekerjaanFormScreen> {
         children: [
           Row(
             children: [
-              Expanded(
+              const Expanded(
                 child: AppButton(
-                  key: const Key('qc_pekerjaan_back_button'),
+                  key: Key('qc_pekerjaan_back_button'),
                   text: 'Kembali',
                   icon: Icons.arrow_back,
                   variant: AppButtonVariant.ghost,

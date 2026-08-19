@@ -1,3 +1,7 @@
+// The backend contract intentionally serializes QC report states using these
+// uppercase identifiers.
+// ignore_for_file: constant_identifier_names
+
 enum ReportStatus {
   draft,
   menunggu,
@@ -17,51 +21,17 @@ enum ChecklistStatus {
   perluTindakLanjut
 }
 
-enum QCType {
-  material,
-  pekerjaan
-}
+enum QCType { material, pekerjaan }
 
-enum InputType {
-  number,
-  text,
-  choice
-}
+enum InputType { number, text, choice }
 
-enum WorkSegment {
-  provisioning,
-  assurance,
-  construction
-}
+enum WorkSegment { provisioning, assurance, construction }
 
 // User-requested dynamic QC enums
-enum QCInputType {
-  number,
-  text,
-  booleanCheck,
-  choice,
-  photo
-}
+enum QCInputType { number, text, booleanCheck, choice, photo }
 
-enum QCValidationType {
-  none,
-  range,
-  min,
-  max,
-  exact,
-  booleanRequired
-}
+enum QCValidationType { none, range, min, max, exact, booleanRequired }
 
-enum QCResultStatus {
-  notFilled,
-  pass,
-  fail,
-  needFollowUp
-}
+enum QCResultStatus { notFilled, pass, fail, needFollowUp }
 
-enum QCReportStatus {
-  DRAFT,
-  SUBMITTED,
-  NEEDS_FOLLOW_UP,
-  APPROVED
-}
+enum QCReportStatus { DRAFT, SUBMITTED, NEEDS_FOLLOW_UP, APPROVED }

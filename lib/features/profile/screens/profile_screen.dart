@@ -144,7 +144,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) => ConfirmationModal(
         title: 'Logout Akun',
-        message: 'Apakah Anda yakin ingin keluar dari akun Staff Warehouse Anda?',
+        message:
+            'Apakah Anda yakin ingin keluar dari akun Staff Warehouse Anda?',
         confirmText: 'Keluar',
         isDanger: true,
         onConfirm: () {

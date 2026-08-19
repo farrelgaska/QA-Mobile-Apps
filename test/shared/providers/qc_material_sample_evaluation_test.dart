@@ -75,40 +75,40 @@ class _FakePersistenceApi implements QCMaterialPersistenceApi {
 }
 
 QCMaterialTemplate _template() => QCMaterialTemplate(
-  id: 'MAT-SAMPLE-EVALUATION',
-  name: 'Sample Evaluation',
-  code: 'MAT-EVAL',
-  description: '',
-  checklistItems: [
-    QCChecklistItem(
-      id: 'dimension',
-      label: 'Dimensi',
-      category: 'Ukuran',
-      inputType: QCInputType.number,
-      standardText: '10 mm',
-      minValue: 9,
-      maxValue: 11,
-      required: true,
-    ),
-    QCChecklistItem(
-      id: 'condition',
-      label: 'Kondisi',
-      category: 'Visual',
-      inputType: QCInputType.choice,
-      standardText: 'Baik',
-      choices: const ['Baik', 'Tidak Baik'],
-      required: true,
-    ),
-    QCChecklistItem(
-      id: 'optional-note',
-      label: 'Catatan Tambahan',
-      category: 'Lainnya',
-      inputType: QCInputType.text,
-      standardText: '',
-      required: false,
-    ),
-  ],
-);
+      id: 'MAT-SAMPLE-EVALUATION',
+      name: 'Sample Evaluation',
+      code: 'MAT-EVAL',
+      description: '',
+      checklistItems: [
+        QCChecklistItem(
+          id: 'dimension',
+          label: 'Dimensi',
+          category: 'Ukuran',
+          inputType: QCInputType.number,
+          standardText: '10 mm',
+          minValue: 9,
+          maxValue: 11,
+          required: true,
+        ),
+        QCChecklistItem(
+          id: 'condition',
+          label: 'Kondisi',
+          category: 'Visual',
+          inputType: QCInputType.choice,
+          standardText: 'Baik',
+          choices: const ['Baik', 'Tidak Baik'],
+          required: true,
+        ),
+        QCChecklistItem(
+          id: 'optional-note',
+          label: 'Catatan Tambahan',
+          category: 'Lainnya',
+          inputType: QCInputType.text,
+          standardText: '',
+          required: false,
+        ),
+      ],
+    );
 
 void _fillGeneralInformation(
   QCMaterialFormProvider provider, {
@@ -179,6 +179,8 @@ Future<String?> _completeSample(
       answerIndex: 0,
       status: QCSampleEvaluationStatus.outOfStandard,
     );
+    provider.samples[sampleIndex].answers[0].issueNote =
+        'Nilai sampel di luar standar';
   }
   return provider.nextStep();
 }
@@ -650,6 +652,8 @@ void main() {
           answerIndex: 0,
           status: QCSampleEvaluationStatus.outOfStandard,
         );
+        provider.samples[index].answers[0].issueNote =
+            'Nilai sampel di luar standar';
         provider.samples[index].inspectionStatus =
             QCSampleInspectionStatus.completed;
       }
@@ -705,6 +709,8 @@ void main() {
         answerIndex: 0,
         status: QCSampleEvaluationStatus.outOfStandard,
       );
+      provider.samples[index].answers[0].issueNote =
+          'Nilai sampel di luar standar';
       provider.samples[index].inspectionStatus =
           QCSampleInspectionStatus.completed;
     }

@@ -1,4 +1,3 @@
-
 class QCValidators {
   static bool isValidNumber(String value) {
     final normalized = value.trim().replaceAll(',', '.');

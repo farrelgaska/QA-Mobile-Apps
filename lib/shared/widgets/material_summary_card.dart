@@ -18,7 +18,7 @@ class MaterialSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = StatusStyleMapper.getStyle(status);
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: AppCard(
@@ -40,7 +40,8 @@ class MaterialSummaryCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: style.background,
                     borderRadius: BorderRadius.circular(100),
@@ -59,7 +60,8 @@ class MaterialSummaryCard extends StatelessWidget {
             const SizedBox(height: 12),
             Row(
               children: [
-                const Icon(Icons.analytics_outlined, size: 14, color: AppColors.textSoft),
+                const Icon(Icons.analytics_outlined,
+                    size: 14, color: AppColors.textSoft),
                 const SizedBox(width: 6),
                 Text(
                   'Jumlah Sampel: $sampleCount',

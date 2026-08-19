@@ -12,21 +12,23 @@ class QCPekerjaanSegmentScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const ScreenHeader(
                 title: 'QC Pekerjaan',
-                subtitle: 'Pilih segmentasi pekerjaan untuk dilakukan Quality Control',
+                subtitle:
+                    'Pilih segmentasi pekerjaan untuk dilakukan Quality Control',
               ),
               const SizedBox(height: 12),
-              
               _buildSegmentCard(
                 context: context,
                 title: 'Provisioning',
-                description: 'Inspeksi pemasangan ONT, penarikan kabel dropcore, & aktivasi pelanggan.',
+                description:
+                    'Inspeksi pemasangan ONT, penarikan kabel dropcore, & aktivasi pelanggan.',
                 icon: Icons.settings_input_component,
                 segmentName: 'provisioning',
                 color: AppColors.infoBg,
@@ -36,7 +38,8 @@ class QCPekerjaanSegmentScreen extends StatelessWidget {
               _buildSegmentCard(
                 context: context,
                 title: 'Assurance',
-                description: 'Inspeksi kualitas redaman fiber optic, pemeliharaan, & kebersihan ODP.',
+                description:
+                    'Inspeksi kualitas redaman fiber optic, pemeliharaan, & kebersihan ODP.',
                 icon: Icons.speed_outlined,
                 segmentName: 'assurance',
                 color: AppColors.primarySoft,
@@ -46,7 +49,8 @@ class QCPekerjaanSegmentScreen extends StatelessWidget {
               _buildSegmentCard(
                 context: context,
                 title: 'Construction',
-                description: 'Pekerjaan konstruksi tiang, pengecoran pondasi, & penarikan kabel feeder.',
+                description:
+                    'Pekerjaan konstruksi tiang, pengecoran pondasi, & penarikan kabel feeder.',
                 icon: Icons.home_repair_service_outlined,
                 segmentName: 'construction',
                 color: AppColors.revisionBg,
@@ -117,7 +121,8 @@ class QCPekerjaanSegmentScreen extends StatelessWidget {
           const SizedBox(width: 8),
           const Align(
             alignment: Alignment.center,
-            child: Icon(Icons.arrow_forward_ios, color: AppColors.textSoft, size: 16),
+            child: Icon(Icons.arrow_forward_ios,
+                color: AppColors.textSoft, size: 16),
           ),
         ],
       ),

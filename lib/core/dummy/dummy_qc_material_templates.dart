@@ -293,7 +293,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
         standardText: 'OK',
         required: true,
         requiredPhoto: true,
-        validationRule: QCValidationRule(type: QCValidationType.booleanRequired),
+        validationRule:
+            QCValidationRule(type: QCValidationType.booleanRequired),
       ),
       QCChecklistItem(
         id: 'tb93-2',
@@ -367,7 +368,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
         unit: 'cm',
         standardText: '40 cm',
         required: true,
-        validationRule: QCValidationRule(type: QCValidationType.min, minValue: 40),
+        validationRule:
+            QCValidationRule(type: QCValidationType.min, minValue: 40),
       ),
       QCChecklistItem(
         id: 'tb93-7',
@@ -377,7 +379,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
         unit: 'mm',
         standardText: '3 mm',
         required: true,
-        validationRule: QCValidationRule(type: QCValidationType.min, minValue: 3),
+        validationRule:
+            QCValidationRule(type: QCValidationType.min, minValue: 3),
       ),
       QCChecklistItem(
         id: 'tb93-8',
@@ -478,7 +481,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
         standardText: '120 kg',
         required: true,
         requiredPhoto: true,
-        validationRule: QCValidationRule(type: QCValidationType.min, minValue: 120),
+        validationRule:
+            QCValidationRule(type: QCValidationType.min, minValue: 120),
       ),
       QCChecklistItem(
         id: 'tb93-15',
@@ -539,7 +543,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
         standardText: 'OK',
         required: true,
         requiredPhoto: true,
-        validationRule: QCValidationRule(type: QCValidationType.booleanRequired),
+        validationRule:
+            QCValidationRule(type: QCValidationType.booleanRequired),
       ),
       QCChecklistItem(
         id: 't72-2',
@@ -648,7 +653,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
         standardText: '≥ 52,5 kg',
         required: true,
         requiredPhoto: true,
-        validationRule: QCValidationRule(type: QCValidationType.min, minValue: 52.5),
+        validationRule:
+            QCValidationRule(type: QCValidationType.min, minValue: 52.5),
       ),
       QCChecklistItem(
         id: 't72-10',
@@ -658,7 +664,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
         unit: 'mm',
         standardText: '≥ 3 mm',
         required: true,
-        validationRule: QCValidationRule(type: QCValidationType.min, minValue: 3),
+        validationRule:
+            QCValidationRule(type: QCValidationType.min, minValue: 3),
       ),
       QCChecklistItem(
         id: 't72-11',
@@ -668,7 +675,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
         unit: 'cm',
         standardText: '≥ 40 cm',
         required: true,
-        validationRule: QCValidationRule(type: QCValidationType.min, minValue: 40),
+        validationRule:
+            QCValidationRule(type: QCValidationType.min, minValue: 40),
       ),
       QCChecklistItem(
         id: 't72-12',
@@ -721,7 +729,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
         standardText: 'tidak cacat',
         required: true,
         requiredPhoto: true,
-        validationRule: QCValidationRule(type: QCValidationType.booleanRequired),
+        validationRule:
+            QCValidationRule(type: QCValidationType.booleanRequired),
       ),
       QCChecklistItem(
         id: 'tg6-2',
@@ -774,7 +783,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
         standardText: 'Minimal 43,78 kg',
         required: true,
         requiredPhoto: true,
-        validationRule: QCValidationRule(type: QCValidationType.min, minValue: 43.78),
+        validationRule:
+            QCValidationRule(type: QCValidationType.min, minValue: 43.78),
       ),
       QCChecklistItem(
         id: 'tg6-6',
@@ -795,7 +805,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
       ),
       QCChecklistItem(
         id: 'tg6-8',
-        label: 'Terdapat nama atau simbol merk pabrik tercetak jelas pada tutup atas',
+        label:
+            'Terdapat nama atau simbol merk pabrik tercetak jelas pada tutup atas',
         category: 'Fisik',
         inputType: QCInputType.booleanCheck,
         standardText: 'Ada',
@@ -819,7 +830,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
         standardText: 'tidak terdapat retakan dan permukaan licin',
         required: true,
         requiredPhoto: true,
-        validationRule: QCValidationRule(type: QCValidationType.booleanRequired),
+        validationRule:
+            QCValidationRule(type: QCValidationType.booleanRequired),
       ),
       QCChecklistItem(
         id: 'tb7-2',
@@ -837,7 +849,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
         unit: 'm',
         standardText: '≥ 0,25 m',
         required: true,
-        validationRule: QCValidationRule(type: QCValidationType.min, minValue: 0.25),
+        validationRule:
+            QCValidationRule(type: QCValidationType.min, minValue: 0.25),
       ),
       QCChecklistItem(
         id: 'tb7-4',
@@ -847,7 +860,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
         unit: 'm',
         standardText: '≥ 0,35 m',
         required: true,
-        validationRule: QCValidationRule(type: QCValidationType.min, minValue: 0.35),
+        validationRule:
+            QCValidationRule(type: QCValidationType.min, minValue: 0.35),
       ),
       QCChecklistItem(
         id: 'tb7-5',
@@ -857,7 +871,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
         unit: 'm',
         standardText: '≥ 0,35 m',
         required: true,
-        validationRule: QCValidationRule(type: QCValidationType.min, minValue: 0.35),
+        validationRule:
+            QCValidationRule(type: QCValidationType.min, minValue: 0.35),
       ),
       QCChecklistItem(
         id: 'tb7-6',
@@ -867,7 +882,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
         unit: 'm',
         standardText: '≥ 7 m',
         required: true,
-        validationRule: QCValidationRule(type: QCValidationType.min, minValue: 7),
+        validationRule:
+            QCValidationRule(type: QCValidationType.min, minValue: 7),
       ),
       QCChecklistItem(
         id: 'tb7-7',
@@ -949,7 +965,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
         standardText: 'tidak terdapat retakan dan permukaan licin',
         required: true,
         requiredPhoto: true,
-        validationRule: QCValidationRule(type: QCValidationType.booleanRequired),
+        validationRule:
+            QCValidationRule(type: QCValidationType.booleanRequired),
       ),
       QCChecklistItem(
         id: 'tb9-2',
@@ -1045,7 +1062,8 @@ final List<QCMaterialTemplate> dummyQCMaterialTemplates = [
         unit: 'm',
         standardText: '≥ 9 m',
         required: true,
-        validationRule: QCValidationRule(type: QCValidationType.min, minValue: 9),
+        validationRule:
+            QCValidationRule(type: QCValidationType.min, minValue: 9),
       ),
       QCChecklistItem(
         id: 'tb9-10',

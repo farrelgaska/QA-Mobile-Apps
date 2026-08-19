@@ -25,14 +25,27 @@ class ReportCard extends StatelessWidget {
   });
 
   String _formatDate(DateTime dt) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des'
+    ];
     return "${dt.day} ${months[dt.month - 1]} ${dt.year}";
   }
 
   @override
   Widget build(BuildContext context) {
     final dateStr = _formatDate(date);
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: AppCard(
@@ -45,15 +58,20 @@ class ReportCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: type == QCType.material ? AppColors.primarySoft : AppColors.infoBg,
+                    color: type == QCType.material
+                        ? AppColors.primarySoft
+                        : AppColors.infoBg,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     type == QCType.material ? 'MATERIAL' : 'PEKERJAAN',
                     style: TextStyle(
-                      color: type == QCType.material ? AppColors.primary : AppColors.infoText,
+                      color: type == QCType.material
+                          ? AppColors.primary
+                          : AppColors.infoText,
                       fontWeight: FontWeight.bold,
                       fontSize: 10,
                     ),
@@ -85,20 +103,24 @@ class ReportCard extends StatelessWidget {
             const SizedBox(height: 12),
             Row(
               children: [
-                const Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSoft),
+                const Icon(Icons.calendar_today_outlined,
+                    size: 14, color: AppColors.textSoft),
                 const SizedBox(width: 6),
                 Text(
                   dateStr,
-                  style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                  style:
+                      const TextStyle(color: AppColors.textMuted, fontSize: 12),
                 ),
                 const Spacer(),
-                const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textSoft),
+                const Icon(Icons.location_on_outlined,
+                    size: 14, color: AppColors.textSoft),
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
                     location,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                    style: const TextStyle(
+                        color: AppColors.textMuted, fontSize: 12),
                   ),
                 ),
               ],

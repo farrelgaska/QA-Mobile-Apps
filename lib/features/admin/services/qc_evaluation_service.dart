@@ -15,10 +15,21 @@ class QCEvaluationService {
     final lowerVal = valStr.toLowerCase();
 
     // 1. Choice/Boolean checks
-    if (item.inputType == QCInputType.choice || item.inputType == QCInputType.booleanCheck) {
+    if (item.inputType == QCInputType.choice ||
+        item.inputType == QCInputType.booleanCheck) {
       final passKeywords = [
-        'sesuai', 'ya', 'ok', 'ada', 'lengkap', 'rapi', 'kencang', 'bersih', 
-        'tegak lurus', 'sesuai standar', 'true', 'diterima'
+        'sesuai',
+        'ya',
+        'ok',
+        'ada',
+        'lengkap',
+        'rapi',
+        'kencang',
+        'bersih',
+        'tegak lurus',
+        'sesuai standar',
+        'true',
+        'diterima'
       ];
       final isPass = passKeywords.contains(lowerVal);
       return isPass ? QCResultStatus.pass : QCResultStatus.fail;
@@ -125,8 +136,16 @@ class QCEvaluationService {
     } else if (inputType == InputType.choice) {
       final lowerVal = valStr.toLowerCase();
       final passKeywords = [
-        'sesuai', 'rapi', 'kencang', 'bersih', 'ada & jelas', 
-        'tegak lurus', 'sesuai standar', 'lengkap', 'ya', 'ok'
+        'sesuai',
+        'rapi',
+        'kencang',
+        'bersih',
+        'ada & jelas',
+        'tegak lurus',
+        'sesuai standar',
+        'lengkap',
+        'ya',
+        'ok'
       ];
       if (passKeywords.contains(lowerVal)) {
         return ChecklistStatus.lulus;

@@ -17,12 +17,12 @@ class QCEvidenceCaptureMetadata {
       latitude != null && longitude != null && accuracyMeters != null;
 
   Map<String, dynamic> toJson() => {
-    'capturedAt': capturedAt,
-    'latitude': latitude,
-    'longitude': longitude,
-    'accuracyMeters': accuracyMeters,
-    'locationLabel': locationLabel,
-  };
+        'capturedAt': capturedAt,
+        'latitude': latitude,
+        'longitude': longitude,
+        'accuracyMeters': accuracyMeters,
+        'locationLabel': locationLabel,
+      };
 
   factory QCEvidenceCaptureMetadata.fromJson(Map<String, dynamic> json) {
     return QCEvidenceCaptureMetadata(

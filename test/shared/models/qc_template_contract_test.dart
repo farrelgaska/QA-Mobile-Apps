@@ -35,31 +35,31 @@ void main() {
 
   test('parses canonical and legacy material boolean input types', () {
     Map<String, dynamic> materialWithInputType(String inputType) => {
-      'id': 'MAT-BOOLEAN',
-      'name': 'Material boolean',
-      'form_code': 'MAT-BOOLEAN',
-      'is_active': true,
-      'checklist_items': [
-        {
-          'id': 'boolean-1',
-          'parameter_name': 'Kondisi fisik',
-          'input_type': inputType,
-          'standard_text': 'OK',
-          'category': '',
-          'min_value': null,
-          'max_value': null,
-          'validation_rule': {
-            'type': 'booleanRequired',
-            'min_value': null,
-            'max_value': null,
-          },
-          'is_required': true,
-          'required_photo': false,
+          'id': 'MAT-BOOLEAN',
+          'name': 'Material boolean',
+          'form_code': 'MAT-BOOLEAN',
           'is_active': true,
-          'choice_options': [],
-        },
-      ],
-    };
+          'checklist_items': [
+            {
+              'id': 'boolean-1',
+              'parameter_name': 'Kondisi fisik',
+              'input_type': inputType,
+              'standard_text': 'OK',
+              'category': '',
+              'min_value': null,
+              'max_value': null,
+              'validation_rule': {
+                'type': 'booleanRequired',
+                'min_value': null,
+                'max_value': null,
+              },
+              'is_required': true,
+              'required_photo': false,
+              'is_active': true,
+              'choice_options': [],
+            },
+          ],
+        };
 
     expect(
       QCTemplateContract.material(

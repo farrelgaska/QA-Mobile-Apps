@@ -28,10 +28,10 @@ class QCCaptureLocationResult {
 
   const QCCaptureLocationResult.unavailable(
     QCCaptureLocationFailure this.failure,
-  ) : latitude = null,
-      longitude = null,
-      accuracyMeters = null,
-      locationLabel = null;
+  )   : latitude = null,
+        longitude = null,
+        accuracyMeters = null,
+        locationLabel = null;
 
   bool get isAvailable =>
       latitude != null && longitude != null && accuracyMeters != null;
@@ -95,9 +95,10 @@ class GeolocatorQCCaptureGeolocationClient
   @override
   Future<QCCapturePosition> getCurrentPosition({
     required LocationSettings locationSettings,
-  }) async => QCCapturePosition.fromGeolocator(
-    await Geolocator.getCurrentPosition(locationSettings: locationSettings),
-  );
+  }) async =>
+      QCCapturePosition.fromGeolocator(
+        await Geolocator.getCurrentPosition(locationSettings: locationSettings),
+      );
 }
 
 abstract class QCCaptureLocationService {
@@ -120,11 +121,12 @@ class GeolocatorQCCaptureLocationService implements QCCaptureLocationService {
     Duration? timeout,
     Duration? maximumCachedAge,
     bool? isWeb,
-  }) : _client = client ?? GeolocatorQCCaptureGeolocationClient(),
-       _clock = clock ?? DateTime.now,
-       _locationTimeout = timeout ?? locationTimeout,
-       _maximumCachedPositionAge = maximumCachedAge ?? maximumCachedPositionAge,
-       _isWeb = isWeb ?? kIsWeb;
+  })  : _client = client ?? GeolocatorQCCaptureGeolocationClient(),
+        _clock = clock ?? DateTime.now,
+        _locationTimeout = timeout ?? locationTimeout,
+        _maximumCachedPositionAge =
+            maximumCachedAge ?? maximumCachedPositionAge,
+        _isWeb = isWeb ?? kIsWeb;
 
   @override
   Future<QCCaptureLocationResult> captureLocation() async {

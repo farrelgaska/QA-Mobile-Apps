@@ -26,9 +26,8 @@ class QCTemplateContract {
       description: _string(json, 'description'),
       isActive: _boolean(json, 'is_active', alias: 'isActive'),
       checklistItems: _items(json).map(_workItem).toList(),
-      status: _boolean(json, 'is_active', alias: 'isActive')
-          ? 'Aktif'
-          : 'Nonaktif',
+      status:
+          _boolean(json, 'is_active', alias: 'isActive') ? 'Aktif' : 'Nonaktif',
     );
   }
 
@@ -127,7 +126,7 @@ class QCTemplateContract {
       case 'choice':
         return InputType.choice;
       default:
-        throw FormatException('Unsupported input_type');
+        throw const FormatException('Unsupported input_type');
     }
   }
 
@@ -143,7 +142,7 @@ class QCTemplateContract {
       case 'booleancheck':
         return QCInputType.booleanCheck;
       default:
-        throw FormatException('Unsupported material input_type');
+        throw const FormatException('Unsupported material input_type');
     }
   }
 
@@ -155,8 +154,8 @@ class QCTemplateContract {
       type: min != null && max != null
           ? QCValidationType.range
           : min != null
-          ? QCValidationType.min
-          : QCValidationType.max,
+              ? QCValidationType.min
+              : QCValidationType.max,
       minValue: min,
       maxValue: max,
     );

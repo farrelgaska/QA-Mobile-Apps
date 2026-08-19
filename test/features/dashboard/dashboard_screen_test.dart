@@ -31,12 +31,12 @@ void main() {
 
   test('dashboard periods filter reports using inclusive calendar dates', () {
     List<String> ids(String period) => filterDashboardReports(
-      reports,
-      period: period,
-      now: now,
-      customStart: DateTime(2026, 7, 26),
-      customEnd: DateTime(2026, 7, 30),
-    ).map((report) => report.id).toList();
+          reports,
+          period: period,
+          now: now,
+          customStart: DateTime(2026, 7, 26),
+          customEnd: DateTime(2026, 7, 30),
+        ).map((report) => report.id).toList();
 
     expect(ids('Hari Ini'), ['today']);
     expect(ids('Minggu Ini'), ['today', 'yesterday', 'this-week']);

@@ -4,7 +4,8 @@ import '../../core/utils/status_style_mapper.dart';
 import '../../shared/models/enums.dart';
 
 class StatusBadge extends StatelessWidget {
-  final dynamic status; // ReportStatus, ChecklistStatus, QCReportStatus, QCResultStatus or String
+  final dynamic
+      status; // ReportStatus, ChecklistStatus, QCReportStatus, QCResultStatus or String
 
   const StatusBadge({
     super.key,
@@ -26,13 +27,29 @@ class StatusBadge extends StatelessWidget {
     } else if (status is String) {
       label = status as String;
       final lowerLabel = label.toLowerCase();
-      if (lowerLabel == 'aktif' || lowerLabel == 'lulus' || lowerLabel == 'disetujui' || lowerLabel == 'diterima' || lowerLabel == 'selesai' || lowerLabel == 'pass') {
+      if (lowerLabel == 'aktif' ||
+          lowerLabel == 'lulus' ||
+          lowerLabel == 'disetujui' ||
+          lowerLabel == 'diterima' ||
+          lowerLabel == 'selesai' ||
+          lowerLabel == 'pass') {
         label = 'Lulus';
-      } else if (lowerLabel == 'tindak lanjut' || lowerLabel == 'perlu tindak lanjut' || lowerLabel == 'needfollowup' || lowerLabel == 'revisi' || lowerLabel == 'butuh revisi') {
+      } else if (lowerLabel == 'tindak lanjut' ||
+          lowerLabel == 'perlu tindak lanjut' ||
+          lowerLabel == 'needfollowup' ||
+          lowerLabel == 'revisi' ||
+          lowerLabel == 'butuh revisi') {
         label = 'Perlu Tindak Lanjut';
-      } else if (lowerLabel == 'perlu perbaikan' || lowerLabel == 'tidak sesuai' || lowerLabel == 'fail') {
+      } else if (lowerLabel == 'perlu perbaikan' ||
+          lowerLabel == 'tidak sesuai' ||
+          lowerLabel == 'fail') {
         label = 'Perlu Perbaikan';
-      } else if (lowerLabel == 'nonaktif' || lowerLabel == 'ditolak' || lowerLabel == 'pending' || lowerLabel == 'menunggu' || lowerLabel == 'on progress' || lowerLabel == 'menunggu review admin') {
+      } else if (lowerLabel == 'nonaktif' ||
+          lowerLabel == 'ditolak' ||
+          lowerLabel == 'pending' ||
+          lowerLabel == 'menunggu' ||
+          lowerLabel == 'on progress' ||
+          lowerLabel == 'menunggu review admin') {
         label = 'Pending';
       }
     }
@@ -44,7 +61,9 @@ class StatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: style.background,
         borderRadius: BorderRadius.circular(100),
-        border: style.border != null ? Border.all(color: style.border!, width: 1) : null,
+        border: style.border != null
+            ? Border.all(color: style.border!, width: 1)
+            : null,
       ),
       child: Text(
         label,

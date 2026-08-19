@@ -201,7 +201,9 @@ void main() {
     },
   );
 
-  test('downscales large images exceeding 2048px to max edge 2048px prior to compression', () async {
+  test(
+      'downscales large images exceeding 2048px to max edge 2048px prior to compression',
+      () async {
     final bytes = _jpeg(width: 3000, height: 2200);
     final original = XFile.fromData(
       bytes,

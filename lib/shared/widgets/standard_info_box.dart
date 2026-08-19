@@ -29,7 +29,8 @@ class StandardInfoBox extends StatelessWidget {
             children: [
               const Padding(
                 padding: EdgeInsets.only(top: 2.0),
-                child: Icon(Icons.info_outline, size: 14, color: AppColors.textMuted),
+                child: Icon(Icons.info_outline,
+                    size: 14, color: AppColors.textMuted),
               ),
               const SizedBox(width: 6),
               Expanded(

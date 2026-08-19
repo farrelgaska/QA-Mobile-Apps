@@ -11,16 +11,16 @@ class DeviceProfilePhotoPicker implements ProfilePhotoPicker {
   final ImagePicker _picker;
 
   DeviceProfilePhotoPicker([ImagePicker? picker])
-    : _picker = picker ?? ImagePicker();
+      : _picker = picker ?? ImagePicker();
 
   @override
   Future<XFile?> pick(ImageSource source) => _picker.pickImage(
-    source: source,
-    maxWidth: 1024,
-    maxHeight: 1024,
-    imageQuality: 75,
-    requestFullMetadata: false,
-  );
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 75,
+        requestFullMetadata: false,
+      );
 }
 
 abstract class ProfilePhotoPersistence {
@@ -79,8 +79,8 @@ class ProfilePhotoController extends ChangeNotifier {
     required this.nik,
     ProfilePhotoPicker? picker,
     ProfilePhotoPersistence? persistence,
-  }) : picker = picker ?? DeviceProfilePhotoPicker(),
-       persistence = persistence ?? PreferencesProfilePhotoPersistence();
+  })  : picker = picker ?? DeviceProfilePhotoPicker(),
+        persistence = persistence ?? PreferencesProfilePhotoPersistence();
 
   Uint8List? get bytes => _bytes;
   bool get hasPhoto => _bytes != null;

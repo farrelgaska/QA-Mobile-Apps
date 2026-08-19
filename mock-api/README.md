@@ -1,3 +1,9 @@
+# Deprecated Backend Copy — Do Not Run
+
+This directory is a legacy duplicate retained only because automated removal
+was not authorized. The canonical backend is `D:\QA-APPS-MOBILE\mock-api` and
+is the only backend supported by the local run instructions.
+
 # Prototype QC Reports Mock API Backend
 
 This is a lightweight local mock API server designed to simulate storage and retrieval of QC reports conforming to the shared data contract.

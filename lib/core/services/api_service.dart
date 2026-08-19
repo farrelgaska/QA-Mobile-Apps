@@ -2,7 +2,13 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform, debugPrint, kIsWeb, kReleaseMode, visibleForTesting;
+    show
+        TargetPlatform,
+        defaultTargetPlatform,
+        debugPrint,
+        kIsWeb,
+        kReleaseMode,
+        visibleForTesting;
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
@@ -39,8 +45,7 @@ String resolveApiBaseUrl({
   final normalized = configuredBaseUrl.trim().replaceFirst(RegExp(r'/+$'), '');
   if (normalized.isNotEmpty && normalized != r'$API_BASE_URL') {
     final uri = Uri.tryParse(normalized);
-    final isAbsoluteHttpUrl =
-        uri != null &&
+    final isAbsoluteHttpUrl = uri != null &&
         (uri.scheme == 'http' || uri.scheme == 'https') &&
         uri.host.isNotEmpty &&
         !uri.hasQuery &&
@@ -84,16 +89,16 @@ class ApiService {
   }
 
   String get baseUrl => resolveApiBaseUrl(
-    configuredBaseUrl: _configuredBaseUrl,
-    isWeb: kIsWeb,
-    isReleaseMode: kReleaseMode,
-    isAndroid: _isAndroid,
-  );
+        configuredBaseUrl: _configuredBaseUrl,
+        isWeb: kIsWeb,
+        isReleaseMode: kReleaseMode,
+        isAndroid: _isAndroid,
+      );
 
   static void validateConfiguration() => ApiService().baseUrl;
 
   /// Fetch all reports from the mock API backend.
-  Future<List<QCReportModel>?> fetchReports() async {
+  Future<List<QCReportModel>> fetchReports() async {
     try {
       final uri = Uri.parse('$baseUrl/reports');
       final response = await (_client?.get(uri) ?? http.get(uri)).timeout(
@@ -109,12 +114,16 @@ class ApiService {
             )
             .toList();
       }
-    } catch (e) {
-      debugPrint(
-        '[Mock API Offline - Prototype Fallback] fetchReports failed: $e',
+      throw ApiRequestException(
+        'Daftar laporan gagal dimuat (HTTP ${response.statusCode}).',
+      );
+    } on ApiRequestException {
+      rethrow;
+    } catch (error) {
+      throw ApiRequestException(
+        'Tidak dapat terhubung ke server saat memuat laporan: $error',
       );
     }
-    return null;
   }
 
   /// Fetch one report directly so report detail never relies on a stale list
@@ -125,13 +134,12 @@ class ApiService {
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/reports/$reportId');
-      final response =
-          await (_client?.get(
-                    uri,
-                    headers: const {'Cache-Control': 'no-cache'},
-                  ) ??
-                  http.get(uri, headers: const {'Cache-Control': 'no-cache'}))
-              .timeout(const Duration(seconds: 4));
+      final response = await (_client?.get(
+                uri,
+                headers: const {'Cache-Control': 'no-cache'},
+              ) ??
+              http.get(uri, headers: const {'Cache-Control': 'no-cache'}))
+          .timeout(const Duration(seconds: 4));
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         if (decoded is Map<String, dynamic>) {
@@ -169,12 +177,10 @@ class ApiService {
   /// Returns a list of raw JSON maps, or null if the API is unavailable.
   Future<List<Map<String, dynamic>>> fetchTemplates([String? type]) async {
     try {
-      final url = type != null
-          ? '$baseUrl/templates?type=$type'
-          : '$baseUrl/templates';
-      var response = await http
-          .get(Uri.parse(url))
-          .timeout(const Duration(seconds: 4));
+      final url =
+          type != null ? '$baseUrl/templates?type=$type' : '$baseUrl/templates';
+      var response =
+          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 4));
       if (response.statusCode == 304) {
         final retryUri = Uri.parse(url).replace(
           queryParameters: {
@@ -193,7 +199,7 @@ class ApiService {
         '[Mock API Offline - Prototype Fallback] fetchTemplates failed: $e',
       );
     }
-    throw ApiRequestException(
+    throw const ApiRequestException(
       'Template tidak dapat dimuat. Periksa koneksi lalu coba lagi.',
     );
   }
@@ -205,18 +211,17 @@ class ApiService {
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/reports');
-      final response =
-          await (_client?.post(
-                    uri,
-                    headers: {'Content-Type': 'application/json'},
-                    body: jsonEncode(report.toJson()),
-                  ) ??
-                  http.post(
-                    uri,
-                    headers: {'Content-Type': 'application/json'},
-                    body: jsonEncode(report.toJson()),
-                  ))
-              .timeout(const Duration(seconds: 30));
+      final response = await (_client?.post(
+                uri,
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode(report.toJson()),
+              ) ??
+              http.post(
+                uri,
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode(report.toJson()),
+              ))
+          .timeout(const Duration(seconds: 30));
       if (response.statusCode == 200 || response.statusCode == 201) {
         return true;
       }
@@ -254,18 +259,17 @@ class ApiService {
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/reports/${report.id}');
-      final response =
-          await (_client?.patch(
-                    uri,
-                    headers: {'Content-Type': 'application/json'},
-                    body: jsonEncode(report.toJson()),
-                  ) ??
-                  http.patch(
-                    uri,
-                    headers: {'Content-Type': 'application/json'},
-                    body: jsonEncode(report.toJson()),
-                  ))
-              .timeout(const Duration(seconds: 30));
+      final response = await (_client?.patch(
+                uri,
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode(report.toJson()),
+              ) ??
+              http.patch(
+                uri,
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode(report.toJson()),
+              ))
+          .timeout(const Duration(seconds: 30));
       if (response.statusCode == 200) return true;
       if (response.statusCode == 409) {
         throw ApiRequestException(
@@ -320,27 +324,26 @@ class ApiService {
 
     try {
       final uploadBytes = bytes ?? await file.readAsBytes();
-      final request =
-          http.MultipartRequest(
-              'POST',
-              Uri.parse('$baseUrl/uploads/qc-evidence'),
-            )
-            ..fields['report_id'] = reportId
-            ..fields['category'] = 'checklist'
-            ..fields['item_id'] = itemId
-            ..files.add(
-              http.MultipartFile.fromBytes(
-                'file',
-                uploadBytes,
-                filename: file.name,
-                contentType: MediaType.parse(mimeType),
-              ),
-            );
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/uploads/qc-evidence'),
+      )
+        ..fields['report_id'] = reportId
+        ..fields['category'] = 'checklist'
+        ..fields['item_id'] = itemId
+        ..files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            uploadBytes,
+            filename: file.name,
+            contentType: MediaType.parse(mimeType),
+          ),
+        );
 
       final client = _client ?? _sharedClient;
       final streamedResponse = await client.send(request).timeout(
-        const Duration(seconds: 15),
-      );
+            const Duration(seconds: 15),
+          );
       final response = await http.Response.fromStream(streamedResponse);
       final body = _decodeObject(response.body);
       if (response.statusCode != 201) {

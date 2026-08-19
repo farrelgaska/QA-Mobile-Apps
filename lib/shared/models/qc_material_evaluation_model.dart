@@ -4,16 +4,16 @@ enum QCSampleEvaluationStatus { notEvaluated, withinStandard, outOfStandard }
 
 extension QCSampleEvaluationStatusValue on QCSampleEvaluationStatus {
   String get apiValue => switch (this) {
-    QCSampleEvaluationStatus.notEvaluated => 'NOT_EVALUATED',
-    QCSampleEvaluationStatus.withinStandard => 'WITHIN_STANDARD',
-    QCSampleEvaluationStatus.outOfStandard => 'OUT_OF_STANDARD',
-  };
+        QCSampleEvaluationStatus.notEvaluated => 'NOT_EVALUATED',
+        QCSampleEvaluationStatus.withinStandard => 'WITHIN_STANDARD',
+        QCSampleEvaluationStatus.outOfStandard => 'OUT_OF_STANDARD',
+      };
 
   String get displayLabel => switch (this) {
-    QCSampleEvaluationStatus.notEvaluated => 'Belum Dievaluasi',
-    QCSampleEvaluationStatus.withinStandard => 'Sesuai Standar',
-    QCSampleEvaluationStatus.outOfStandard => 'Di Luar Standar',
-  };
+        QCSampleEvaluationStatus.notEvaluated => 'Belum Dievaluasi',
+        QCSampleEvaluationStatus.withinStandard => 'Sesuai Standar',
+        QCSampleEvaluationStatus.outOfStandard => 'Di Luar Standar',
+      };
 }
 
 QCSampleEvaluationStatus qcSampleEvaluationStatusFromValue(dynamic value) {
@@ -29,9 +29,9 @@ enum QCMaterialSamplingDecisionType { stop, continueInspection }
 extension QCMaterialSamplingDecisionTypeValue
     on QCMaterialSamplingDecisionType {
   String get apiValue => switch (this) {
-    QCMaterialSamplingDecisionType.stop => 'STOP',
-    QCMaterialSamplingDecisionType.continueInspection => 'CONTINUE',
-  };
+        QCMaterialSamplingDecisionType.stop => 'STOP',
+        QCMaterialSamplingDecisionType.continueInspection => 'CONTINUE',
+      };
 }
 
 class QCMaterialSamplingDecision {
@@ -95,9 +95,8 @@ class QCMaterialSamplingDecision {
 
   static List<String> _stringList(dynamic value) {
     try {
-      final decoded = value is List
-          ? value
-          : jsonDecode(value?.toString() ?? '');
+      final decoded =
+          value is List ? value : jsonDecode(value?.toString() ?? '');
       return (decoded as List)
           .map((entry) => entry.toString())
           .where((entry) => entry.isNotEmpty)
@@ -109,9 +108,8 @@ class QCMaterialSamplingDecision {
 
   static List<int> _intList(dynamic value) {
     try {
-      final decoded = value is List
-          ? value
-          : jsonDecode(value?.toString() ?? '');
+      final decoded =
+          value is List ? value : jsonDecode(value?.toString() ?? '');
       return (decoded as List)
           .map((entry) => entry is int ? entry : int.tryParse('$entry'))
           .whereType<int>()
@@ -170,9 +168,8 @@ class QCMaterialReviewRequest {
 
   static List<String> _stringList(dynamic value) {
     try {
-      final decoded = value is List
-          ? value
-          : jsonDecode(value?.toString() ?? '');
+      final decoded =
+          value is List ? value : jsonDecode(value?.toString() ?? '');
       return (decoded as List)
           .map((entry) => entry.toString())
           .where((entry) => entry.isNotEmpty)
@@ -184,9 +181,8 @@ class QCMaterialReviewRequest {
 
   static List<int> _intList(dynamic value) {
     try {
-      final decoded = value is List
-          ? value
-          : jsonDecode(value?.toString() ?? '');
+      final decoded =
+          value is List ? value : jsonDecode(value?.toString() ?? '');
       return (decoded as List)
           .map((entry) => entry is int ? entry : int.tryParse('$entry'))
           .whereType<int>()

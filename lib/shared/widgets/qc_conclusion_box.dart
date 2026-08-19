@@ -31,7 +31,8 @@ class QCConclusionBox extends StatelessWidget {
       bgColor = AppColors.inactiveBg;
       textColor = AppColors.inactiveText;
       icon = Icons.pending_outlined;
-      text = 'Belum Lengkap - Harap selesaikan seluruh isian wajib & foto dokumentasi.';
+      text =
+          'Belum Lengkap - Harap selesaikan seluruh isian wajib & foto dokumentasi.';
     }
 
     return AppCard(

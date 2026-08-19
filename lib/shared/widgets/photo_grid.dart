@@ -66,8 +66,8 @@ class _PhotoGridState extends State<PhotoGrid> {
   }
 
   bool _isCanonicalObjectPath(String value) => RegExp(
-    r'^reports/[A-Za-z0-9_-]{1,128}/(?:general/[0-9a-f-]{36}|checklist/[A-Za-z0-9_-]{1,128}/[0-9a-f-]{36})\.(?:jpg|png|webp|heic)$',
-  ).hasMatch(value);
+        r'^reports/[A-Za-z0-9_-]{1,128}/(?:general/[0-9a-f-]{36}|checklist/[A-Za-z0-9_-]{1,128}/[0-9a-f-]{36})\.(?:jpg|png|webp|heic)$',
+      ).hasMatch(value);
 
   Widget _buildRemoteImage(String url) {
     return Image.network(
@@ -180,8 +180,7 @@ class _PhotoGridState extends State<PhotoGrid> {
 
   @override
   Widget build(BuildContext context) {
-    final photoCount =
-        widget.photos.length +
+    final photoCount = widget.photos.length +
         widget.localPhotos.length +
         widget.processingPhotos.length;
     if (photoCount == 0) return const SizedBox.shrink();
@@ -195,8 +194,7 @@ class _PhotoGridState extends State<PhotoGrid> {
           final Key photoKey;
           if (index < widget.photos.length) {
             photoKey = ValueKey<String>('stored:${widget.photos[index]}');
-          } else if (index <
-              widget.photos.length + widget.localPhotos.length) {
+          } else if (index < widget.photos.length + widget.localPhotos.length) {
             photoKey = ObjectKey(
               widget.localPhotos[index - widget.photos.length],
             );

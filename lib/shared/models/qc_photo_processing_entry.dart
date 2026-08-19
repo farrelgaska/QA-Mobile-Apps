@@ -27,11 +27,9 @@ class QCPhotoProcessingEntry {
     final mimeType = source.mimeType?.split(';').first.trim().toLowerCase();
     final sourceName = source.name.isNotEmpty ? source.name : source.path;
     final dotIndex = sourceName.lastIndexOf('.');
-    final extension = dotIndex < 0
-        ? ''
-        : sourceName.substring(dotIndex).toLowerCase();
-    final isHeicOrHeif =
-        const {
+    final extension =
+        dotIndex < 0 ? '' : sourceName.substring(dotIndex).toLowerCase();
+    final isHeicOrHeif = const {
           'image/heic',
           'image/heif',
           'image/heic-sequence',
@@ -40,8 +38,7 @@ class QCPhotoProcessingEntry {
           'image/x-heif',
         }.contains(mimeType) ||
         const {'.heic', '.heif', '.heics', '.heifs'}.contains(extension);
-    final canPreviewSource =
-        !isHeicOrHeif &&
+    final canPreviewSource = !isHeicOrHeif &&
         (const {'image/jpeg', 'image/png'}.contains(mimeType) ||
             const {'.jpg', '.jpeg', '.png'}.contains(extension));
 

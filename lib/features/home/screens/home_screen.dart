@@ -4,7 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/dummy/dummy_state.dart';
 import '../../../core/dummy/dummy_sites.dart';
 import '../../../core/utils/dummy_auth.dart';
-import '../../../shared/models/enums.dart';
+import '../../../core/utils/report_statistics.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/stat_card.dart';
 import '../../../shared/widgets/qc_module_card.dart';
@@ -57,11 +57,16 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _isLoading = true;
     });
-    await _state.fetchReportsFromApi();
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+    try {
+      await _state.fetchReportsFromApi();
+    } catch (_) {
+      // DummyState exposes a user-facing error and clears stale data.
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -103,9 +108,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       Flexible(
                         child: ListView.separated(
-                          padding: EdgeInsets.fromLTRB(24, 0, 24, MediaQuery.of(context).viewInsets.bottom + 32),
+                          padding: EdgeInsets.fromLTRB(24, 0, 24,
+                              MediaQuery.of(context).viewInsets.bottom + 32),
                           itemCount: dummySites.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 8),
                           itemBuilder: (context, index) {
                             final site = dummySites[index];
                             final isSelected = site.name == _selectedLocation;
@@ -113,7 +120,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               contentPadding: EdgeInsets.zero,
                               leading: Icon(
                                 Icons.location_on,
-                                color: isSelected ? AppColors.primary : AppColors.textSoft,
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : AppColors.textSoft,
                               ),
                               title: Text(
                                 site.name,
@@ -121,7 +130,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   color: AppColors.textMain,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
                                   fontSize: 14,
                                 ),
                               ),
@@ -134,7 +145,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     )
                                   : null,
                               trailing: isSelected
-                                  ? const Icon(Icons.check_circle, color: AppColors.primary)
+                                  ? const Icon(Icons.check_circle,
+                                      color: AppColors.primary)
                                   : null,
                               onTap: () {
                                 setModalState(() {
@@ -164,11 +176,17 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     // Recalculate stats dynamically from DummyState based on current user NIK
-    final userReports = _state.reports.where((r) => r.createdByNik == DummyAuth.current.nik).toList();
-    final totalQc = userReports.length;
-    final waitingQc = userReports.where((r) => r.status == QCReportStatus.SUBMITTED).length;
-    final revisionQc = userReports.where((r) => r.status == QCReportStatus.NEEDS_FOLLOW_UP).length;
-    final approvedQc = userReports.where((r) => r.status == QCReportStatus.APPROVED).length;
+    final userReports = _state.reports
+        .where((r) => r.createdByNik == DummyAuth.current.nik)
+        .toList();
+    final statistics = ReportStatistics.forStaff(
+      _state.reports,
+      DummyAuth.current.nik,
+    );
+    final totalQc = statistics.total;
+    final waitingQc = statistics.submitted;
+    final revisionQc = statistics.needsFollowUp;
+    final approvedQc = statistics.approved;
 
     // Filter recent reports based on currently selected site and current user
     final recentReports = userReports
@@ -184,17 +202,40 @@ class _HomeScreenState extends State<HomeScreen> {
           color: AppColors.primary,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (_state.reportsLoadError != null) ...[
+                  AppCard(
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.cloud_off,
+                          color: AppColors.rejectedText,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(child: Text(_state.reportsLoadError!)),
+                        TextButton(
+                          key: const Key('home-retry-reports'),
+                          onPressed: _isLoading ? null : _fetchData,
+                          child: const Text('Coba Lagi'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 // Lokasi Aktif Card
                 AppCard(
                   onTap: _showSitePicker,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
                     children: [
-                      const Icon(Icons.location_on, color: AppColors.primary, size: 20),
+                      const Icon(Icons.location_on,
+                          color: AppColors.primary, size: 20),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -222,7 +263,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                       ),
-                      const Icon(Icons.chevron_right, color: AppColors.primary, size: 18),
+                      const Icon(Icons.chevron_right,
+                          color: AppColors.primary, size: 18),
                     ],
                   ),
                 ),
@@ -302,7 +344,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       icon: Icons.hourglass_empty,
                       color: AppColors.waitingBg,
                       textColor: AppColors.waitingText,
-                      onTap: () => context.go('/reports?status=Menunggu Review'),
+                      onTap: () =>
+                          context.go('/reports?status=Menunggu Review'),
                     ),
                     StatCard(
                       title: 'Perlu Perbaikan',
@@ -310,7 +353,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       icon: Icons.edit_note,
                       color: AppColors.rejectedBg,
                       textColor: AppColors.rejectedText,
-                      onTap: () => context.go('/reports?status=Perlu Perbaikan'),
+                      onTap: () =>
+                          context.go('/reports?status=Perlu Perbaikan'),
                     ),
                     StatCard(
                       title: 'Disetujui',
@@ -339,7 +383,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(
                       child: QCModuleCard(
                         title: 'QC Material',
-                        description: 'Pencatatan & inspeksi material masuk di gudang.',
+                        description:
+                            'Pencatatan & inspeksi material masuk di gudang.',
                         icon: Icons.inventory_2_outlined,
                         onTap: () => context.push('/qc-material'),
                       ),
@@ -348,7 +393,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(
                       child: QCModuleCard(
                         title: 'QC Pekerjaan',
-                        description: 'Inspeksi mutu instalasi, redaman & konstruksi fisik.',
+                        description:
+                            'Inspeksi mutu instalasi, redaman & konstruksi fisik.',
                         icon: Icons.engineering_outlined,
                         onTap: () => context.push('/qc-pekerjaan'),
                       ),
@@ -373,23 +419,27 @@ class _HomeScreenState extends State<HomeScreen> {
                       onPressed: () => context.go('/reports'),
                       child: const Text(
                         'Lihat Semua',
-                        style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 if (recentReports.isEmpty)
-                  AppCard(
-                    padding: const EdgeInsets.all(24),
+                  const AppCard(
+                    padding: EdgeInsets.all(24),
                     child: Center(
                       child: Column(
                         children: [
-                          Icon(Icons.assignment_turned_in_outlined, color: AppColors.textSoft, size: 36),
-                          const SizedBox(height: 8),
-                          const Text(
+                          Icon(Icons.assignment_turned_in_outlined,
+                              color: AppColors.textSoft, size: 36),
+                          SizedBox(height: 8),
+                          Text(
                             'Belum ada laporan di site ini',
-                            style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                            style: TextStyle(
+                                color: AppColors.textMuted, fontSize: 13),
                           ),
                         ],
                       ),
@@ -401,7 +451,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       reportId: report.id,
                       title: report.title,
                       date: report.date,
-                      location: report.detailLocation.isNotEmpty ? report.detailLocation : report.siteName,
+                      location: report.detailLocation.isNotEmpty
+                          ? report.detailLocation
+                          : report.siteName,
                       status: report.status,
                       type: report.type,
                       onTap: () => context.push('/reports/${report.id}'),

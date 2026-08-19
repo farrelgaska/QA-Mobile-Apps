@@ -41,8 +41,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final nikInput = _nikController.text.trim();
     final matchingUserIndex = dummyUsers.indexWhere(
-      (u) => u.nik.toLowerCase() == nikInput.toLowerCase() || 
-             u.name.toLowerCase().contains(nikInput.toLowerCase()),
+      (u) =>
+          u.nik.toLowerCase() == nikInput.toLowerCase() ||
+          u.name.toLowerCase().contains(nikInput.toLowerCase()),
     );
 
     if (matchingUserIndex == -1) {
@@ -129,12 +130,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         errorText: _passwordError,
                       ),
                       const SizedBox(height: 16),
-                      
-                      // Remember me & forgot password
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
+
+                      // Keep both actions usable without forcing them into a
+                      // single overflowing row on narrow phones.
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final rememberMe = Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               SizedBox(
@@ -153,7 +154,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     color: Color(0xFF9CA3AF),
                                     width: 1.5,
                                   ),
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                   visualDensity: VisualDensity.compact,
                                 ),
                               ),
@@ -167,11 +169,24 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                             ],
-                          ),
-                          GestureDetector(
-                            onTap: () {
+                          );
+                          final forgotPassword = TextButton(
+                            key: const Key('forgot-password-action'),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 8,
+                              ),
+                              minimumSize: const Size(0, 40),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            onPressed: () {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Silakan hubungi IT Support untuk reset password')),
+                                const SnackBar(
+                                  content: Text(
+                                    'Silakan hubungi IT Support untuk reset password',
+                                  ),
+                                ),
                               );
                             },
                             child: const Text(
@@ -182,8 +197,27 @@ class _LoginScreenState extends State<LoginScreen> {
                                 fontSize: 13,
                               ),
                             ),
-                          ),
-                        ],
+                          );
+
+                          if (constraints.maxWidth < 300) {
+                            return Column(
+                              key: const Key('login-actions-narrow'),
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                rememberMe,
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: forgotPassword,
+                                ),
+                              ],
+                            );
+                          }
+                          return Row(
+                            key: const Key('login-actions-wide'),
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [rememberMe, forgotPassword],
+                          );
+                        },
                       ),
                       const SizedBox(height: 24),
                       AppButton(
@@ -198,7 +232,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.waitingBg,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.waitingText.withValues(alpha: 0.3)),
+                          border: Border.all(
+                              color:
+                                  AppColors.waitingText.withValues(alpha: 0.3)),
                         ),
                         child: const Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,11 +250,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             SizedBox(height: 6),
                             Text(
                               '• Staff Warehouse 1: NIK-908271 (atau ketik "yanuar")',
-                              style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600),
                             ),
                             Text(
                               '• Staff Warehouse 2: NIK-908272 (atau ketik "budi")',
-                              style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
@@ -229,7 +271,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 48),
                 const Text(
                   '© Quality Assurance & Innovation',
-                  style: TextStyle(color: AppColors.textSoft, fontSize: 12, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                      color: AppColors.textSoft,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 const Text(

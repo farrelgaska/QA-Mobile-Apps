@@ -80,18 +80,18 @@ class ReportLocation {
   });
 
   Map<String, dynamic> toJson() => {
-    'site_id': siteId,
-    'site_name': siteName,
-    'area': area,
-    'detail_location': detailLocation,
-  };
+        'site_id': siteId,
+        'site_name': siteName,
+        'area': area,
+        'detail_location': detailLocation,
+      };
 
   factory ReportLocation.fromJson(Map<String, dynamic> json) => ReportLocation(
-    siteId: json['site_id'] ?? '',
-    siteName: json['site_name'] ?? '',
-    area: json['area'] ?? '',
-    detailLocation: json['detail_location'] ?? '',
-  );
+        siteId: json['site_id'] ?? '',
+        siteName: json['site_name'] ?? '',
+        area: json['area'] ?? '',
+        detailLocation: json['detail_location'] ?? '',
+      );
 }
 
 class AdminReview {
@@ -102,16 +102,16 @@ class AdminReview {
   AdminReview({this.adminNote, this.reviewedAt, this.conclusion});
 
   Map<String, dynamic> toJson() => {
-    'admin_note': adminNote,
-    'reviewed_at': reviewedAt,
-    'conclusion': conclusion,
-  };
+        'admin_note': adminNote,
+        'reviewed_at': reviewedAt,
+        'conclusion': conclusion,
+      };
 
   factory AdminReview.fromJson(Map<String, dynamic> json) => AdminReview(
-    adminNote: json['admin_note'],
-    reviewedAt: json['reviewed_at'],
-    conclusion: json['conclusion'],
-  );
+        adminNote: json['admin_note'],
+        reviewedAt: json['reviewed_at'],
+        conclusion: json['conclusion'],
+      );
 }
 
 class QCReportModel {
@@ -171,47 +171,43 @@ class QCReportModel {
     this.formCode = '',
     this.templateId = '',
     this.finalConclusion,
-  }) : staff =
-           staff ??
-           StaffIdentity(
-             name: checkedByName ?? 'Yanuar Luthfi',
-             nik: checkedByNik ?? createdByNik ?? 'NIK-908271',
-           ),
-       location =
-           location ??
-           ReportLocation(
-             siteId: siteId ?? 'site-1',
-             siteName: siteName ?? 'Gudang Material Utama',
-             area: area ?? 'Sektor Utama',
-             detailLocation: detailLocation ?? '',
-           ),
-       generalInfo = generalInfo ?? {},
-       checklistItems =
-           checklistItems ??
-           checklistAnswers ??
-           (checklistResults
-                   ?.map(
-                     (res) => QCChecklistAnswer(
-                       itemId: res.itemId,
-                       value: res.resultValue,
-                       status: _mapChecklistStatusToQCResultStatus(res.status),
-                       photoPaths: res.photos,
-                       paramName: res.paramName,
-                       standardText: res.standard,
-                       unit: res.unit,
-                       inputType: res.inputType,
-                       adminNote: adminNote,
-                     ),
-                   )
-                   .toList() ??
-               []),
-       submittedAt = submittedAt ?? date ?? DateTime.now(),
-       adminReview =
-           adminReview ??
-           AdminReview(adminNote: adminNote, conclusion: finalConclusion),
-       generalPhotos = generalPhotos ?? photos ?? [],
-       sampleCount = sampleCount > 0 ? sampleCount : 1,
-       samples = samples ?? const [];
+  })  : staff = staff ??
+            StaffIdentity(
+              name: checkedByName ?? 'Yanuar Luthfi',
+              nik: checkedByNik ?? createdByNik ?? 'NIK-908271',
+            ),
+        location = location ??
+            ReportLocation(
+              siteId: siteId ?? 'site-1',
+              siteName: siteName ?? 'Gudang Material Utama',
+              area: area ?? 'Sektor Utama',
+              detailLocation: detailLocation ?? '',
+            ),
+        generalInfo = generalInfo ?? {},
+        checklistItems = checklistItems ??
+            checklistAnswers ??
+            (checklistResults
+                    ?.map(
+                      (res) => QCChecklistAnswer(
+                        itemId: res.itemId,
+                        value: res.resultValue,
+                        status: _mapChecklistStatusToQCResultStatus(res.status),
+                        photoPaths: res.photos,
+                        paramName: res.paramName,
+                        standardText: res.standard,
+                        unit: res.unit,
+                        inputType: res.inputType,
+                        adminNote: adminNote,
+                      ),
+                    )
+                    .toList() ??
+                []),
+        submittedAt = submittedAt ?? date ?? DateTime.now(),
+        adminReview = adminReview ??
+            AdminReview(adminNote: adminNote, conclusion: finalConclusion),
+        generalPhotos = generalPhotos ?? photos ?? [],
+        sampleCount = sampleCount > 0 ? sampleCount : 1,
+        samples = samples ?? const [];
 
   // Legacy getters for backward compatibility
   String get checkedByName => staff.name;
@@ -227,11 +223,11 @@ class QCReportModel {
   String? get adminNote => adminReview.adminNote;
 
   WorkLocation get workLocation => WorkLocation(
-    siteName: location.siteName,
-    area: location.area,
-    segment: location.detailLocation,
-    isCustom: location.siteId == 'custom-site',
-  );
+        siteName: location.siteName,
+        area: location.area,
+        segment: location.detailLocation,
+        isCustom: location.siteId == 'custom-site',
+      );
 
   List<QCReportChecklistResult> get checklistResults => checklistItems
       .map(

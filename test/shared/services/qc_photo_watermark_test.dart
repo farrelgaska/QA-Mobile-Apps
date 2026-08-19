@@ -102,15 +102,16 @@ QCEvidenceCaptureMetadata _metadata({
   double? longitude,
   double? accuracyMeters,
   String? locationLabel,
-}) => QCEvidenceCaptureMetadata(
-  capturedAt: QCEvidenceCaptureMetadata.iso8601WithTimezone(
-    DateTime(2026, 7, 30, 14, 5, 9),
-  ),
-  latitude: latitude,
-  longitude: longitude,
-  accuracyMeters: accuracyMeters,
-  locationLabel: locationLabel,
-);
+}) =>
+    QCEvidenceCaptureMetadata(
+      capturedAt: QCEvidenceCaptureMetadata.iso8601WithTimezone(
+        DateTime(2026, 7, 30, 14, 5, 9),
+      ),
+      latitude: latitude,
+      longitude: longitude,
+      accuracyMeters: accuracyMeters,
+      locationLabel: locationLabel,
+    );
 
 double _brightness(image.Pixel pixel) =>
     (pixel.r.toDouble() + pixel.g.toDouble() + pixel.b.toDouble()) / 3;

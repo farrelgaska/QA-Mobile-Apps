@@ -47,45 +47,45 @@ class _FakePersistenceApi implements QCMaterialPersistenceApi {
 }
 
 QCMaterialTemplate _template({bool required = false}) => QCMaterialTemplate(
-  id: 'MAT-MULTI-STEP',
-  name: 'Material Multi Step',
-  code: 'MAT-MS-01',
-  description: '',
-  checklistItems: [
-    QCChecklistItem(
-      id: 'number',
-      label: 'Angka',
-      category: 'Test',
-      inputType: QCInputType.number,
-      standardText: '10',
-      required: required,
-    ),
-    QCChecklistItem(
-      id: 'boolean',
-      label: 'Boolean',
-      category: 'Test',
-      inputType: QCInputType.booleanCheck,
-      standardText: 'Ya',
-      required: required,
-    ),
-    QCChecklistItem(
-      id: 'choice',
-      label: 'Pilihan',
-      category: 'Test',
-      inputType: QCInputType.choice,
-      standardText: 'Baik',
-      required: required,
-    ),
-    QCChecklistItem(
-      id: 'text',
-      label: 'Teks',
-      category: 'Test',
-      inputType: QCInputType.text,
-      standardText: '',
-      required: required,
-    ),
-  ],
-);
+      id: 'MAT-MULTI-STEP',
+      name: 'Material Multi Step',
+      code: 'MAT-MS-01',
+      description: '',
+      checklistItems: [
+        QCChecklistItem(
+          id: 'number',
+          label: 'Angka',
+          category: 'Test',
+          inputType: QCInputType.number,
+          standardText: '10',
+          required: required,
+        ),
+        QCChecklistItem(
+          id: 'boolean',
+          label: 'Boolean',
+          category: 'Test',
+          inputType: QCInputType.booleanCheck,
+          standardText: 'Ya',
+          required: required,
+        ),
+        QCChecklistItem(
+          id: 'choice',
+          label: 'Pilihan',
+          category: 'Test',
+          inputType: QCInputType.choice,
+          standardText: 'Baik',
+          required: required,
+        ),
+        QCChecklistItem(
+          id: 'text',
+          label: 'Teks',
+          category: 'Test',
+          inputType: QCInputType.text,
+          standardText: '',
+          required: required,
+        ),
+      ],
+    );
 
 void _fillValidGeneralInformation(
   QCMaterialFormProvider provider, {
@@ -110,24 +110,25 @@ void _fillValidGeneralInformation(
 
 Map<QCMaterialGeneralField, TextEditingController> _requiredControllers(
   QCMaterialFormProvider provider,
-) => {
-  QCMaterialGeneralField.poNumber: provider.poNumberController,
-  QCMaterialGeneralField.poDate: provider.poDateController,
-  QCMaterialGeneralField.doNumber: provider.doNumberController,
-  QCMaterialGeneralField.vendorName: provider.vendorNameController,
-  QCMaterialGeneralField.materialId: provider.materialIdController,
-  QCMaterialGeneralField.arrivalVolume: provider.arrivalVolumeController,
-  QCMaterialGeneralField.samplingVolume: provider.samplingVolumeController,
-  QCMaterialGeneralField.sampleCount: provider.sampleCountController,
-  QCMaterialGeneralField.brandName: provider.brandNameController,
-  QCMaterialGeneralField.warehouseLocation:
-      provider.warehouseLocationController,
-  QCMaterialGeneralField.stelVersion: provider.stelVersionController,
-  QCMaterialGeneralField.qaExpiryDate: provider.qaExpiryDateController,
-  QCMaterialGeneralField.tkdnNumber: provider.tkdnNumberController,
-  QCMaterialGeneralField.tkdnCertDate: provider.tkdnCertDateController,
-  QCMaterialGeneralField.tkdnValue: provider.tkdnValueController,
-};
+) =>
+    {
+      QCMaterialGeneralField.poNumber: provider.poNumberController,
+      QCMaterialGeneralField.poDate: provider.poDateController,
+      QCMaterialGeneralField.doNumber: provider.doNumberController,
+      QCMaterialGeneralField.vendorName: provider.vendorNameController,
+      QCMaterialGeneralField.materialId: provider.materialIdController,
+      QCMaterialGeneralField.arrivalVolume: provider.arrivalVolumeController,
+      QCMaterialGeneralField.samplingVolume: provider.samplingVolumeController,
+      QCMaterialGeneralField.sampleCount: provider.sampleCountController,
+      QCMaterialGeneralField.brandName: provider.brandNameController,
+      QCMaterialGeneralField.warehouseLocation:
+          provider.warehouseLocationController,
+      QCMaterialGeneralField.stelVersion: provider.stelVersionController,
+      QCMaterialGeneralField.qaExpiryDate: provider.qaExpiryDateController,
+      QCMaterialGeneralField.tkdnNumber: provider.tkdnNumberController,
+      QCMaterialGeneralField.tkdnCertDate: provider.tkdnCertDateController,
+      QCMaterialGeneralField.tkdnValue: provider.tkdnValueController,
+    };
 
 void main() {
   test('empty Step 1 cannot proceed or resize sample state', () async {
@@ -250,6 +251,7 @@ void main() {
       provider.updateAnswer(1, true);
       provider.updateAnswer(2, 'Baik');
       provider.updateAnswer(3, 'Sampel pertama');
+      provider.updateStatus(3, QCResultStatus.pass);
       provider.currentSample!.notesController.text = 'Catatan satu';
       provider.updateSampleNotes('Catatan satu');
       provider.answers[0].photoPaths.add(sampleOnePhoto);
@@ -263,6 +265,7 @@ void main() {
       provider.updateAnswer(1, false);
       provider.updateAnswer(2, 'Periksa');
       provider.updateAnswer(3, 'Sampel kedua');
+      provider.updateStatus(3, QCResultStatus.pass);
       provider.currentSample!.notesController.text = 'Catatan dua';
       provider.updateSampleNotes('Catatan dua');
       provider.answers[0].photoPaths.add(sampleTwoPhoto);
@@ -292,7 +295,8 @@ void main() {
     },
   );
 
-  test('draft saves and restores all ordered samples and current step', () async {
+  test('draft saves and restores all ordered samples and current step',
+      () async {
     const firstPhoto =
         'reports/QC-MULTI/checklist/number/223e4567-e89b-42d3-a456-426614174000.jpg';
     const secondPhoto =
@@ -322,6 +326,7 @@ void main() {
     provider.updateAnswer(1, true);
     provider.updateAnswer(2, 'A');
     provider.updateAnswer(3, 'Teks A');
+    provider.updateStatus(3, QCResultStatus.pass);
     provider.currentSample!.notesController.text = 'Catatan A';
     provider.currentSample!.photoPaths.add(firstSamplePhoto);
     provider.answers[0].photoPaths.add(firstPhoto);
@@ -330,6 +335,7 @@ void main() {
     provider.updateAnswer(1, false);
     provider.updateAnswer(2, 'B');
     provider.updateAnswer(3, 'Teks B');
+    provider.updateStatus(3, QCResultStatus.pass);
     provider.currentSample!.notesController.text = 'Catatan B';
     provider.currentSample!.photoPaths.add(secondSamplePhoto);
     provider.answers[0].photoPaths.add(secondPhoto);
@@ -421,6 +427,7 @@ void main() {
     provider.updateAnswer(1, 'Ya');
     provider.updateAnswer(2, 'Baik');
     provider.updateAnswer(3, 'Lengkap');
+    provider.updateStatus(3, QCResultStatus.pass);
 
     expect(provider.validateCurrentStep(), isNull);
     expect(provider.validateForm(), contains('Sampel 2'));

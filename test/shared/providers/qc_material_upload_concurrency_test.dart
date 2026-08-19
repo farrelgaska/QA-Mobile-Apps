@@ -132,29 +132,29 @@ class _SubmitGuardPhotoProcessor implements QCPhotoProcessor {
 }
 
 QCMaterialTemplate _template() => QCMaterialTemplate(
-  id: 'MAT-UPLOAD-CONCURRENCY',
-  name: 'Material upload concurrency',
-  code: 'MAT-UPLOAD',
-  description: '',
-  checklistItems: [
-    QCChecklistItem(
-      id: 'visual-item',
-      label: 'Visual',
-      category: 'Visual',
-      inputType: QCInputType.text,
-      standardText: '',
-      required: false,
-    ),
-    QCChecklistItem(
-      id: 'dimension-item',
-      label: 'Dimensi',
-      category: 'Dimensi',
-      inputType: QCInputType.number,
-      standardText: '',
-      required: false,
-    ),
-  ],
-);
+      id: 'MAT-UPLOAD-CONCURRENCY',
+      name: 'Material upload concurrency',
+      code: 'MAT-UPLOAD',
+      description: '',
+      checklistItems: [
+        QCChecklistItem(
+          id: 'visual-item',
+          label: 'Visual',
+          category: 'Visual',
+          inputType: QCInputType.text,
+          standardText: '',
+          required: false,
+        ),
+        QCChecklistItem(
+          id: 'dimension-item',
+          label: 'Dimensi',
+          category: 'Dimensi',
+          inputType: QCInputType.number,
+          standardText: '',
+          required: false,
+        ),
+      ],
+    );
 
 void _fillGeneralInformation(
   QCMaterialFormProvider provider, {
@@ -199,17 +199,13 @@ List<List<List<String>>> _addPendingPhotos(
 }) {
   var photoNumber = 0;
   final expectedPaths = <List<List<String>>>[];
-  for (
-    var sampleIndex = 0;
-    sampleIndex < provider.samples.length;
-    sampleIndex++
-  ) {
+  for (var sampleIndex = 0;
+      sampleIndex < provider.samples.length;
+      sampleIndex++) {
     final expectedByItem = <List<String>>[];
-    for (
-      var itemIndex = 0;
-      itemIndex < provider.template.checklistItems.length;
-      itemIndex++
-    ) {
+    for (var itemIndex = 0;
+        itemIndex < provider.template.checklistItems.length;
+        itemIndex++) {
       final expectedForItem = <String>[];
       for (var photoIndex = 0; photoIndex < photosPerItem; photoIndex++) {
         final fileName = _photoFileName(photoNumber);
@@ -383,8 +379,7 @@ void main() {
       final api = _ConcurrentPersistenceApi();
       final provider = await _providerWithSamples(api, sampleCount: 1);
       addTearDown(provider.dispose);
-      const canonicalPath =
-          'reports/QC-EXISTING/checklist/visual-item/'
+      const canonicalPath = 'reports/QC-EXISTING/checklist/visual-item/'
           '10000000-0000-4000-8000-000000000000.jpg';
       provider.samples.single.answers[0].photoPaths.add(canonicalPath);
       final expectedLocalPaths = _addPendingPhotos(provider, photosPerItem: 1);

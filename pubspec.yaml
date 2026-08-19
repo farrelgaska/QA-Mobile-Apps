@@ -43,7 +43,7 @@ dependencies:
   image: ^4.3.0
   heic_to_png_jpg: ^0.1.2
   geolocator: ^13.0.1
-  sentry_flutter: ^8.14.2
+  sentry_flutter: 9.27.0
 
 dev_dependencies:
   flutter_test:

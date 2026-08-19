@@ -42,10 +42,10 @@ class QCChecklistAnswer {
     this.minimumValue,
     this.maximumValue,
     this.evaluationStatus = 'NOT_EVALUATED',
-  }) : photoMetadataByPath = photoMetadataByPath ?? {},
-       paramName = paramName ?? '',
-       standardText = standardText ?? '',
-       inputType = inputType ?? 'text';
+  })  : photoMetadataByPath = photoMetadataByPath ?? {},
+        paramName = paramName ?? '',
+        standardText = standardText ?? '',
+        inputType = inputType ?? 'text';
 
   QCChecklistAnswer copyWith({
     String? itemId,
@@ -91,10 +91,15 @@ class QCChecklistAnswer {
 
   factory QCChecklistAnswer.fromJson(Map<String, dynamic> json) {
     QCResultStatus parsedStatus = QCResultStatus.notFilled;
-    final statusStr = json['admin_evaluation'] ?? json['status'];
-    if (statusStr == 'PASS' || statusStr == 'pass') {
+    final statusStr =
+        json['staff_evaluation'] ?? json['evaluation_status'] ?? json['status'];
+    if (statusStr == 'PASS' ||
+        statusStr == 'pass' ||
+        statusStr == 'WITHIN_STANDARD') {
       parsedStatus = QCResultStatus.pass;
-    } else if (statusStr == 'FAIL' || statusStr == 'fail') {
+    } else if (statusStr == 'FAIL' ||
+        statusStr == 'fail' ||
+        statusStr == 'OUT_OF_STANDARD') {
       parsedStatus = QCResultStatus.fail;
     } else if (statusStr == 'needFollowUp' || statusStr == 'NEEDS_FOLLOW_UP') {
       parsedStatus = QCResultStatus.needFollowUp;
@@ -128,7 +133,7 @@ class QCChecklistAnswer {
   }
 
   Map<String, dynamic> toJson() {
-    // Staff never evaluates PASS/FAIL — always submit as NEEDS_REVIEW for Admin to evaluate.
+    // Staff evaluation and Admin evaluation are intentionally separate.
     return {
       'id': itemId,
       'parameter_name': paramName,
@@ -137,6 +142,7 @@ class QCChecklistAnswer {
       'unit': unit,
       'actual_value': value?.toString() ?? '',
       'staff_note': issueNote ?? '',
+      'staff_evaluation': _staffEvaluationValue,
       'item_photos': photoPaths,
       'admin_evaluation': 'NEEDS_REVIEW',
       'admin_note': adminNote ?? '',
@@ -157,9 +163,21 @@ class QCChecklistAnswer {
       'lower_tolerance': lowerTolerance,
       'minimum_value': minimumValue,
       'maximum_value': maximumValue,
-      'evaluation_status': evaluationStatus,
+      'evaluation_status': _parameterEvaluationValue,
     };
   }
+
+  String get _staffEvaluationValue => switch (status) {
+        QCResultStatus.pass => 'WITHIN_STANDARD',
+        QCResultStatus.fail || QCResultStatus.needFollowUp => 'OUT_OF_STANDARD',
+        QCResultStatus.notFilled => 'NOT_EVALUATED',
+      };
+
+  String get _parameterEvaluationValue => switch (status) {
+        QCResultStatus.pass => 'WITHIN_STANDARD',
+        QCResultStatus.fail || QCResultStatus.needFollowUp => 'OUT_OF_STANDARD',
+        QCResultStatus.notFilled => evaluationStatus,
+      };
 
   static double? _asDouble(dynamic value) {
     if (value is num) return value.toDouble();

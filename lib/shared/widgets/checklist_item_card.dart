@@ -11,8 +11,6 @@ import 'validation_warning_box.dart';
 import '../models/template_choice_option.dart';
 import '../models/qc_photo_processing_entry.dart';
 
-enum _NumericStandardCompliance { compliant, nonCompliant }
-
 class ChecklistItemCard extends StatefulWidget {
   final int itemNumber;
   final String title;
@@ -104,19 +102,9 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isBooleanOrChoice =
-        widget.inputType == QCInputType.booleanCheck ||
-        widget.inputType == QCInputType.choice;
-    final selectedChoice = choiceOptionForValue(
-      _resolvedChoiceOptions,
-      widget.resultValue,
-    );
-    final bool isNonIdeal = widget.inputType == QCInputType.choice
-        ? selectedChoice?.outcome == 'FAIL'
-        : widget.resultValue == 'Tidak' || widget.resultValue == 'Tidak Sesuai';
-
-    final showIssueField = isBooleanOrChoice && isNonIdeal;
-    final numericCompliance = _numericCompliance;
+    final showIssueField = widget.currentStatus == QCResultStatus.fail;
+    final requiresManualStatus = widget.inputType == QCInputType.text ||
+        widget.inputType == QCInputType.photo;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -163,9 +151,11 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
             // 1. Render Input Field by inputType
             _buildInputField(),
 
-            if (numericCompliance != null) ...[
-              _buildNumericComplianceIndicator(numericCompliance),
+            _buildStatusBadge(),
+
+            if (requiresManualStatus) ...[
               const SizedBox(height: 12),
+              _buildManualStatusSelector(),
             ],
 
             // Render Warning Message if fail (only show formatting/filling errors to staff, not standard failures)
@@ -252,63 +242,90 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
     );
   }
 
-  _NumericStandardCompliance? get _numericCompliance {
-    if (widget.inputType != QCInputType.number ||
-        (widget.minValue == null && widget.maxValue == null)) {
-      return null;
-    }
-
-    final normalizedValue = widget.resultValue.trim().replaceAll(',', '.');
-    if (normalizedValue.isEmpty) return null;
-
-    final actualValue = double.tryParse(normalizedValue);
-    if (actualValue == null || !actualValue.isFinite) return null;
-    if (widget.minValue != null && actualValue < widget.minValue!) {
-      return _NumericStandardCompliance.nonCompliant;
-    }
-    if (widget.maxValue != null && actualValue > widget.maxValue!) {
-      return _NumericStandardCompliance.nonCompliant;
-    }
-    return _NumericStandardCompliance.compliant;
-  }
-
-  Widget _buildNumericComplianceIndicator(
-    _NumericStandardCompliance compliance,
-  ) {
-    final isCompliant = compliance == _NumericStandardCompliance.compliant;
+  Widget _buildStatusBadge() {
+    final isCompliant = widget.currentStatus == QCResultStatus.pass;
+    final isNonCompliant = widget.currentStatus == QCResultStatus.fail;
+    final color = isCompliant
+        ? AppColors.approvedText
+        : isNonCompliant
+            ? AppColors.rejectedText
+            : AppColors.textMuted;
+    final background = isCompliant
+        ? AppColors.approvedBg
+        : isNonCompliant
+            ? AppColors.rejectedBg
+            : AppColors.backgroundSoft;
+    final label = isCompliant
+        ? 'Sesuai Standar'
+        : isNonCompliant
+            ? 'Tidak Sesuai Standar'
+            : 'Belum Diisi';
     return Container(
-      key: const Key('numeric-standard-compliance'),
+      key: Key('parameter-status-${widget.itemNumber}'),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: isCompliant ? AppColors.approvedBg : AppColors.rejectedBg,
+        color: background,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isCompliant ? AppColors.approvedText : AppColors.rejectedText,
-        ),
+        border: Border.all(color: color),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isCompliant ? Icons.check_circle_outline : Icons.error_outline,
+            isCompliant
+                ? Icons.check_circle_outline
+                : isNonCompliant
+                    ? Icons.error_outline
+                    : Icons.radio_button_unchecked,
             size: 16,
-            color: isCompliant
-                ? AppColors.approvedText
-                : AppColors.rejectedText,
+            color: color,
           ),
           const SizedBox(width: 6),
-          Text(
-            isCompliant ? 'Sesuai Standar' : 'Tidak Sesuai Standar',
-            style: TextStyle(
-              color: isCompliant
-                  ? AppColors.approvedText
-                  : AppColors.rejectedText,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildManualStatusSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Status Pemeriksaan Staff *',
+          style: TextStyle(
+            color: AppColors.textMain,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _buildChoiceChip(
+              label: 'Sesuai Standar',
+              selected: widget.currentStatus == QCResultStatus.pass,
+              onTap: () => widget.onStatusChanged(QCResultStatus.pass),
+            ),
+            _buildChoiceChip(
+              label: 'Tidak Sesuai Standar',
+              selected: widget.currentStatus == QCResultStatus.fail,
+              onTap: () => widget.onStatusChanged(QCResultStatus.fail),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -409,11 +426,24 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
         ],
       );
     } else if (widget.inputType == QCInputType.booleanCheck) {
-      // Sesuai / Tidak Sesuai or Ya / Tidak toggle button style
-      final bool isSesuai =
-          widget.resultValue == 'Sesuai' ||
-          widget.resultValue == 'Ya' ||
-          widget.resultValue == 'OK';
+      final booleanOptions = widget.choiceOptions.isNotEmpty
+          ? widget.choiceOptions
+          : const [
+              TemplateChoiceOption(
+                id: 'legacy-boolean-pass',
+                label: 'Sesuai (Ya)',
+                value: 'Ya',
+                outcome: 'PASS',
+                position: 0,
+              ),
+              TemplateChoiceOption(
+                id: 'legacy-boolean-fail',
+                label: 'Tidak Sesuai (Tidak)',
+                value: 'Tidak',
+                outcome: 'FAIL',
+                position: 1,
+              ),
+            ];
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -429,22 +459,15 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: [
-              _buildChoiceChip(
-                label: 'Sesuai (Ya)',
-                selected: isSesuai && widget.resultValue.isNotEmpty,
-                onTap: () {
-                  widget.onResultValueChanged('Ya');
-                },
-              ),
-              _buildChoiceChip(
-                label: 'Tidak Sesuai (Tidak)',
-                selected: !isSesuai && widget.resultValue.isNotEmpty,
-                onTap: () {
-                  widget.onResultValueChanged('Tidak');
-                },
-              ),
-            ],
+            children: booleanOptions
+                .map(
+                  (option) => _buildChoiceChip(
+                    label: option.label,
+                    selected: widget.resultValue == option.value,
+                    onTap: () => widget.onResultValueChanged(option.value),
+                  ),
+                )
+                .toList(growable: false),
           ),
           const SizedBox(height: 12),
         ],

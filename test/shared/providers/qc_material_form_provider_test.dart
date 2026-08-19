@@ -44,7 +44,8 @@ class _FailingPhotoProcessor implements QCPhotoProcessor {
   Future<QCProcessedPhoto> process(
     XFile photo, {
     QCEvidenceCaptureMetadata? captureMetadata,
-  }) => Future.error(error);
+  }) =>
+      Future.error(error);
 
   @override
   Future<void> deleteGeneratedFile(XFile photo) async {}
@@ -58,7 +59,8 @@ class _ControlledPhotoProcessor implements QCPhotoProcessor {
   Future<QCProcessedPhoto> process(
     XFile photo, {
     QCEvidenceCaptureMetadata? captureMetadata,
-  }) => completer.future;
+  }) =>
+      completer.future;
 
   @override
   Future<void> deleteGeneratedFile(XFile photo) async {
@@ -152,66 +154,66 @@ class _FakeMaterialPersistenceApi implements QCMaterialPersistenceApi {
 }
 
 QCMaterialTemplate _draftTemplate() => QCMaterialTemplate(
-  id: 'MAT-DRAFT-SNAPSHOT',
-  name: 'Material draft snapshot',
-  code: 'MAT-DRAFT',
-  description: '',
-  checklistItems: [
-    QCChecklistItem(
-      id: 'number-1',
-      label: 'Diameter luar',
-      category: 'Dimensi',
-      inputType: QCInputType.number,
-      standardText: '100 mm',
-      unit: 'mm',
-    ),
-    QCChecklistItem(
-      id: 'boolean-1',
-      label: 'Terdapat tanda tanam',
-      category: 'Fisik',
-      inputType: QCInputType.booleanCheck,
-      standardText: 'Ada',
-    ),
-    QCChecklistItem(
-      id: 'choice-1',
-      label: 'Warna cat',
-      category: 'Fisik',
-      inputType: QCInputType.choice,
-      standardText: 'Sesuai',
-      choiceOptions: const [
-        TemplateChoiceOption(
-          id: 'pass',
-          label: 'Sesuai',
-          value: 'Sesuai',
-          outcome: 'PASS',
-          position: 0,
+      id: 'MAT-DRAFT-SNAPSHOT',
+      name: 'Material draft snapshot',
+      code: 'MAT-DRAFT',
+      description: '',
+      checklistItems: [
+        QCChecklistItem(
+          id: 'number-1',
+          label: 'Diameter luar',
+          category: 'Dimensi',
+          inputType: QCInputType.number,
+          standardText: '100 mm',
+          unit: 'mm',
         ),
-        TemplateChoiceOption(
-          id: 'fail',
-          label: 'Tidak Sesuai',
-          value: 'Tidak Sesuai',
-          outcome: 'FAIL',
-          position: 1,
+        QCChecklistItem(
+          id: 'boolean-1',
+          label: 'Terdapat tanda tanam',
+          category: 'Fisik',
+          inputType: QCInputType.booleanCheck,
+          standardText: 'Ada',
+        ),
+        QCChecklistItem(
+          id: 'choice-1',
+          label: 'Warna cat',
+          category: 'Fisik',
+          inputType: QCInputType.choice,
+          standardText: 'Sesuai',
+          choiceOptions: const [
+            TemplateChoiceOption(
+              id: 'pass',
+              label: 'Sesuai',
+              value: 'Sesuai',
+              outcome: 'PASS',
+              position: 0,
+            ),
+            TemplateChoiceOption(
+              id: 'fail',
+              label: 'Tidak Sesuai',
+              value: 'Tidak Sesuai',
+              outcome: 'FAIL',
+              position: 1,
+            ),
+          ],
+        ),
+        QCChecklistItem(
+          id: 'text-1',
+          label: 'Keterangan',
+          category: 'Teks',
+          inputType: QCInputType.text,
+          standardText: 'Catatan',
         ),
       ],
-    ),
-    QCChecklistItem(
-      id: 'text-1',
-      label: 'Keterangan',
-      category: 'Teks',
-      inputType: QCInputType.text,
-      standardText: 'Catatan',
-    ),
-  ],
-);
+    );
 
 XFile _localPng() => XFile.fromData(
-  base64Decode(
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
-  ),
-  name: 'qc-material.png',
-  mimeType: 'image/png',
-);
+      base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      ),
+      name: 'qc-material.png',
+      mimeType: 'image/png',
+    );
 
 void main() {
   test('newly captured material photo retains capture metadata', () async {
@@ -645,14 +647,14 @@ void main() {
     addTearDown(provider.dispose);
 
     provider.updateAnswer(0, 'CUSTOM_FAIL');
-    expect(provider.validateForm(), contains('keterangan masalah'));
+    expect(provider.validateSample(0), contains('keterangan masalah'));
 
     provider.updateIssueNote(0, 'Kondisi berantakan');
-    expect(provider.validateForm(), isNull);
+    expect(provider.validateSample(0), isNull);
 
     provider.updateAnswer(0, 'CUSTOM_PASS');
     expect(provider.answers.single.issueNote, isEmpty);
-    expect(provider.validateForm(), isNull);
+    expect(provider.validateSample(0), isNull);
   });
 
   test(
@@ -700,8 +702,9 @@ void main() {
           .firstWhere((answer) => answer.itemId == 'number-1')
           .photoPaths
           .single;
-      final serializedMetadata =
-          jsonDecode(saved.generalInfo[metadataKey]!) as Map<String, dynamic>;
+      final serializedMetadata = Map<String, dynamic>.from(
+        saved.generalInfo[metadataKey] as Map,
+      );
 
       expect(serializedMetadata.keys, [objectPath]);
       expect(serializedMetadata[objectPath]['latitude'], -6.2088);
@@ -858,15 +861,60 @@ void main() {
       expect(provider.localItemPhotos[1], isEmpty);
       expect(provider.localItemPhotoBytes[1], isEmpty);
       expect(
-        restored.checklistItems.every(
-          (answer) => answer.status == QCResultStatus.notFilled,
-        ),
-        isTrue,
+        restoredById['number-1']!.status,
+        QCResultStatus.notFilled,
       );
+      expect(restoredById['boolean-1']!.status, QCResultStatus.pass);
+      expect(restoredById['choice-1']!.status, QCResultStatus.pass);
+      expect(restoredById['text-1']!.status, QCResultStatus.notFilled);
+      expect(freshById['boolean-1']!.status, QCResultStatus.pass);
+      expect(freshById['choice-1']!.status, QCResultStatus.pass);
     },
   );
 
-  test('edited draft persists only canonical photo paths in original order', () async {
+  test('submit sends independent Staff parameter statuses', () async {
+    final template = _draftTemplate();
+    final api = _FakeMaterialPersistenceApi();
+    final state = DummyState();
+    final originalReports = List<QCReportModel>.from(state.reports);
+    final provider = QCMaterialFormProvider(api: api)
+      ..init(template.id, template: template);
+    addTearDown(() {
+      provider.dispose();
+      state.reports
+        ..clear()
+        ..addAll(originalReports);
+    });
+
+    provider.updateAnswer(1, 'Ya');
+    provider.updateAnswer(2, 'Tidak Sesuai');
+    provider.updateIssueNote(2, 'Warna berbeda dari standar');
+    provider.updateAnswer(3, 'Kemasan dan label diperiksa');
+    provider.updateStatus(3, QCResultStatus.pass);
+
+    await provider.persistReport(QCReportStatus.SUBMITTED);
+
+    final submitted = api.postedReport!;
+    final byId = {
+      for (final answer in submitted.checklistItems) answer.itemId: answer,
+    };
+    expect(submitted.status, QCReportStatus.SUBMITTED);
+    expect(byId['boolean-1']!.status, QCResultStatus.pass);
+    expect(byId['choice-1']!.status, QCResultStatus.fail);
+    expect(byId['choice-1']!.issueNote, 'Warna berbeda dari standar');
+    expect(byId['text-1']!.status, QCResultStatus.pass);
+    final wireItems = submitted.toJson()['checklist_items'] as List<dynamic>;
+    final wireById = {
+      for (final item in wireItems.cast<Map<String, dynamic>>())
+        item['id'] as String: item,
+    };
+    expect(wireById['boolean-1']!['staff_evaluation'], 'WITHIN_STANDARD');
+    expect(wireById['choice-1']!['staff_evaluation'], 'OUT_OF_STANDARD');
+    expect(wireById['choice-1']!['admin_evaluation'], 'NEEDS_REVIEW');
+  });
+
+  test('edited draft persists only canonical photo paths in original order',
+      () async {
     const canonicalFirst =
         'reports/QC-MAT-URL-FILTER/checklist/number-1/162a1d19-23cf-4950-9671-41e1293d68f2.jpg';
     const canonicalSecond =
@@ -1071,7 +1119,8 @@ void main() {
     },
   );
 
-  test('report failure retries without reuploading the pending photo', () async {
+  test('report failure retries without reuploading the pending photo',
+      () async {
     final template = _draftTemplate();
     final api = _FakeMaterialPersistenceApi(failFirstReportPersistence: true);
     final localPhoto = _localPng();
@@ -1157,6 +1206,16 @@ void main() {
         ..init(template.id, template: template);
       addTearDown(provider.dispose);
 
+      provider.poNumberController.text = 'PO-100';
+      provider.doNumberController.text = 'DO-100';
+      provider.vendorNameController.text = 'Vendor A';
+      provider.arrivalVolumeController.text = '100';
+      provider.samplingVolumeController.text = '5';
+      provider.sampleCountController.text = '2';
+      provider.brandNameController.text = 'Brand A';
+      provider.warehouseLocationController.text = 'Gudang A';
+      provider.tkdnValueController.text = '42.5';
+
       final step0Error = await provider.nextStep();
       expect(step0Error, isNull);
       expect(provider.currentStep, 1);
@@ -1177,6 +1236,7 @@ void main() {
       provider.updateAnswer(1, 'Ya');
       provider.updateAnswer(2, 'Sesuai');
       provider.updateAnswer(3, 'Catatan ok');
+      provider.updateStatus(3, QCResultStatus.pass);
 
       expect(provider.isCurrentSampleComplete(), isTrue);
       expect(provider.validateCurrentSampleStep(), isNull);

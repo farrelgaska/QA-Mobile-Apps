@@ -278,8 +278,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       );
     }
 
-    final isEditable =
-        report.status == QCReportStatus.DRAFT ||
+    final isEditable = report.status == QCReportStatus.DRAFT ||
         report.status == QCReportStatus.NEEDS_FOLLOW_UP;
 
     final renderItems = resolveReportDetailItems(report);
@@ -287,11 +286,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     final decision = QCMaterialSamplingDecision.fromGeneralInfo(
       report.generalInfo,
     );
-    final isStopped =
-        decision?.type == QCMaterialSamplingDecisionType.stop ||
+    final isStopped = decision?.type == QCMaterialSamplingDecisionType.stop ||
         report.generalInfo[QCMaterialSamplingDecision.decisionKey] == 'STOP';
-    final stopReason =
-        decision?.stopReason ??
+    final stopReason = decision?.stopReason ??
         report.generalInfo[QCMaterialSamplingDecision.stopReasonKey];
 
     final isMultiSampleMaterial =
@@ -527,7 +524,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
                 ...report.samples.map(
                   (sample) => _buildMaterialSampleSection(report, sample),
                 ),
@@ -541,7 +537,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-
                 ...renderItems.map(
                   (result) => _buildSingleChecklistCard(report, result),
                 ),
@@ -593,12 +588,12 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                           : 'tiang_besi_7m_3_segmen';
                       final QCMaterialTemplate? cachedTemplate =
                           DummyState().templateCache[tid] ??
-                          dummyQCMaterialTemplates
-                              .cast<QCMaterialTemplate?>()
-                              .firstWhere(
-                                (t) => t?.id == tid,
-                                orElse: () => null,
-                              );
+                              dummyQCMaterialTemplates
+                                  .cast<QCMaterialTemplate?>()
+                                  .firstWhere(
+                                    (t) => t?.id == tid,
+                                    orElse: () => null,
+                                  );
                       context.push(
                         '/qc-material/form/$tid?editReportId=${report.id}${isRevision ? "&isRevision=true" : ""}',
                         extra: cachedTemplate,
@@ -736,7 +731,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   ) {
     final bool itemNeedsFollowUp =
         report.status == QCReportStatus.NEEDS_FOLLOW_UP &&
-        (answer.adminNote != null && answer.adminNote!.trim().isNotEmpty);
+            (answer.adminNote != null && answer.adminNote!.trim().isNotEmpty);
     final hasIssue = answer.issueNote != null && answer.issueNote!.isNotEmpty;
 
     return Padding(
@@ -763,7 +758,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             const SizedBox(height: 12),
             const Divider(color: AppColors.borderSoft, height: 1),
             const SizedBox(height: 12),
-
             Row(
               children: [
                 const Text(
@@ -783,7 +777,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 ),
               ],
             ),
-
             if (answer.warningMessage != null &&
                 answer.warningMessage!.isNotEmpty) ...[
               const SizedBox(height: 6),
@@ -806,7 +799,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 ],
               ),
             ],
-
             if (hasIssue && answer.issueNote!.isNotEmpty) ...[
               const SizedBox(height: 12),
               Container(
@@ -839,7 +831,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 ),
               ),
             ],
-
             if (answer.photoPaths.isNotEmpty) ...[
               const SizedBox(height: 12),
               const Text(
@@ -853,7 +844,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               const SizedBox(height: 6),
               PhotoGrid(photos: answer.photoPaths),
             ],
-
             if (itemNeedsFollowUp &&
                 answer.adminNote != null &&
                 answer.adminNote!.isNotEmpty) ...[
@@ -907,15 +897,14 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   }
 
   Widget _buildSingleChecklistCard(QCReportModel report, RenderItem result) {
-    final hasIssue =
-        result.status == ChecklistStatus.tidakSesuai ||
+    final hasIssue = result.status == ChecklistStatus.tidakSesuai ||
         result.status == ChecklistStatus.perluTindakLanjut ||
         result.status == QCResultStatus.fail ||
         result.status == QCResultStatus.needFollowUp;
 
     final bool itemNeedsFollowUp =
         report.status == QCReportStatus.NEEDS_FOLLOW_UP &&
-        (result.adminNote != null && result.adminNote!.trim().isNotEmpty);
+            (result.adminNote != null && result.adminNote!.trim().isNotEmpty);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
@@ -948,7 +937,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             const SizedBox(height: 12),
             const Divider(color: AppColors.borderSoft, height: 1),
             const SizedBox(height: 12),
-
             Row(
               children: [
                 const Text(
@@ -968,7 +956,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 ),
               ],
             ),
-
             if (result.warningMessage != null &&
                 result.warningMessage!.isNotEmpty) ...[
               const SizedBox(height: 6),
@@ -991,7 +978,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 ],
               ),
             ],
-
             if (hasIssue && result.issueNote.isNotEmpty) ...[
               const SizedBox(height: 12),
               Container(
@@ -1024,7 +1010,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 ),
               ),
             ],
-
             if (result.photos.isNotEmpty) ...[
               const SizedBox(height: 12),
               const Text(
@@ -1038,7 +1023,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               const SizedBox(height: 6),
               PhotoGrid(photos: result.photos),
             ],
-
             if (itemNeedsFollowUp &&
                 result.adminNote != null &&
                 result.adminNote!.isNotEmpty) ...[

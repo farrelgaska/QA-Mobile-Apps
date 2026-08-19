@@ -3,7 +3,6 @@ import '../../shared/models/qc_report_model.dart';
 import '../../shared/models/enums.dart';
 import '../../shared/models/qc_material_template_model.dart';
 import '../../shared/models/pekerjaan_model.dart';
-import 'dummy_reports.dart';
 import '../../shared/models/user_model.dart';
 import 'dummy_users.dart';
 import '../../shared/models/site_model.dart';
@@ -17,7 +16,8 @@ class DummyState extends ChangeNotifier {
 
   UserModel currentUser = dummyUsers[0];
   SiteModel currentSite = dummySites[0];
-  List<QCReportModel> reports = List.from(dummyReports);
+  List<QCReportModel> reports = [];
+  String? reportsLoadError;
 
   /// In-memory cache of QCMaterialTemplate objects keyed by template id.
   /// Populated when a template is first loaded (either from API or dummy list)
@@ -26,10 +26,19 @@ class DummyState extends ChangeNotifier {
   final Map<String, PekerjaanModel> workTemplateCache = {};
 
   /// Fetch latest reports from Mock API backend and update memory state.
-  Future<void> fetchReportsFromApi() async {
-    final serverReports = await ApiService().fetchReports();
-    if (serverReports != null) {
-      mergeReportsFromApi(serverReports);
+  Future<void> fetchReportsFromApi({ApiService? apiService}) async {
+    try {
+      final serverReports = await (apiService ?? ApiService()).fetchReports();
+      reports = List<QCReportModel>.from(serverReports)
+        ..sort((a, b) => b.submittedAt.compareTo(a.submittedAt));
+      reportsLoadError = null;
+      notifyListeners();
+    } catch (_) {
+      reports = [];
+      reportsLoadError =
+          'Laporan tidak dapat dimuat. Periksa koneksi lalu coba lagi.';
+      notifyListeners();
+      rethrow;
     }
   }
 
@@ -61,8 +70,7 @@ class DummyState extends ChangeNotifier {
       }
 
       final localReport = reports[index];
-      final keepNewerLocalDraft =
-          localReport.status == QCReportStatus.DRAFT &&
+      final keepNewerLocalDraft = localReport.status == QCReportStatus.DRAFT &&
           localReport.submittedAt.isAfter(serverReport.submittedAt);
       if (!keepNewerLocalDraft) reports[index] = serverReport;
     }

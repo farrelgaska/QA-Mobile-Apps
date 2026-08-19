@@ -14,7 +14,8 @@ class AppSnackbar {
         ),
         content: Row(
           children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+            const Icon(Icons.check_circle_rounded,
+                color: Colors.white, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -45,7 +46,8 @@ class AppSnackbar {
         ),
         content: Row(
           children: [
-            const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+            const Icon(Icons.error_outline_rounded,
+                color: Colors.white, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -76,7 +78,8 @@ class AppSnackbar {
         ),
         content: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+            const Icon(Icons.warning_amber_rounded,
+                color: Colors.white, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Text(

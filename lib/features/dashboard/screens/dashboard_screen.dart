@@ -55,7 +55,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       await _state.fetchReportsFromApi();
       if (mounted) setState(() {});
     } catch (_) {
-      // Keep the locally cached reports usable when the dashboard is offline.
+      // DummyState clears stale data and exposes a user-facing error.
+      if (mounted) setState(() {});
     }
   }
 
@@ -100,6 +101,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (_state.reportsLoadError != null) ...[
+                AppCard(
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.cloud_off,
+                        color: AppColors.rejectedText,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text(_state.reportsLoadError!)),
+                      TextButton(
+                        key: const Key('dashboard-retry-reports'),
+                        onPressed: _refreshReports,
+                        child: const Text('Coba Lagi'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               // 1. TOP HEADER & FILTER WAKTU
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

@@ -44,19 +44,17 @@ class QCPhotoWatermark {
     QCEvidenceCaptureMetadata metadata,
   ) {
     final watermarkLines = lines(metadata);
-    final shortestEdge = source.width < source.height
-        ? source.width
-        : source.height;
+    final shortestEdge =
+        source.width < source.height ? source.width : source.height;
     final font = shortestEdge >= 1600
         ? image.arial48
         : shortestEdge >= 800
-        ? image.arial24
-        : image.arial14;
+            ? image.arial24
+            : image.arial14;
     final padding = (shortestEdge * 0.018).round().clamp(8, 48);
     final lineHeight = font.lineHeight > 0 ? font.lineHeight : font.base;
     final lineSpacing = (lineHeight * 0.22).round().clamp(2, 12);
-    final panelHeight =
-        (padding * 2) +
+    final panelHeight = (padding * 2) +
         (watermarkLines.length * lineHeight) +
         ((watermarkLines.length - 1) * lineSpacing);
     final panelTop = (source.height - panelHeight).clamp(0, source.height - 1);
@@ -110,8 +108,8 @@ class QCPhotoWatermark {
 
   static double? _bounded(double? value, double minimum, double maximum) =>
       value != null && value.isFinite && value >= minimum && value <= maximum
-      ? value
-      : null;
+          ? value
+          : null;
 
   static String _formatAccuracy(double value) {
     final fixed = value.toStringAsFixed(2);

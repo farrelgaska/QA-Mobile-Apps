@@ -25,7 +25,8 @@ class _FailingPhotoProcessor implements QCPhotoProcessor {
   Future<QCProcessedPhoto> process(
     XFile photo, {
     QCEvidenceCaptureMetadata? captureMetadata,
-  }) => Future.error(error);
+  }) =>
+      Future.error(error);
 
   @override
   Future<void> deleteGeneratedFile(XFile photo) async {}
@@ -233,14 +234,14 @@ void main() {
           standard: 'Pilih kondisi',
           requiredPhoto: true,
           choiceOptions: [
-            TemplateChoiceOption(
+            const TemplateChoiceOption(
               id: 'pass',
               label: 'Sudah Rapi',
               value: 'PASS',
               outcome: 'PASS',
               position: 0,
             ),
-            TemplateChoiceOption(
+            const TemplateChoiceOption(
               id: 'fail',
               label: 'Perlu Perbaikan',
               value: 'FAIL',
@@ -339,6 +340,9 @@ void main() {
     provider.mitraController.text = 'Mitra A';
 
     provider.updateResult(0, 'CUSTOM_FAIL');
+    // Ensure status does not change to perluDilengkapi so that UI still recognizes it as a FAIL
+    expect(provider.itemStatuses[0], ChecklistStatus.tidakSesuai);
+    expect(provider.itemWarnings[0], 'Keterangan masalah wajib diisi');
     expect(provider.validateForm(), contains('keterangan masalah'));
 
     provider.updateIssueNote(0, 'Kondisi berantakan');

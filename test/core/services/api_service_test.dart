@@ -4,17 +4,18 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:mobile/core/dummy/dummy_state.dart';
 import 'package:mobile/core/services/api_service.dart';
 import 'package:mobile/shared/models/enums.dart';
 import 'package:mobile/shared/models/qc_report_model.dart';
 
 QCReportModel _report() => QCReportModel(
-  id: 'QC-REPORT-2026-0001',
-  title: 'Report submission test',
-  type: QCType.material,
-  status: QCReportStatus.SUBMITTED,
-  staffNote: '',
-);
+      id: 'QC-REPORT-2026-0001',
+      title: 'Report submission test',
+      type: QCType.material,
+      status: QCReportStatus.SUBMITTED,
+      staffNote: '',
+    );
 
 void main() {
   group('API base URL resolution', () {
@@ -54,7 +55,8 @@ void main() {
       );
     });
 
-    test('production Web falls back to production backend URL when missing', () {
+    test('production Web falls back to production backend URL when missing',
+        () {
       expect(
         resolveApiBaseUrl(
           configuredBaseUrl: '',
@@ -175,7 +177,7 @@ void main() {
 
       expect(parsed, hasLength(5));
       expect(
-        parsed!.where((report) => report.status == QCReportStatus.SUBMITTED),
+        parsed.where((report) => report.status == QCReportStatus.SUBMITTED),
         hasLength(2),
       );
       expect(
@@ -195,38 +197,60 @@ void main() {
       expect(legacy.generalInfo['reviewRequested'], isTrue);
       expect(legacy.generalInfo['tolerances'], [5, 10]);
 
-      final metadata =
-          parsed[1].generalInfo['qcEvidenceCaptureMetadata']
-              as Map<String, dynamic>;
+      final metadata = parsed[1].generalInfo['qcEvidenceCaptureMetadata']
+          as Map<String, dynamic>;
       expect(
         metadata['reports/report-1/checklist/item-1/photo.jpg'],
         isA<Map>(),
       );
     },
   );
+
+  test('API offline clears stale reports and exposes an error state', () async {
+    final state = DummyState();
+    final originalReports = List<QCReportModel>.from(state.reports);
+    final originalError = state.reportsLoadError;
+    state.reports = [_report()];
+    addTearDown(() {
+      state.reports = originalReports;
+      state.reportsLoadError = originalError;
+    });
+    final service = ApiService.withClient(
+      MockClient((_) async => throw http.ClientException('offline')),
+    );
+
+    await expectLater(
+      state.fetchReportsFromApi(apiService: service),
+      throwsA(isA<ApiRequestException>()),
+    );
+
+    expect(state.reports, isEmpty);
+    expect(state.reportsLoadError, contains('tidak dapat dimuat'));
+  });
 }
 
 Map<String, dynamic> _reportJson({
   required String id,
   required String status,
   Map<String, dynamic> generalInfo = const {},
-}) => {
-  'id': id,
-  'title': id,
-  'type': 'MATERIAL',
-  'status': status,
-  'staff': {'name': 'Staff Warehouse', 'nik': 'NIK-1'},
-  'location': {
-    'site_id': 'site-1',
-    'site_name': 'Gudang',
-    'area': 'Area',
-    'detail_location': '',
-  },
-  'general_info': generalInfo,
-  'checklist_items': <dynamic>[],
-  'staff_note': '',
-  'submitted_at': '2026-07-29T10:30:00.000Z',
-  'admin_review': <String, dynamic>{},
-  'general_photos': <String>[],
-  'samples': <dynamic>[],
-};
+}) =>
+    {
+      'id': id,
+      'title': id,
+      'type': 'MATERIAL',
+      'status': status,
+      'staff': {'name': 'Staff Warehouse', 'nik': 'NIK-1'},
+      'location': {
+        'site_id': 'site-1',
+        'site_name': 'Gudang',
+        'area': 'Area',
+        'detail_location': '',
+      },
+      'general_info': generalInfo,
+      'checklist_items': <dynamic>[],
+      'staff_note': '',
+      'submitted_at': '2026-07-29T10:30:00.000Z',
+      'admin_review': <String, dynamic>{},
+      'general_photos': <String>[],
+      'samples': <dynamic>[],
+    };

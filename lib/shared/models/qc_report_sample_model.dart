@@ -4,10 +4,10 @@ enum QCSampleInspectionStatus { notStarted, inProgress, completed }
 
 extension QCSampleInspectionStatusValue on QCSampleInspectionStatus {
   String get apiValue => switch (this) {
-    QCSampleInspectionStatus.notStarted => 'NOT_STARTED',
-    QCSampleInspectionStatus.inProgress => 'IN_PROGRESS',
-    QCSampleInspectionStatus.completed => 'COMPLETED',
-  };
+        QCSampleInspectionStatus.notStarted => 'NOT_STARTED',
+        QCSampleInspectionStatus.inProgress => 'IN_PROGRESS',
+        QCSampleInspectionStatus.completed => 'COMPLETED',
+      };
 }
 
 class QCReportSample {
@@ -54,17 +54,17 @@ class QCReportSample {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'sample_number': sampleNumber,
-    'inspection_status': inspectionStatus.apiValue,
-    'checklist_answers': checklistAnswers
-        .map((answer) => answer.toSampleJson())
-        .toList(growable: false),
-    'notes': notes,
-    'photo_paths': photoPaths,
-    'created_at': createdAt.toIso8601String(),
-    'updated_at': updatedAt.toIso8601String(),
-  };
+        'id': id,
+        'sample_number': sampleNumber,
+        'inspection_status': inspectionStatus.apiValue,
+        'checklist_answers': checklistAnswers
+            .map((answer) => answer.toSampleJson())
+            .toList(growable: false),
+        'notes': notes,
+        'photo_paths': photoPaths,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': updatedAt.toIso8601String(),
+      };
 
   factory QCReportSample.fromJson(Map<String, dynamic> json) {
     final now = DateTime.now();

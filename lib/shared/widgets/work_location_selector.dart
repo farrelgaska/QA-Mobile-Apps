@@ -62,7 +62,7 @@ class _WorkLocationSelectorState extends State<WorkLocationSelector> {
             ),
           ),
           const SizedBox(height: 12),
-          
+
           // Site Dropdown selection
           if (!widget.isCustom) ...[
             const Text(
@@ -84,11 +84,13 @@ class _WorkLocationSelectorState extends State<WorkLocationSelector> {
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<SiteModel>(
                   dropdownColor: Colors.white,
-                  value: (widget.selectedSite != null && dummySites.contains(widget.selectedSite))
+                  value: (widget.selectedSite != null &&
+                          dummySites.contains(widget.selectedSite))
                       ? widget.selectedSite
                       : dummySites[0],
                   isExpanded: true,
-                  icon: const Icon(Icons.arrow_drop_down, color: AppColors.primary),
+                  icon: const Icon(Icons.arrow_drop_down,
+                      color: AppColors.primary),
                   onChanged: (SiteModel? newSite) {
                     if (newSite != null) {
                       widget.onSiteChanged(newSite);
@@ -99,7 +101,8 @@ class _WorkLocationSelectorState extends State<WorkLocationSelector> {
                       value: site,
                       child: Text(
                         site.name,
-                        style: const TextStyle(fontSize: 13, color: Color(0xFF111827)),
+                        style: const TextStyle(
+                            fontSize: 13, color: Color(0xFF111827)),
                       ),
                     );
                   }).toList(),
@@ -114,9 +117,9 @@ class _WorkLocationSelectorState extends State<WorkLocationSelector> {
               ),
             ],
           ],
-          
+
           const SizedBox(height: 12),
-          
+
           // Toggle "Gunakan Lokasi Custom"
           Row(
             children: [

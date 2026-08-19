@@ -63,7 +63,8 @@ class AppTheme {
         ),
         prefixIconColor: const Color(0xFF6B7280),
         suffixIconColor: const Color(0xFF6B7280),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
@@ -120,7 +121,8 @@ class AppTheme {
         secondary: AppColors.primaryDark,
         surface: darkSurface,
       ),
-      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).copyWith(
+      textTheme:
+          GoogleFonts.interTextTheme(ThemeData.dark().textTheme).copyWith(
         titleLarge: GoogleFonts.inter(
           color: darkTextMain,
           fontWeight: FontWeight.bold,
@@ -169,7 +171,8 @@ class AppTheme {
         ),
         prefixIconColor: const Color(0xFF6B7280),
         suffixIconColor: const Color(0xFF6B7280),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: Color(0xFFE5E7EB)),

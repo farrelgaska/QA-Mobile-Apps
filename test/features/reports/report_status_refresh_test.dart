@@ -65,12 +65,12 @@ Map<String, dynamic> _reportPayload(
 }
 
 QCReportModel _localReport(QCReportStatus status) => QCReportModel(
-  id: _reportId,
-  title: 'Stale local report',
-  type: QCType.material,
-  status: status,
-  staffNote: '',
-);
+      id: _reportId,
+      title: 'Stale local report',
+      type: QCType.material,
+      status: status,
+      staffNote: '',
+    );
 
 void main() {
   group('QC report workflow status presentation', () {

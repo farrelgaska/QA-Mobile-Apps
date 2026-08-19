@@ -185,13 +185,13 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
     final statusColor = isOutOfStandard
         ? AppColors.rejectedText
         : isWithinStandard
-        ? AppColors.approvedText
-        : AppColors.inactiveText;
+            ? AppColors.approvedText
+            : AppColors.inactiveText;
     final statusBackground = isOutOfStandard
         ? AppColors.rejectedBg
         : isWithinStandard
-        ? AppColors.approvedBg
-        : AppColors.inactiveBg;
+            ? AppColors.approvedBg
+            : AppColors.inactiveBg;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -225,8 +225,8 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
                 isOutOfStandard
                     ? Icons.error_outline
                     : isWithinStandard
-                    ? Icons.check_circle_outline
-                    : Icons.schedule_outlined,
+                        ? Icons.check_circle_outline
+                        : Icons.schedule_outlined,
                 color: statusColor,
                 size: 16,
               ),
@@ -273,8 +273,8 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
                   decision == null
                       ? 'Material terindikasi tidak memenuhi standar.'
                       : decision.type == QCMaterialSamplingDecisionType.stop
-                      ? 'Pemeriksaan dihentikan.'
-                      : 'Pemeriksaan dilanjutkan.',
+                          ? 'Pemeriksaan dihentikan.'
+                          : 'Pemeriksaan dilanjutkan.',
                   style: const TextStyle(
                     color: AppColors.rejectedText,
                     fontSize: 14,
@@ -285,10 +285,10 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          Text(
+          const Text(
             'Material dapat dikembalikan kepada vendor dan laporan '
             'memerlukan revisi. Pemeriksaan tidak dihentikan secara otomatis.',
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.textMain,
               fontSize: 12,
               height: 1.4,
@@ -611,9 +611,9 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
     dynamic tpl,
   ) {
     if (tpl.checklistItems.isEmpty) {
-      return Column(
+      return const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           Text(
             'Parameter Checklist Mutu',
             style: TextStyle(
@@ -661,8 +661,7 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
         ...List.generate(tpl.checklistItems.length, (index) {
           final item = tpl.checklistItems[index];
           final answer = p.answers[index];
-          final hasValidationError =
-              answer.warningMessage != null &&
+          final hasValidationError = answer.warningMessage != null &&
               answer.warningMessage!.isNotEmpty &&
               answer.warningMessage != 'Wajib diisi';
           return Column(
@@ -687,7 +686,7 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
                 processingPhotos: p.processingItemPhotos[index],
                 warningMessage: answer.warningMessage,
                 isLocked: hasValidationError,
-                onStatusChanged: (status) => p.answers[index].status = status,
+                onStatusChanged: (status) => p.updateStatus(index, status),
                 onResultValueChanged: (val) => p.updateAnswer(index, val),
                 onIssueDescriptionChanged: (val) =>
                     p.updateIssueNote(index, val),
@@ -875,9 +874,8 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
                       text: p.isRevisionMode ? 'Kirim Ulang' : 'Kirim Laporan',
                       variant: AppButtonVariant.primary,
                       isLoading: p.isPersisting,
-                      onPressed: navigationDisabled
-                          ? null
-                          : () => _submit(context, p),
+                      onPressed:
+                          navigationDisabled ? null : () => _submit(context, p),
                     )
                   : AppButton(
                       key: const Key('qc_material_next_button'),
@@ -887,8 +885,10 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
                       onPressed: navigationDisabled
                           ? null
                           : () async {
-                              if (!p.isGeneralStep && !p.isCurrentSampleComplete()) {
-                                final sampleError = p.validateCurrentSampleStep() ??
+                              if (!p.isGeneralStep &&
+                                  !p.isCurrentSampleComplete()) {
+                                final sampleError = p
+                                        .validateCurrentSampleStep() ??
                                     'Harap lengkapi semua parameter pada sampel saat ini.';
                                 AppSnackbar.warning(context, sampleError);
                                 return;
@@ -897,12 +897,8 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
                               final error = await p.nextStep();
                               if (!mounted) return;
                               if (error == null) {
-                                final currentCtx = context.mounted
-                                    ? context
-                                    : this.context;
                                 if (p.isSamplingDecisionRequired) {
                                   await _showSamplingDecisionDialog(
-                                    currentCtx,
                                     p,
                                   );
                                   return;
@@ -925,10 +921,7 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
                                 );
                               }
                               if (!mounted) return;
-                              final snackCtx = context.mounted
-                                  ? context
-                                  : this.context;
-                              AppSnackbar.error(snackCtx, error);
+                              AppSnackbar.error(this.context, error);
                             },
                     ),
             ),
@@ -954,20 +947,14 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
                     try {
                       await p.persistReport(QCReportStatus.DRAFT);
                       if (!mounted) return;
-                      final currentCtx = context.mounted
-                          ? context
-                          : this.context;
                       AppSnackbar.success(
-                        currentCtx,
+                        this.context,
                         'Draft berhasil disimpan',
                       );
-                      currentCtx.pop();
+                      this.context.pop();
                     } on QCMaterialPersistenceException catch (error) {
                       if (!mounted) return;
-                      final currentCtx = context.mounted
-                          ? context
-                          : this.context;
-                      AppSnackbar.error(currentCtx, error.message);
+                      AppSnackbar.error(this.context, error.message);
                     }
                   },
           ),
@@ -1035,14 +1022,14 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
       }
       return;
     }
-    final error = p.validateCurrentStep();
+    final error = p.validateForm();
     if (error != null) {
       AppSnackbar.error(context, error);
       return;
     }
     p.completeCurrentSample();
     if (p.isSamplingDecisionRequired) {
-      unawaited(_showSamplingDecisionDialog(context, p));
+      unawaited(_showSamplingDecisionDialog(p));
       return;
     }
     showDialog(
@@ -1076,7 +1063,6 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
   }
 
   Future<void> _showSamplingDecisionDialog(
-    BuildContext context,
     QCMaterialFormProvider provider,
   ) async {
     if (!provider.isSamplingDecisionRequired ||
@@ -1084,9 +1070,8 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
         !mounted) {
       return;
     }
-    final dialogCtx = context.mounted ? context : this.context;
     final result = await showDialog<_SamplingDecisionResult>(
-      context: dialogCtx,
+      context: context,
       barrierDismissible: false,
       builder: (_) => const _SamplingDecisionDialog(),
     );
@@ -1097,24 +1082,21 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
       stopReason: result.stopReason,
     );
     if (decisionError != null) {
-      final snackCtx = context.mounted ? context : this.context;
-      AppSnackbar.error(snackCtx, decisionError);
+      AppSnackbar.error(context, decisionError);
       return;
     }
     if (result.type == QCMaterialSamplingDecisionType.stop) {
       try {
         await provider.persistReport(QCReportStatus.SUBMITTED);
         if (!mounted) return;
-        final currentCtx = context.mounted ? context : this.context;
         AppSnackbar.success(
-          currentCtx,
+          context,
           'Pemeriksaan dihentikan. Laporan berhasil dikirim untuk review Admin.',
         );
-        currentCtx.pop();
+        context.pop();
       } on QCMaterialPersistenceException catch (error) {
         if (!mounted) return;
-        final snackCtx = context.mounted ? context : this.context;
-        AppSnackbar.error(snackCtx, error.message);
+        AppSnackbar.error(context, error.message);
         _scheduleScrollToTop();
       }
       return;
@@ -1124,8 +1106,7 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
     final navigationError = await provider.nextStep();
     if (!mounted) return;
     if (navigationError != null) {
-      final snackCtx = context.mounted ? context : this.context;
-      AppSnackbar.error(snackCtx, navigationError);
+      AppSnackbar.error(context, navigationError);
       return;
     }
     if (provider.currentStep != previousStep) {
@@ -1166,7 +1147,9 @@ class _SamplingDecisionDialogState extends State<_SamplingDecisionDialog> {
     return Theme(
       data: Theme.of(
         context,
-      ).copyWith(dialogBackgroundColor: AppColors.surface),
+      ).copyWith(
+          dialogTheme:
+              const DialogThemeData(backgroundColor: AppColors.surface)),
       child: AlertDialog(
         backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
@@ -1240,44 +1223,53 @@ class _SamplingDecisionDialogState extends State<_SamplingDecisionDialog> {
             ],
           ),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
         actions: [
-          FilledButton(
-            key: const Key('qc_material_stop_inspection_button'),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.rejectedText,
-              foregroundColor: AppColors.surface,
-            ),
-            onPressed: () {
-              final reason = _stopReasonController.text.trim();
-              if (reason.isEmpty) {
-                setState(
-                  () => _stopReasonError = 'Alasan penghentian wajib diisi.',
-                );
-                return;
-              }
-              Navigator.pop(
-                context,
-                _SamplingDecisionResult(
-                  QCMaterialSamplingDecisionType.stop,
-                  stopReason: reason,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              FilledButton(
+                key: const Key('qc_material_stop_inspection_button'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.rejectedText,
+                  foregroundColor: AppColors.surface,
+                  minimumSize: const Size.fromHeight(44),
                 ),
-              );
-            },
-            child: const Text('Hentikan Pemeriksaan'),
-          ),
-          FilledButton(
-            key: const Key('qc_material_continue_inspection_button'),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.surface,
-            ),
-            onPressed: () => Navigator.pop(
-              context,
-              const _SamplingDecisionResult(
-                QCMaterialSamplingDecisionType.continueInspection,
+                onPressed: () {
+                  final reason = _stopReasonController.text.trim();
+                  if (reason.isEmpty) {
+                    setState(
+                      () => _stopReasonError = 'Alasan penghentian wajib diisi.',
+                    );
+                    return;
+                  }
+                  Navigator.pop(
+                    context,
+                    _SamplingDecisionResult(
+                      QCMaterialSamplingDecisionType.stop,
+                      stopReason: reason,
+                    ),
+                  );
+                },
+                child: const Text('Hentikan Pemeriksaan'),
               ),
-            ),
-            child: const Text('Lanjutkan Pemeriksaan'),
+              const SizedBox(height: 12),
+              FilledButton(
+                key: const Key('qc_material_continue_inspection_button'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.surface,
+                  minimumSize: const Size.fromHeight(44),
+                ),
+                onPressed: () => Navigator.pop(
+                  context,
+                  const _SamplingDecisionResult(
+                    QCMaterialSamplingDecisionType.continueInspection,
+                  ),
+                ),
+                child: const Text('Lanjutkan Pemeriksaan'),
+              ),
+            ],
           ),
         ],
       ),

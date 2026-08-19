@@ -24,9 +24,7 @@ class ConfirmationModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final confirmColor = isDanger
-        ? const Color(0xFFDC2626)
-        : AppColors.primary;
+    final confirmColor = isDanger ? const Color(0xFFDC2626) : AppColors.primary;
 
     return Dialog(
       backgroundColor: Colors.transparent,

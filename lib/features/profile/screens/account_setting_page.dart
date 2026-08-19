@@ -83,7 +83,8 @@ class _AccountSettingPageState extends State<AccountSettingPage> {
       context: context,
       builder: (context) => ConfirmationModal(
         title: 'Logout Akun',
-        message: 'Apakah Anda yakin ingin keluar dari akun Staff Warehouse Anda?',
+        message:
+            'Apakah Anda yakin ingin keluar dari akun Staff Warehouse Anda?',
         confirmText: 'Keluar',
         isDanger: true,
         onConfirm: () {
@@ -174,7 +175,7 @@ class _AccountSettingPageState extends State<AccountSettingPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ScreenHeader(
+              const ScreenHeader(
                 title: 'Pengaturan Akun',
                 subtitle: 'Informasi personal, penugasan, dan keamanan akun.',
               ),

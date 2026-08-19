@@ -59,7 +59,9 @@ class AppInput extends StatelessWidget {
             hintText: hintText,
             helperText: helperText,
             errorText: errorText,
-            prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: const Color(0xFF6B7280), size: 20) : null,
+            prefixIcon: prefixIcon != null
+                ? Icon(prefixIcon, color: const Color(0xFF6B7280), size: 20)
+                : null,
             suffixIcon: suffixIcon,
             hintStyle: const TextStyle(
               color: Color(0xFF9CA3AF),

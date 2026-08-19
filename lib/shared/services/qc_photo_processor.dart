@@ -97,6 +97,10 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
       throw const QCPhotoDecodingException();
     }
 
+    final requiresDimensionReduction = _exceedsMaximumLongEdge(
+      processableBytes,
+    );
+
     // 1. Jika ada metadata (Watermark)
     if (captureMetadata != null) {
       final processedBytes = await compute(_watermarkAndCompressToLimit, {
@@ -122,7 +126,9 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
     }
 
     // 2. Jika tanpa watermark & ukuran sudah <= 2MB
-    if (!exceedsQCPhotoSizeLimit(processableBytes) && !requiresJpegOutput) {
+    if (!exceedsQCPhotoSizeLimit(processableBytes) &&
+        !requiresJpegOutput &&
+        !requiresDimensionReduction) {
       return QCProcessedPhoto(
         file: photo,
         bytes: processableBytes,
@@ -132,7 +138,8 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
 
     // 3. Kompresi standar jika > 2MB
     Uint8List finalBytes;
-    if (!exceedsQCPhotoSizeLimit(processableBytes)) {
+    if (!exceedsQCPhotoSizeLimit(processableBytes) &&
+        !requiresDimensionReduction) {
       finalBytes = processableBytes;
     } else {
       final processedBytes = await compute(_compressToLimit, processableBytes);
@@ -169,11 +176,9 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
     final mimeType = photo.mimeType?.split(';').first.trim().toLowerCase();
     final sourceName = photo.name.isNotEmpty ? photo.name : photo.path;
     final dotIndex = sourceName.lastIndexOf('.');
-    final extension = dotIndex < 0
-        ? ''
-        : sourceName.substring(dotIndex).toLowerCase();
-    final isHeicOrHeif =
-        _heicMimeTypes.contains(mimeType) ||
+    final extension =
+        dotIndex < 0 ? '' : sourceName.substring(dotIndex).toLowerCase();
+    final isHeicOrHeif = _heicMimeTypes.contains(mimeType) ||
         _heicExtensions.contains(extension) ||
         _hasHeicContainerSignature(bytes);
     return QCPhotoInputMetadata(
@@ -192,7 +197,8 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
     var oriented = image.bakeOrientation(decoded);
 
     // Immediate Downscale: Pangkas piksel raksasa langsung di awal
-    if (oriented.width > _maximumLongEdge || oriented.height > _maximumLongEdge) {
+    if (oriented.width > _maximumLongEdge ||
+        oriented.height > _maximumLongEdge) {
       oriented = image.copyResize(
         oriented,
         width: oriented.width >= oriented.height ? _maximumLongEdge : null,
@@ -235,7 +241,8 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
     var oriented = image.bakeOrientation(decoded);
 
     // Immediate Downscale sebelum apply watermark
-    if (oriented.width > _maximumLongEdge || oriented.height > _maximumLongEdge) {
+    if (oriented.width > _maximumLongEdge ||
+        oriented.height > _maximumLongEdge) {
       oriented = image.copyResize(
         oriented,
         width: oriented.width >= oriented.height ? _maximumLongEdge : null,
@@ -253,7 +260,8 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
 
     // Loop kualitas
     for (final quality in _jpegQualities) {
-      encoded = Uint8List.fromList(image.encodeJpg(candidate, quality: quality));
+      encoded =
+          Uint8List.fromList(image.encodeJpg(candidate, quality: quality));
       if (!exceedsQCPhotoSizeLimit(encoded)) return encoded;
     }
 
@@ -282,10 +290,22 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
   }
 
   static bool _isDecodableImage(Uint8List bytes) {
-    if (bytes.length < 4) return false;
-    // Cek header dasar JPEG / PNG tanpa full decode
-    if (_isValidJpeg(bytes)) return true;
-    return bytes[0] == 0x89 && bytes[1] == 0x50; // PNG Header
+    try {
+      return image.decodeImage(bytes) != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static bool _exceedsMaximumLongEdge(Uint8List bytes) {
+    try {
+      final decoded = image.decodeImage(bytes);
+      return decoded != null &&
+          (decoded.width > _maximumLongEdge ||
+              decoded.height > _maximumLongEdge);
+    } catch (_) {
+      return false;
+    }
   }
 
   static bool _hasHeicContainerSignature(Uint8List bytes) {
