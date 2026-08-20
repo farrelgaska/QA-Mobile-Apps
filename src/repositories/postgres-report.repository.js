@@ -361,14 +361,15 @@ class PostgresReportRepository {
   }
 
   async delete(id, { storageProvider = getQCEvidenceStorage } = {}) {
-    // 1. Fetch the report first so we know which photo paths to clean up.
-    const report = await this.findById(id);
-    if (!report) throw notFound(`Report with ID ${id} not found`);
+    let photoPaths = [];
 
-    const photoPaths = collectReportPhotoPaths(report);
-
-    // 2. Delete from database (CASCADE removes child rows).
+    // 1 & 2. Fetch the report inside the transaction (with lock) and delete it.
     await this._transaction(async client => {
+      const report = await this._findById(client, id, true);
+      if (!report) throw notFound(`Report with ID ${id} not found`);
+
+      photoPaths = collectReportPhotoPaths(report);
+
       const result = await client.query(
         'delete from public.qc_reports where id = $1 returning id',
         [id]

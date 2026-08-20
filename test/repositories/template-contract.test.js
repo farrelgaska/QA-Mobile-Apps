@@ -273,3 +273,29 @@ test('JSON item PATCH merges fields, keeps IDs immutable, and clears fields on t
     error => error.statusCode === 404
   );
 });
+
+test('all 13 canonical choice items have valid choices and the 4 fallback items expose Sesuai/Tidak Sesuai', () => {
+  const templatesPath = path.join(__dirname, '../../data/templates.json');
+  const templates = JSON.parse(fs.readFileSync(templatesPath, 'utf8'));
+  const choiceItems = templates.flatMap(t => t.checklist_items || t.checklistItems).filter(i => (i.input_type || i.inputType) === 'choice');
+  
+  assert.equal(choiceItems.length, 13);
+  for (const item of choiceItems) {
+    const opts = item.choice_options || item.choiceOptions;
+    assert.equal(Array.isArray(opts), true);
+    assert.ok(opts.length > 0);
+  }
+  
+  const specificIds = ['tb73-17', 'tb93-17', 't72-14', 'tg6-7'];
+  const specificItems = choiceItems.filter(i => specificIds.includes(i.id));
+  assert.equal(specificItems.length, 4);
+  
+  for (const item of specificItems) {
+    const opts = item.choice_options || item.choiceOptions;
+    assert.equal(opts.length, 2);
+    assert.equal(opts[0].label, 'Sesuai');
+    assert.equal(opts[0].outcome, 'PASS');
+    assert.equal(opts[1].label, 'Tidak Sesuai');
+    assert.equal(opts[1].outcome, 'FAIL');
+  }
+});

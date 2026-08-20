@@ -10,3 +10,4 @@ test/fixtures/*.canonical.json
 supabase/.temp/
 .vercel
 .env*
+.local-storage/

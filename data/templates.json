@@ -216,7 +216,27 @@
         "is_required": true,
         "name": "Pengecatan sesuai standar",
         "standardLabel": "meni/hitam/cat identitas operator",
-        "requiredPhoto": false
+        "requiredPhoto": false,
+        "choices": [
+          "Sesuai",
+          "Tidak Sesuai"
+        ],
+        "choice_options": [
+          {
+            "id": "opt-0",
+            "label": "Sesuai",
+            "value": "Sesuai",
+            "outcome": "PASS",
+            "position": 0
+          },
+          {
+            "id": "opt-1",
+            "label": "Tidak Sesuai",
+            "value": "Tidak Sesuai",
+            "outcome": "FAIL",
+            "position": 1
+          }
+        ]
       },
       {
         "id": "tb73-18",
@@ -462,7 +482,27 @@
         "is_required": true,
         "name": "Pengecatan sesuai standar",
         "standardLabel": "Sesuai",
-        "requiredPhoto": false
+        "requiredPhoto": false,
+        "choices": [
+          "Sesuai",
+          "Tidak Sesuai"
+        ],
+        "choice_options": [
+          {
+            "id": "opt-0",
+            "label": "Sesuai",
+            "value": "Sesuai",
+            "outcome": "PASS",
+            "position": 0
+          },
+          {
+            "id": "opt-1",
+            "label": "Tidak Sesuai",
+            "value": "Tidak Sesuai",
+            "outcome": "FAIL",
+            "position": 1
+          }
+        ]
       },
       {
         "id": "tb93-18",
@@ -669,7 +709,27 @@
         "is_required": true,
         "name": "Standar pengecatan",
         "standardLabel": "Sesuai",
-        "requiredPhoto": false
+        "requiredPhoto": false,
+        "choices": [
+          "Sesuai",
+          "Tidak Sesuai"
+        ],
+        "choice_options": [
+          {
+            "id": "opt-0",
+            "label": "Sesuai",
+            "value": "Sesuai",
+            "outcome": "PASS",
+            "position": 0
+          },
+          {
+            "id": "opt-1",
+            "label": "Tidak Sesuai",
+            "value": "Tidak Sesuai",
+            "outcome": "FAIL",
+            "position": 1
+          }
+        ]
       },
       {
         "id": "t72-15",
@@ -778,7 +838,27 @@
         "is_required": true,
         "name": "Warna cat sesuai standar pengecatan",
         "standardLabel": "silver / cat identitas operator",
-        "requiredPhoto": false
+        "requiredPhoto": false,
+        "choices": [
+          "Sesuai",
+          "Tidak Sesuai"
+        ],
+        "choice_options": [
+          {
+            "id": "opt-0",
+            "label": "Sesuai",
+            "value": "Sesuai",
+            "outcome": "PASS",
+            "position": 0
+          },
+          {
+            "id": "opt-1",
+            "label": "Tidak Sesuai",
+            "value": "Tidak Sesuai",
+            "outcome": "FAIL",
+            "position": 1
+          }
+        ]
       },
       {
         "id": "tg6-8",
@@ -1158,6 +1238,22 @@
         "choices": [
           "Sesuai",
           "TidakSesuai"
+        ],
+        "choice_options": [
+          {
+            "id": "opt-0",
+            "label": "Sesuai",
+            "value": "Sesuai",
+            "outcome": "PASS",
+            "position": 0
+          },
+          {
+            "id": "opt-1",
+            "label": "TidakSesuai",
+            "value": "TidakSesuai",
+            "outcome": "FAIL",
+            "position": 1
+          }
         ]
       },
       {
@@ -1174,6 +1270,22 @@
         "choices": [
           "Rapi",
           "Bermasalah"
+        ],
+        "choice_options": [
+          {
+            "id": "opt-0",
+            "label": "Rapi",
+            "value": "Rapi",
+            "outcome": "PASS",
+            "position": 0
+          },
+          {
+            "id": "opt-1",
+            "label": "Bermasalah",
+            "value": "Bermasalah",
+            "outcome": "FAIL",
+            "position": 1
+          }
         ]
       },
       {
@@ -1229,6 +1341,22 @@
         "choices": [
           "Kencang",
           "Kendor"
+        ],
+        "choice_options": [
+          {
+            "id": "opt-0",
+            "label": "Kencang",
+            "value": "Kencang",
+            "outcome": "PASS",
+            "position": 0
+          },
+          {
+            "id": "opt-1",
+            "label": "Kendor",
+            "value": "Kendor",
+            "outcome": "FAIL",
+            "position": 1
+          }
         ]
       },
       {
@@ -1257,6 +1385,22 @@
         "choices": [
           "Rapi",
           "Kendor/Berantakan"
+        ],
+        "choice_options": [
+          {
+            "id": "opt-0",
+            "label": "Rapi",
+            "value": "Rapi",
+            "outcome": "PASS",
+            "position": 0
+          },
+          {
+            "id": "opt-1",
+            "label": "Kendor/Berantakan",
+            "value": "Kendor/Berantakan",
+            "outcome": "FAIL",
+            "position": 1
+          }
         ]
       }
     ],
@@ -1300,6 +1444,22 @@
         "choices": [
           "Bersih",
           "Kotor"
+        ],
+        "choice_options": [
+          {
+            "id": "opt-0",
+            "label": "Bersih",
+            "value": "Bersih",
+            "outcome": "PASS",
+            "position": 0
+          },
+          {
+            "id": "opt-1",
+            "label": "Kotor",
+            "value": "Kotor",
+            "outcome": "FAIL",
+            "position": 1
+          }
         ]
       }
     ],
@@ -1331,6 +1491,22 @@
         "choices": [
           "Ada&Jelas",
           "TidakAda/Buram"
+        ],
+        "choice_options": [
+          {
+            "id": "opt-0",
+            "label": "Ada&Jelas",
+            "value": "Ada&Jelas",
+            "outcome": "PASS",
+            "position": 0
+          },
+          {
+            "id": "opt-1",
+            "label": "TidakAda/Buram",
+            "value": "TidakAda/Buram",
+            "outcome": "FAIL",
+            "position": 1
+          }
         ]
       },
       {
@@ -1386,6 +1562,22 @@
         "choices": [
           "TegakLurus",
           "Miring"
+        ],
+        "choice_options": [
+          {
+            "id": "opt-0",
+            "label": "TegakLurus",
+            "value": "TegakLurus",
+            "outcome": "PASS",
+            "position": 0
+          },
+          {
+            "id": "opt-1",
+            "label": "Miring",
+            "value": "Miring",
+            "outcome": "FAIL",
+            "position": 1
+          }
         ]
       },
       {
@@ -1429,6 +1621,22 @@
         "choices": [
           "SesuaiStandar",
           "KurangSemen"
+        ],
+        "choice_options": [
+          {
+            "id": "opt-0",
+            "label": "SesuaiStandar",
+            "value": "SesuaiStandar",
+            "outcome": "PASS",
+            "position": 0
+          },
+          {
+            "id": "opt-1",
+            "label": "KurangSemen",
+            "value": "KurangSemen",
+            "outcome": "FAIL",
+            "position": 1
+          }
         ]
       },
       {
@@ -1508,6 +1716,22 @@
         "choices": [
           "Lengkap",
           "TidakLengkap"
+        ],
+        "choice_options": [
+          {
+            "id": "opt-0",
+            "label": "Lengkap",
+            "value": "Lengkap",
+            "outcome": "PASS",
+            "position": 0
+          },
+          {
+            "id": "opt-1",
+            "label": "TidakLengkap",
+            "value": "TidakLengkap",
+            "outcome": "FAIL",
+            "position": 1
+          }
         ]
       }
     ],

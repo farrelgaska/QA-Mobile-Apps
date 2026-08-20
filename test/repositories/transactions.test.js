@@ -32,6 +32,12 @@ class DeletePool {
         if (text.startsWith('delete from public.')) {
           return { rows: parameters[0].includes('MISSING') ? [] : [{ id: parameters[0] }], rowCount: parameters[0].includes('MISSING') ? 0 : 1 };
         }
+        if (text.startsWith('select id, type, template_id')) {
+          return {
+            rows: parameters[0].includes('MISSING') ? [] : [{ id: parameters[0], type: 'MATERIAL', form_code: 'MAT' }],
+            rowCount: parameters[0].includes('MISSING') ? 0 : 1
+          };
+        }
         return { rows: [], rowCount: 0 };
       },
       release: () => {}
@@ -189,9 +195,9 @@ test('PostgreSQL aggregate deletes commit after deleting only the parent row', a
   assert.deepEqual(templatePool.commands, [
     'BEGIN', 'delete from public.qc_templates where id', 'COMMIT'
   ]);
-  assert.deepEqual(reportPool.commands, [
-    'BEGIN', 'delete from public.qc_reports where id', 'COMMIT'
-  ]);
+  assert.equal(reportPool.commands[0], 'BEGIN');
+  assert.equal(reportPool.commands.includes('delete from public.qc_reports where id'), true);
+  assert.equal(reportPool.commands.at(-1), 'COMMIT');
 });
 
 test('PostgreSQL aggregate deletes roll back and return 404 for missing IDs', async () => {
