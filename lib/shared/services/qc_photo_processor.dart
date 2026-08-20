@@ -69,9 +69,12 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
     XFile photo, {
     QCEvidenceCaptureMetadata? captureMetadata,
   }) async {
+    final stopwatch = Stopwatch()..start();
     final originalBytes = await photo.readAsBytes();
-    final metadata = inspectInput(photo, originalBytes);
+    debugPrint('[QCPhotoProfile] A. file selection/read: ${stopwatch.elapsedMilliseconds} ms');
 
+    stopwatch.reset();
+    final metadata = inspectInput(photo, originalBytes);
     var processableBytes = originalBytes;
     var requiresJpegOutput = false;
 
@@ -93,14 +96,11 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
       }
       processableBytes = orientedJpeg;
       requiresJpegOutput = true;
-    } else if (!_isDecodableImage(originalBytes)) {
-      throw const QCPhotoDecodingException();
     }
-
-    final requiresDimensionReduction = _exceedsMaximumLongEdge(
-      processableBytes,
-    );
-
+    
+    debugPrint('[QCPhotoProfile] B. decode (header checks only): ${stopwatch.elapsedMilliseconds} ms');
+    
+    stopwatch.reset();
     // 1. Jika ada metadata (Watermark)
     if (captureMetadata != null) {
       final processedBytes = await compute(_watermarkAndCompressToLimit, {
@@ -118,6 +118,7 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
         outputName: _createOutputName(photo),
       );
       _generatedFiles.add(processedPhoto);
+      debugPrint('[QCPhotoProfile] D. watermark/metadata processing: ${stopwatch.elapsedMilliseconds} ms');
       return QCProcessedPhoto(
         file: processedPhoto,
         bytes: processedBytes,
@@ -125,29 +126,36 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
       );
     }
 
-    // 2. Jika tanpa watermark & ukuran sudah <= 2MB
-    if (!exceedsQCPhotoSizeLimit(processableBytes) &&
-        !requiresJpegOutput &&
-        !requiresDimensionReduction) {
-      return QCProcessedPhoto(
-        file: photo,
-        bytes: processableBytes,
-        isGenerated: false,
-      );
+    // 2. Jika tanpa watermark & ukuran sudah <= batas
+    final bool isSmallEnough = !exceedsQCPhotoSizeLimit(processableBytes);
+    
+    if (isSmallEnough && !requiresJpegOutput) {
+      final isDecodable = await compute(_isDecodableImage, processableBytes);
+      if (!isDecodable) {
+        throw const QCPhotoDecodingException();
+      }
+      
+      final exceedsEdge = await compute(_exceedsMaximumLongEdge, processableBytes);
+      if (!exceedsEdge) {
+        debugPrint('[QCPhotoProfile] C. resize/compression: skipped (not needed)');
+        return QCProcessedPhoto(
+          file: photo,
+          bytes: processableBytes,
+          isGenerated: false,
+        );
+      }
     }
 
-    // 3. Kompresi standar jika > 2MB
-    Uint8List finalBytes;
-    if (!exceedsQCPhotoSizeLimit(processableBytes) &&
-        !requiresDimensionReduction) {
-      finalBytes = processableBytes;
-    } else {
-      final processedBytes = await compute(_compressToLimit, processableBytes);
-      if (processedBytes == null || exceedsQCPhotoSizeLimit(processedBytes)) {
-        throw const QCPhotoProcessingException();
-      }
-      finalBytes = processedBytes;
+    // 3. Kompresi standar jika diperlukan
+    stopwatch.reset();
+    final processedBytes = await compute(_compressToLimit, processableBytes);
+    if (processedBytes == null) {
+      throw const QCPhotoDecodingException();
     }
+    if (exceedsQCPhotoSizeLimit(processedBytes)) {
+      throw const QCPhotoProcessingException();
+    }
+    final Uint8List finalBytes = processedBytes;
 
     if (!_isValidJpeg(finalBytes) || exceedsQCPhotoSizeLimit(finalBytes)) {
       throw const QCPhotoProcessingException();
@@ -159,6 +167,7 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
       outputName: _createOutputName(photo),
     );
     _generatedFiles.add(processedPhoto);
+    debugPrint('[QCPhotoProfile] C. resize/compression: ${stopwatch.elapsedMilliseconds} ms');
     return QCProcessedPhoto(
       file: processedPhoto,
       bytes: finalBytes,

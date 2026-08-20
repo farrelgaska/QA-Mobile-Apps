@@ -27,7 +27,7 @@ void main() {
           isReleaseMode: false,
           isAndroid: false,
         ),
-        'http://localhost:3002',
+        'http://127.0.0.1:3002',
       );
     });
 

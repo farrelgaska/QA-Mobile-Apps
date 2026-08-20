@@ -346,7 +346,7 @@ void main() {
       expect(result, QCMaterialPhotoAddResult.fileTooLarge);
       expect(provider.localItemPhotos[0], isEmpty);
       expect(provider.localItemPhotoBytes[0], isEmpty);
-      expect(qcPhotoTooLargeMessage, contains('2 MB'));
+      expect(qcPhotoTooLargeMessage, contains('700 KB'));
     },
   );
 

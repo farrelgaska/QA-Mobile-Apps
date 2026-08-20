@@ -105,7 +105,7 @@ void main() {
       expect(result, PhotoAddResult.fileTooLarge);
       expect(provider.pendingItemPhotos[0], isEmpty);
       expect(provider.pendingItemPhotoBytes[0], isEmpty);
-      expect(qcPhotoTooLargeMessage, contains('2 MB'));
+      expect(qcPhotoTooLargeMessage, contains('700 KB'));
     },
   );
 

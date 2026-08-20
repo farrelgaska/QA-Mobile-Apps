@@ -29,11 +29,13 @@ class DummyState extends ChangeNotifier {
   Future<void> fetchReportsFromApi({ApiService? apiService}) async {
     try {
       final serverReports = await (apiService ?? ApiService()).fetchReports();
+      debugPrint('[DummyState] Fetched ${serverReports.length} reports from API');
       reports = List<QCReportModel>.from(serverReports)
         ..sort((a, b) => b.submittedAt.compareTo(a.submittedAt));
       reportsLoadError = null;
       notifyListeners();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[DummyState] Error fetching reports: $e');
       reports = [];
       reportsLoadError =
           'Laporan tidak dapat dimuat. Periksa koneksi lalu coba lagi.';

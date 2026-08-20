@@ -61,12 +61,12 @@ String resolveApiBaseUrl({
     if (isReleaseMode) {
       return 'https://qa-mobile-api.vercel.app';
     }
-    return 'http://localhost:3002';
+    return 'http://127.0.0.1:3002';
   }
   if (isAndroid) {
     return 'http://10.0.2.2:3002';
   }
-  return 'http://localhost:3002';
+  return 'http://127.0.0.1:3002';
 }
 
 class ApiService {
@@ -341,10 +341,13 @@ class ApiService {
         );
 
       final client = _client ?? _sharedClient;
+      final stopwatch = Stopwatch()..start();
       final streamedResponse = await client.send(request).timeout(
             const Duration(seconds: 15),
           );
       final response = await http.Response.fromStream(streamedResponse);
+      debugPrint('[QCPhotoProfile] E. HTTP upload: ${stopwatch.elapsedMilliseconds} ms');
+      
       final body = _decodeObject(response.body);
       if (response.statusCode != 201) {
         throw ApiRequestException(
