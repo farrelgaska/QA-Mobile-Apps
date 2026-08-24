@@ -87,13 +87,16 @@ class DeferredConclusionViolationPool {
 test('template aggregate write rolls back when an item write fails', async () => {
   const pool = new FailingPool('insert into public.qc_template_items');
   const repository = new PostgresTemplateRepository(pool);
-  await assert.rejects(repository.create({
-    id: 'MAT-ROLLBACK', type: 'MATERIAL', name: 'Rollback',
-    checklist_items: [{
-      id: 'I-1', parameter_name: 'Value', input_type: 'text', is_required: true,
-      required_photo: false
-    }]
-  }), /forced child write failure/);
+  await assert.rejects(
+    repository.create({
+      id: 'MAT-ROLLBACK', type: 'MATERIAL', name: 'Rollback',
+      checklist_items: [{
+        id: 'I-1', parameter_name: 'Value', input_type: 'text', is_required: true,
+        required_photo: false
+      }]
+    }),
+    error => error.code === 'INTERNAL_ERROR' && error.cause?.message === 'forced child write failure'
+  );
   assert.equal(pool.commands[0], 'BEGIN');
   assert.equal(pool.commands.at(-1), 'ROLLBACK');
   assert.equal(pool.commands.includes('COMMIT'), false);
@@ -103,12 +106,15 @@ test('template aggregate write rolls back when an item write fails', async () =>
 test('report aggregate write rolls back when an item write fails', async () => {
   const pool = new FailingPool('insert into public.qc_report_items');
   const repository = new PostgresReportRepository(pool);
-  await assert.rejects(repository.create({
-    id: 'QC-ROLLBACK', type: 'MATERIAL', title: 'Rollback', status: 'DRAFT',
-    staff: { name: '', nik: '' }, location: {}, checklist_items: [{
-      id: 'I-1', parameter_name: 'Value', input_type: 'text'
-    }]
-  }), /forced child write failure/);
+  await assert.rejects(
+    repository.create({
+      id: 'QC-ROLLBACK', type: 'MATERIAL', title: 'Rollback', status: 'DRAFT',
+      staff: { name: '', nik: '' }, location: {}, checklist_items: [{
+        id: 'I-1', parameter_name: 'Value', input_type: 'text'
+      }]
+    }),
+    error => error.code === 'INTERNAL_ERROR' && error.cause?.message === 'forced child write failure'
+  );
   assert.equal(pool.commands[0], 'BEGIN');
   assert.equal(pool.commands.at(-1), 'ROLLBACK');
   assert.equal(pool.commands.includes('COMMIT'), false);
@@ -165,8 +171,9 @@ test('deferred final-conclusion violations return 422 and roll back every report
       location: {},
       checklist_items: []
     }),
-    error => error.statusCode === 422 &&
-      error.message.includes('requires an explicit final conclusion')
+    error => (error.statusCode || error.status) === 422 &&
+      error.message ===
+        'Kesimpulan akhir wajib diisi sebelum laporan dapat diselesaikan.'
   );
 
   assert.equal(pool.commands.includes('COMMIT'), true);
@@ -205,11 +212,11 @@ test('PostgreSQL aggregate deletes roll back and return 404 for missing IDs', as
   const reportPool = new DeletePool();
   await assert.rejects(
     new PostgresTemplateRepository(templatePool).delete('MAT-MISSING'),
-    error => error.statusCode === 404
+    error => (error.statusCode || error.status) === 404
   );
   await assert.rejects(
     new PostgresReportRepository(reportPool).delete('QC-MISSING'),
-    error => error.statusCode === 404
+    error => (error.statusCode || error.status) === 404
   );
   assert.equal(templatePool.commands.at(-1), 'ROLLBACK');
   assert.equal(reportPool.commands.at(-1), 'ROLLBACK');

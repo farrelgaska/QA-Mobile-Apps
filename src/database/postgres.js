@@ -1,11 +1,12 @@
 const { Pool } = require('pg');
 const { attachDatabasePool } = require('@vercel/functions');
 const environment = require('../config/env');
+const structuredLogger = require('../utils/logger');
 
 const createPool = (
   config = environment,
   PoolImplementation = Pool,
-  logger = console
+  logger = structuredLogger
 ) => {
   const pool = new PoolImplementation({
     connectionString: config.DATABASE_URL,
@@ -20,9 +21,9 @@ const createPool = (
   });
 
   pool.on('error', error => {
-    logger.error('Unexpected idle PostgreSQL client error.', {
+    logger.error('database_idle_client_error', {
       code: error?.code,
-      message: error?.message
+      error_name: error?.name || 'Error'
     });
   });
 

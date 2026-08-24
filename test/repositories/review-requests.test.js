@@ -134,7 +134,7 @@ test('fewer than two failed samples is rejected with HTTP-safe validation metada
       review_failed_sample_ids: ['sample-1'],
       review_failed_sample_numbers: [1]
     }))),
-    error => error.statusCode === 400 && /at least 2/.test(error.message)
+    error => (error.statusCode || error.status) === 400 && /at least 2/.test(error.message)
   );
 });
 
@@ -143,13 +143,13 @@ test('duplicate failed sample IDs and numbers are rejected', () => {
     () => normalizeReportReviewRequestFields(report(reviewRequest({
       review_failed_sample_ids: ['sample-1', 'sample-1']
     }))),
-    error => error.statusCode === 400 && /IDs must be unique/.test(error.message)
+    error => (error.statusCode || error.status) === 400 && /IDs must be unique/.test(error.message)
   );
   assert.throws(
     () => normalizeReportReviewRequestFields(report(reviewRequest({
       review_failed_sample_numbers: [1, 1]
     }))),
-    error => error.statusCode === 400 && /numbers must be unique/.test(error.message)
+    error => (error.statusCode || error.status) === 400 && /numbers must be unique/.test(error.message)
   );
 });
 
@@ -158,7 +158,7 @@ test('snapshot count must match both failed sample arrays', () => {
     () => normalizeReportReviewRequestFields(report(reviewRequest({
       review_failed_sample_count: 3
     }))),
-    error => error.statusCode === 400 && /must match both failed sample arrays/.test(error.message)
+    error => (error.statusCode || error.status) === 400 && /must match both failed sample arrays/.test(error.message)
   );
 });
 
@@ -167,13 +167,13 @@ test('invalid request timestamps and unauthorized role values are rejected', () 
     () => normalizeReportReviewRequestFields(report(reviewRequest({
       review_requested_at: 'not-a-date'
     }))),
-    error => error.statusCode === 400 && /valid date/.test(error.message)
+    error => (error.statusCode || error.status) === 400 && /valid date/.test(error.message)
   );
   assert.throws(
     () => normalizeReportReviewRequestFields(report(reviewRequest({
       review_requested_by_role: 'ADMIN'
     }))),
-    error => error.statusCode === 400 && /STAFF_WAREHOUSE/.test(error.message)
+    error => (error.statusCode || error.status) === 400 && /STAFF_WAREHOUSE/.test(error.message)
   );
 });
 
@@ -292,13 +292,13 @@ test('existing review requests cannot be cleared or overwritten', t => {
 
   assert.throws(
     () => repository.update('QC-REVIEW-1', { review_requested: false }),
-    error => error.statusCode === 400 && /immutable/.test(error.message)
+    error => (error.statusCode || error.status) === 400 && /immutable/.test(error.message)
   );
   assert.throws(
     () => repository.update('QC-REVIEW-1', {
       review_failed_sample_ids: ['sample-1', 'sample-3']
     }),
-    error => error.statusCode === 400 && /immutable/.test(error.message)
+    error => (error.statusCode || error.status) === 400 && /immutable/.test(error.message)
   );
 });
 
@@ -446,7 +446,10 @@ test('malformed review requests return the existing structured HTTP 400 response
     })))
   });
   assert.equal(response.status, 400);
-  assert.deepEqual(Object.keys(await response.json()), ['error']);
+  const body = await response.json();
+  assert.equal(body.code, 'BAD_REQUEST');
+  assert.equal(body.status, 400);
+  assert.match(body.message, /failed sample IDs must be unique/);
 });
 
 test('review-request migration is additive and enforces snapshot integrity', () => {

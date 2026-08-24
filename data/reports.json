@@ -2374,5 +2374,1062 @@
       1,
       2
     ]
+  },
+  {
+    "id": "QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24",
+    "type": "MATERIAL",
+    "template_id": "tiang_galvanis_6m_tanpa_sambungan",
+    "form_code": "TA-FR-048-010-03",
+    "title": "Tiang Galvanis 6M Tanpa Sambungan",
+    "status": "SUBMITTED",
+    "staff": {
+      "name": "Yanuar Luthfi",
+      "nik": "NIK-908271"
+    },
+    "location": {
+      "site_id": "site-1",
+      "site_name": "Site Warehouse Jakarta Barat",
+      "area": "Area Site Utama",
+      "detail_location": "Segmen Default"
+    },
+    "general_info": {
+      "poNumber": "123",
+      "poDate": "2026-07-01",
+      "doNumber": "123",
+      "vendorName": "Vendor A",
+      "materialId": "tiang_galvanis_6m_tanpa_sambungan",
+      "arrivalVolume": "10",
+      "samplingVolume": "3",
+      "brandName": "Tiang A",
+      "warehouseLocation": "Gudang A",
+      "stelVersion": "STEL-QA-MYTA-2026",
+      "qaExpiryDate": "2028-12-31",
+      "tkdnNumber": "TKDN-TA-FR-048-010-03-2026",
+      "tkdnCertDate": "2026-01-15",
+      "tkdnValue": "42,5",
+      "currentStep": "3",
+      "qcSampleEvaluationStatuses": "{\"QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24-sample-1\":\"OUT_OF_STANDARD\",\"QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24-sample-2\":\"WITHIN_STANDARD\",\"QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24-sample-3\":\"OUT_OF_STANDARD\"}",
+      "qcFailedSampleCount": "2",
+      "qcReviewRequestEligible": "true",
+      "qcEvidenceCaptureMetadata": {
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-1/e84dc659-88c1-4962-9bdc-11991c9f4db1.jpg": {
+          "capturedAt": "2026-08-24T13:37:51.257+07:00",
+          "latitude": -6.17498686775859,
+          "longitude": 106.7934627879696,
+          "accuracyMeters": 81,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-2/7d6e5292-1770-418d-95a8-d7d581de245d.jpg": {
+          "capturedAt": "2026-08-24T13:38:10.746+07:00",
+          "latitude": -6.174990137813726,
+          "longitude": 106.79346349925157,
+          "accuracyMeters": 79,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-3/acf5d8b9-5889-4a55-ae12-d28c77f8fc7a.jpg": {
+          "capturedAt": "2026-08-24T13:38:34.083+07:00",
+          "latitude": -6.174991291150284,
+          "longitude": 106.79345759876298,
+          "accuracyMeters": 79,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-4/705183da-b5da-429f-96a0-dfe5db67e351.jpg": {
+          "capturedAt": "2026-08-24T13:38:55.161+07:00",
+          "latitude": -6.174985559499699,
+          "longitude": 106.79346298357778,
+          "accuracyMeters": 79,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-5/9ac9c557-f9d2-487e-b243-d5c550ea1be0.jpg": {
+          "capturedAt": "2026-08-24T13:40:04.574+07:00",
+          "latitude": -6.174985471597491,
+          "longitude": 106.79346298357775,
+          "accuracyMeters": 79,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-6/85fccad6-2a70-49c1-81c4-eeb0107ec67e.jpg": {
+          "capturedAt": "2026-08-24T13:40:14.012+07:00",
+          "latitude": -6.174985471597491,
+          "longitude": 106.79346298357775,
+          "accuracyMeters": 79,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-7/3d1ae41e-dc33-4af6-9777-cc7796567fcc.jpg": {
+          "capturedAt": "2026-08-24T13:40:21.251+07:00",
+          "latitude": -6.174984579192654,
+          "longitude": 106.79346257790051,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-8/38d5314d-2c4d-429d-bc60-ef748db0c8cd.jpg": {
+          "capturedAt": "2026-08-24T13:40:29.262+07:00",
+          "latitude": -6.174984579192654,
+          "longitude": 106.79346257790051,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-1/09485f15-ec37-44f3-bfdb-6d2af290a3ba.jpg": {
+          "capturedAt": "2026-08-24T13:40:40.435+07:00",
+          "latitude": -6.1749847997388,
+          "longitude": 106.79346370113737,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-2/90841979-fb30-4391-9102-47b4c5ccf245.jpg": {
+          "capturedAt": "2026-08-24T13:40:50.584+07:00",
+          "latitude": -6.1749847997388,
+          "longitude": 106.79346370113737,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-3/85246c28-9245-4ac7-a8cf-7d20d6b8b761.jpg": {
+          "capturedAt": "2026-08-24T13:40:59.204+07:00",
+          "latitude": -6.1749847997388,
+          "longitude": 106.79346370113737,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-4/668525bf-ba53-475c-8074-43a98ec78e9d.jpg": {
+          "capturedAt": "2026-08-24T13:41:20.677+07:00",
+          "latitude": -6.1749847997388,
+          "longitude": 106.79346370113737,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-5/27b45099-a868-4f04-b571-509a97cf8db7.jpg": {
+          "capturedAt": "2026-08-24T13:41:31.173+07:00",
+          "latitude": -6.1749847997388,
+          "longitude": 106.79346370113737,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-6/4bc77a29-6141-419b-a36f-5853435d0815.jpg": {
+          "capturedAt": "2026-08-24T13:41:39.240+07:00",
+          "latitude": -6.1749847997388,
+          "longitude": 106.79346370113737,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-7/67646948-845f-4a0d-84c3-9e2737ee2eb0.jpg": {
+          "capturedAt": "2026-08-24T13:41:48.538+07:00",
+          "latitude": -6.1749847997388,
+          "longitude": 106.79346370113737,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-8/c35d0743-497f-483f-867c-e0b238eb435a.jpg": {
+          "capturedAt": "2026-08-24T13:41:56.815+07:00",
+          "latitude": -6.1749847997388,
+          "longitude": 106.79346370113737,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-1/e5b365a7-54ea-43f8-aec0-d945f0850281.jpg": {
+          "capturedAt": "2026-08-24T13:42:08.311+07:00",
+          "latitude": -6.1749847997388,
+          "longitude": 106.79346370113737,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-2/294bf101-ade1-4d68-9ebd-7402c4acd06d.jpg": {
+          "capturedAt": "2026-08-24T13:42:19.802+07:00",
+          "latitude": -6.1749847997388,
+          "longitude": 106.79346370113737,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-3/f4cb7ccf-f529-4c8b-99b5-10b8c1b908b7.jpg": {
+          "capturedAt": "2026-08-24T13:42:29.315+07:00",
+          "latitude": -6.1749847997388,
+          "longitude": 106.79346370113737,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-4/5ce832fc-5f51-4d18-baf4-3ec459dfe0ca.jpg": {
+          "capturedAt": "2026-08-24T13:42:39.411+07:00",
+          "latitude": -6.1749847997388,
+          "longitude": 106.79346370113737,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-5/6ca44758-648f-4f03-bd59-cefa7daf159b.jpg": {
+          "capturedAt": "2026-08-24T13:42:48.566+07:00",
+          "latitude": -6.1749847997388,
+          "longitude": 106.79346370113737,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-6/88853aa5-c5b5-4dc8-85d6-c8bb265c7a94.jpg": {
+          "capturedAt": "2026-08-24T13:42:59.113+07:00",
+          "latitude": -6.1749847997388,
+          "longitude": 106.79346370113737,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-7/b23d5c83-c194-4bfb-8d6b-c10351880114.jpg": {
+          "capturedAt": "2026-08-24T13:43:07.546+07:00",
+          "latitude": -6.1749847997388,
+          "longitude": 106.79346370113737,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        },
+        "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-8/b2bc97a3-881f-4d49-9a37-57cde7140051.jpg": {
+          "capturedAt": "2026-08-24T13:43:15.574+07:00",
+          "latitude": -6.1749847997388,
+          "longitude": 106.79346370113737,
+          "accuracyMeters": 77,
+          "locationLabel": null,
+          "serverReceivedAt": "2026-08-24T06:44:22.179Z"
+        }
+      },
+      "qcSamplingDecision": "STOP",
+      "qcSamplingDecisionAt": "2026-08-24T13:44:16.599",
+      "qcSamplingStopReason": "beberapa parameter tidak sesuai standar",
+      "qcSamplingFailedSampleIds": "[\"QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24-sample-1\",\"QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24-sample-3\"]",
+      "qcSamplingFailedSampleNumbers": "[1,3]",
+      "qcReviewRequested": "true",
+      "qcReviewRequestedAt": "2026-08-24T13:44:16.599",
+      "qcReviewFailedSampleIds": "[\"QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24-sample-1\",\"QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24-sample-3\"]",
+      "qcReviewFailedSampleNumbers": "[1,3]"
+    },
+    "checklist_items": [
+      {
+        "id": "tg6-1",
+        "parameter_name": "Kondisi fisik luar baik/tidak cacat",
+        "input_type": "boolean",
+        "standard_text": "tidak cacat",
+        "unit": "",
+        "actual_value": "Tidak",
+        "staff_note": "cacat",
+        "item_photos": [
+          "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-1/e84dc659-88c1-4962-9bdc-11991c9f4db1.jpg"
+        ],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "tg6-2",
+        "parameter_name": "Panjang total",
+        "input_type": "number",
+        "standard_text": "6000 ± 50 mm",
+        "unit": "mm",
+        "actual_value": "6050",
+        "staff_note": "",
+        "item_photos": [
+          "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-2/7d6e5292-1770-418d-95a8-d7d581de245d.jpg"
+        ],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "tg6-3",
+        "parameter_name": "Diameter luar",
+        "input_type": "number",
+        "standard_text": "76,3 mm ± 1%",
+        "unit": "mm",
+        "actual_value": "77",
+        "staff_note": "",
+        "item_photos": [
+          "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-3/acf5d8b9-5889-4a55-ae12-d28c77f8fc7a.jpg"
+        ],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "tg6-4",
+        "parameter_name": "Tebal tiang",
+        "input_type": "number",
+        "standard_text": "4 mm +15% -12,2%",
+        "unit": "mm",
+        "actual_value": "4",
+        "staff_note": "",
+        "item_photos": [
+          "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-4/705183da-b5da-429f-96a0-dfe5db67e351.jpg"
+        ],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "tg6-5",
+        "parameter_name": "Berat",
+        "input_type": "number",
+        "standard_text": "Minimal 43,78 kg",
+        "unit": "kg",
+        "actual_value": "44",
+        "staff_note": "",
+        "item_photos": [
+          "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-5/9ac9c557-f9d2-487e-b243-d5c550ea1be0.jpg"
+        ],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "tg6-6",
+        "parameter_name": "Terdapat tanda tanam",
+        "input_type": "boolean",
+        "standard_text": "Ada",
+        "unit": "",
+        "actual_value": "Ya",
+        "staff_note": "",
+        "item_photos": [
+          "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-6/85fccad6-2a70-49c1-81c4-eeb0107ec67e.jpg"
+        ],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "tg6-7",
+        "parameter_name": "Warna cat sesuai standar pengecatan",
+        "input_type": "choice",
+        "standard_text": "silver / cat identitas operator",
+        "unit": "",
+        "actual_value": "Sesuai",
+        "staff_note": "",
+        "item_photos": [
+          "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-7/3d1ae41e-dc33-4af6-9777-cc7796567fcc.jpg"
+        ],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      },
+      {
+        "id": "tg6-8",
+        "parameter_name": "Terdapat nama atau simbol merk pabrik tercetak jelas pada tutup atas",
+        "input_type": "boolean",
+        "standard_text": "Ada",
+        "unit": "",
+        "actual_value": "Ya",
+        "staff_note": "",
+        "item_photos": [
+          "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-8/38d5314d-2c4d-429d-bc60-ef748db0c8cd.jpg"
+        ],
+        "admin_evaluation": "NEEDS_REVIEW",
+        "admin_note": ""
+      }
+    ],
+    "staff_note": "",
+    "submitted_at": "2026-08-24T06:44:21.976Z",
+    "admin_review": {
+      "admin_note": "Menunggu peninjauan Admin.",
+      "reviewed_at": null,
+      "conclusion": null
+    },
+    "general_photos": [],
+    "sample_count": 3,
+    "samples": [
+      {
+        "id": "QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24-sample-1",
+        "sample_number": 1,
+        "inspection_status": "COMPLETED",
+        "checklist_answers": [
+          {
+            "checklist_item_id": "tg6-1",
+            "input_type": "boolean",
+            "actual_value": "Tidak",
+            "note": "cacat",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-1/e84dc659-88c1-4962-9bdc-11991c9f4db1.jpg"
+            ],
+            "standard_text": "tidak cacat",
+            "standard_value": null,
+            "unit": "",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "OUT_OF_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-2",
+            "input_type": "number",
+            "actual_value": "6050",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-2/7d6e5292-1770-418d-95a8-d7d581de245d.jpg"
+            ],
+            "standard_text": "6000 ± 50 mm",
+            "standard_value": null,
+            "unit": "mm",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-3",
+            "input_type": "number",
+            "actual_value": "77",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-3/acf5d8b9-5889-4a55-ae12-d28c77f8fc7a.jpg"
+            ],
+            "standard_text": "76,3 mm ± 1%",
+            "standard_value": null,
+            "unit": "mm",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-4",
+            "input_type": "number",
+            "actual_value": "4",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-4/705183da-b5da-429f-96a0-dfe5db67e351.jpg"
+            ],
+            "standard_text": "4 mm +15% -12,2%",
+            "standard_value": null,
+            "unit": "mm",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-5",
+            "input_type": "number",
+            "actual_value": "44",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-5/9ac9c557-f9d2-487e-b243-d5c550ea1be0.jpg"
+            ],
+            "standard_text": "Minimal 43,78 kg",
+            "standard_value": null,
+            "unit": "kg",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-6",
+            "input_type": "boolean",
+            "actual_value": "Ya",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-6/85fccad6-2a70-49c1-81c4-eeb0107ec67e.jpg"
+            ],
+            "standard_text": "Ada",
+            "standard_value": null,
+            "unit": "",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-7",
+            "input_type": "choice",
+            "actual_value": "Sesuai",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-7/3d1ae41e-dc33-4af6-9777-cc7796567fcc.jpg"
+            ],
+            "standard_text": "silver / cat identitas operator",
+            "standard_value": null,
+            "unit": "",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-8",
+            "input_type": "boolean",
+            "actual_value": "Ya",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-8/38d5314d-2c4d-429d-bc60-ef748db0c8cd.jpg"
+            ],
+            "standard_text": "Ada",
+            "standard_value": null,
+            "unit": "",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          }
+        ],
+        "notes": "",
+        "photo_paths": [],
+        "created_at": "2026-08-24T13:36:32.668",
+        "updated_at": "2026-08-24T13:40:34.507"
+      },
+      {
+        "id": "QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24-sample-2",
+        "sample_number": 2,
+        "inspection_status": "COMPLETED",
+        "checklist_answers": [
+          {
+            "checklist_item_id": "tg6-1",
+            "input_type": "boolean",
+            "actual_value": "Ya",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-1/09485f15-ec37-44f3-bfdb-6d2af290a3ba.jpg"
+            ],
+            "standard_text": "tidak cacat",
+            "standard_value": null,
+            "unit": "",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-2",
+            "input_type": "number",
+            "actual_value": "6050",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-2/90841979-fb30-4391-9102-47b4c5ccf245.jpg"
+            ],
+            "standard_text": "6000 ± 50 mm",
+            "standard_value": null,
+            "unit": "mm",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-3",
+            "input_type": "number",
+            "actual_value": "77",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-3/85246c28-9245-4ac7-a8cf-7d20d6b8b761.jpg"
+            ],
+            "standard_text": "76,3 mm ± 1%",
+            "standard_value": null,
+            "unit": "mm",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-4",
+            "input_type": "number",
+            "actual_value": "4",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-4/668525bf-ba53-475c-8074-43a98ec78e9d.jpg"
+            ],
+            "standard_text": "4 mm +15% -12,2%",
+            "standard_value": null,
+            "unit": "mm",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-5",
+            "input_type": "number",
+            "actual_value": "44",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-5/27b45099-a868-4f04-b571-509a97cf8db7.jpg"
+            ],
+            "standard_text": "Minimal 43,78 kg",
+            "standard_value": null,
+            "unit": "kg",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-6",
+            "input_type": "boolean",
+            "actual_value": "Ya",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-6/4bc77a29-6141-419b-a36f-5853435d0815.jpg"
+            ],
+            "standard_text": "Ada",
+            "standard_value": null,
+            "unit": "",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-7",
+            "input_type": "choice",
+            "actual_value": "Sesuai",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-7/67646948-845f-4a0d-84c3-9e2737ee2eb0.jpg"
+            ],
+            "standard_text": "silver / cat identitas operator",
+            "standard_value": null,
+            "unit": "",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-8",
+            "input_type": "boolean",
+            "actual_value": "Ya",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-8/c35d0743-497f-483f-867c-e0b238eb435a.jpg"
+            ],
+            "standard_text": "Ada",
+            "standard_value": null,
+            "unit": "",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          }
+        ],
+        "notes": "",
+        "photo_paths": [],
+        "created_at": "2026-08-24T13:37:21.626",
+        "updated_at": "2026-08-24T13:42:02.480"
+      },
+      {
+        "id": "QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24-sample-3",
+        "sample_number": 3,
+        "inspection_status": "COMPLETED",
+        "checklist_answers": [
+          {
+            "checklist_item_id": "tg6-1",
+            "input_type": "boolean",
+            "actual_value": "Ya",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-1/e5b365a7-54ea-43f8-aec0-d945f0850281.jpg"
+            ],
+            "standard_text": "tidak cacat",
+            "standard_value": null,
+            "unit": "",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-2",
+            "input_type": "number",
+            "actual_value": "5949",
+            "note": "kurang 1 mm",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-2/294bf101-ade1-4d68-9ebd-7402c4acd06d.jpg"
+            ],
+            "standard_text": "6000 ± 50 mm",
+            "standard_value": null,
+            "unit": "mm",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "OUT_OF_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-3",
+            "input_type": "number",
+            "actual_value": "77",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-3/f4cb7ccf-f529-4c8b-99b5-10b8c1b908b7.jpg"
+            ],
+            "standard_text": "76,3 mm ± 1%",
+            "standard_value": null,
+            "unit": "mm",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-4",
+            "input_type": "number",
+            "actual_value": "4",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-4/5ce832fc-5f51-4d18-baf4-3ec459dfe0ca.jpg"
+            ],
+            "standard_text": "4 mm +15% -12,2%",
+            "standard_value": null,
+            "unit": "mm",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-5",
+            "input_type": "number",
+            "actual_value": "44",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-5/6ca44758-648f-4f03-bd59-cefa7daf159b.jpg"
+            ],
+            "standard_text": "Minimal 43,78 kg",
+            "standard_value": null,
+            "unit": "kg",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-6",
+            "input_type": "boolean",
+            "actual_value": "Ya",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-6/88853aa5-c5b5-4dc8-85d6-c8bb265c7a94.jpg"
+            ],
+            "standard_text": "Ada",
+            "standard_value": null,
+            "unit": "",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-7",
+            "input_type": "choice",
+            "actual_value": "Sesuai",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-7/b23d5c83-c194-4bfb-8d6b-c10351880114.jpg"
+            ],
+            "standard_text": "silver / cat identitas operator",
+            "standard_value": null,
+            "unit": "",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          },
+          {
+            "checklist_item_id": "tg6-8",
+            "input_type": "boolean",
+            "actual_value": "Ya",
+            "note": "",
+            "photo_paths": [
+              "reports/QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24/checklist/tg6-8/b2bc97a3-881f-4d49-9a37-57cde7140051.jpg"
+            ],
+            "standard_text": "Ada",
+            "standard_value": null,
+            "unit": "",
+            "upper_tolerance": null,
+            "lower_tolerance": null,
+            "minimum_value": null,
+            "maximum_value": null,
+            "evaluation_status": "WITHIN_STANDARD",
+            "admin_evaluation": "NEEDS_REVIEW",
+            "admin_note": ""
+          }
+        ],
+        "notes": "",
+        "photo_paths": [],
+        "created_at": "2026-08-24T13:37:21.626",
+        "updated_at": "2026-08-24T13:44:02.212"
+      }
+    ],
+    "review_requested": true,
+    "review_requested_at": "2026-08-24T13:44:16.599",
+    "review_requested_by_role": "STAFF_WAREHOUSE",
+    "review_failed_sample_count": 2,
+    "review_failed_sample_ids": [
+      "QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24-sample-1",
+      "QC-MAT-1787553392668000-e30b5947c6ae06b770b91b26634f6d24-sample-3"
+    ],
+    "review_failed_sample_numbers": [
+      1,
+      3
+    ],
+    "revision_number": 1,
+    "template_snapshot": {
+      "id": "tiang_galvanis_6m_tanpa_sambungan",
+      "type": "MATERIAL",
+      "name": "Tiang Galvanis 6M Tanpa Sambungan",
+      "description": "Pemeriksaan Fisik Tiang Galvanis 6M Tanpa Sambungan",
+      "form_code": "TA-FR-048-010-03",
+      "category": "Tiang Besi",
+      "segment": "construction",
+      "standard_code": "SPLN T3.001-2:2021",
+      "is_active": true,
+      "workflow_status": null,
+      "version": 1,
+      "created_at": "2026-07-13T08:17:17.470Z",
+      "updated_at": "2026-07-13T08:17:17.470Z",
+      "checklist_items": [
+        {
+          "id": "tg6-1",
+          "parameter_name": "Kondisi fisik luar baik/tidak cacat",
+          "input_type": "boolean",
+          "standard_text": "tidak cacat",
+          "min_value": null,
+          "max_value": null,
+          "unit": null,
+          "is_required": true,
+          "required_photo": true,
+          "is_active": true,
+          "is_critical": false,
+          "position": 0,
+          "choices": [],
+          "choice_options": [],
+          "category": "",
+          "validation_rule": null,
+          "migration_metadata": null
+        },
+        {
+          "id": "tg6-2",
+          "parameter_name": "Panjang total",
+          "input_type": "number",
+          "standard_text": "6000 ± 50 mm",
+          "min_value": 5950,
+          "max_value": 6050,
+          "unit": "mm",
+          "is_required": true,
+          "required_photo": false,
+          "is_active": true,
+          "is_critical": false,
+          "position": 1,
+          "choices": [],
+          "choice_options": [],
+          "category": "",
+          "validation_rule": null,
+          "migration_metadata": null
+        },
+        {
+          "id": "tg6-3",
+          "parameter_name": "Diameter luar",
+          "input_type": "number",
+          "standard_text": "76,3 mm ± 1%",
+          "min_value": 75.537,
+          "max_value": 77.063,
+          "unit": "mm",
+          "is_required": true,
+          "required_photo": false,
+          "is_active": true,
+          "is_critical": false,
+          "position": 2,
+          "choices": [],
+          "choice_options": [],
+          "category": "",
+          "validation_rule": null,
+          "migration_metadata": null
+        },
+        {
+          "id": "tg6-4",
+          "parameter_name": "Tebal tiang",
+          "input_type": "number",
+          "standard_text": "4 mm +15% -12,2%",
+          "min_value": 3.512,
+          "max_value": 4.6,
+          "unit": "mm",
+          "is_required": true,
+          "required_photo": false,
+          "is_active": true,
+          "is_critical": false,
+          "position": 3,
+          "choices": [],
+          "choice_options": [],
+          "category": "",
+          "validation_rule": null,
+          "migration_metadata": null
+        },
+        {
+          "id": "tg6-5",
+          "parameter_name": "Berat",
+          "input_type": "number",
+          "standard_text": "Minimal 43,78 kg",
+          "min_value": 43.78,
+          "max_value": null,
+          "unit": "kg",
+          "is_required": true,
+          "required_photo": true,
+          "is_active": true,
+          "is_critical": false,
+          "position": 4,
+          "choices": [],
+          "choice_options": [],
+          "category": "",
+          "validation_rule": null,
+          "migration_metadata": null
+        },
+        {
+          "id": "tg6-6",
+          "parameter_name": "Terdapat tanda tanam",
+          "input_type": "boolean",
+          "standard_text": "Ada",
+          "min_value": null,
+          "max_value": null,
+          "unit": null,
+          "is_required": true,
+          "required_photo": false,
+          "is_active": true,
+          "is_critical": false,
+          "position": 5,
+          "choices": [],
+          "choice_options": [],
+          "category": "",
+          "validation_rule": null,
+          "migration_metadata": null
+        },
+        {
+          "id": "tg6-7",
+          "parameter_name": "Warna cat sesuai standar pengecatan",
+          "input_type": "choice",
+          "standard_text": "silver / cat identitas operator",
+          "min_value": null,
+          "max_value": null,
+          "unit": null,
+          "is_required": true,
+          "required_photo": false,
+          "is_active": true,
+          "is_critical": false,
+          "position": 6,
+          "choices": [
+            "Sesuai",
+            "Tidak Sesuai"
+          ],
+          "choice_options": [
+            {
+              "id": "opt-0",
+              "label": "Sesuai",
+              "value": "Sesuai",
+              "outcome": "PASS",
+              "position": 0
+            },
+            {
+              "id": "opt-1",
+              "label": "Tidak Sesuai",
+              "value": "Tidak Sesuai",
+              "outcome": "FAIL",
+              "position": 1
+            }
+          ],
+          "category": "",
+          "validation_rule": null,
+          "migration_metadata": null
+        },
+        {
+          "id": "tg6-8",
+          "parameter_name": "Terdapat nama atau simbol merk pabrik tercetak jelas pada tutup atas",
+          "input_type": "boolean",
+          "standard_text": "Ada",
+          "min_value": null,
+          "max_value": null,
+          "unit": null,
+          "is_required": true,
+          "required_photo": false,
+          "is_active": true,
+          "is_critical": false,
+          "position": 7,
+          "choices": [],
+          "choice_options": [],
+          "category": "",
+          "validation_rule": null,
+          "migration_metadata": null
+        }
+      ],
+      "migration_metadata": null
+    },
+    "migration_metadata": null
   }
 ]

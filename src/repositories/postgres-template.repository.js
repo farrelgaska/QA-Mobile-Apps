@@ -150,7 +150,7 @@ class PostgresTemplateRepository {
   async update(id, patch) {
     return this._transaction(async client => {
       const current = await this._findById(client, id, true);
-      if (!current) throw notFound(`Template with ID ${id} not found`);
+      if (!current) throw notFound(`Template dengan ID ${id} tidak ditemukan.`);
       const merged = { ...current, ...patch, id };
       const aliases = [
         ['formCode', 'form_code'], ['standardCode', 'standard_code'],
@@ -190,10 +190,10 @@ class PostgresTemplateRepository {
     try {
       return await this._transaction(async client => {
         const template = await this._findById(client, templateId, true);
-        if (!template) throw notFound(`Template with ID ${templateId} not found`);
+        if (!template) throw notFound(`Template dengan ID ${templateId} tidak ditemukan.`);
         const id = input.id || this._nextItemId(templateId, template.checklist_items);
         if (template.checklist_items.some(item => item.id === id)) {
-          throw conflict(`Checklist parameter with ID ${id} already exists in template ${templateId}`);
+          throw conflict(`Parameter checklist dengan ID ${id} sudah ada pada template ${templateId}.`);
         }
         const nextPosition = template.checklist_items.reduce(
           (maximum, item) => Math.max(maximum, item.position),
@@ -206,7 +206,7 @@ class PostgresTemplateRepository {
       });
     } catch (error) {
       if (error?.code === '23505') {
-        throw conflict(`Checklist parameter or position already exists in template ${templateId}`);
+        throw conflict(`Parameter atau posisi checklist sudah ada pada template ${templateId}.`);
       }
       throw error;
     }
@@ -215,9 +215,9 @@ class PostgresTemplateRepository {
   async updateChecklistItem(templateId, itemId, patch) {
     return this._transaction(async client => {
       const template = await this._findById(client, templateId, true);
-      if (!template) throw notFound(`Template with ID ${templateId} not found`);
+      if (!template) throw notFound(`Template dengan ID ${templateId} tidak ditemukan.`);
       const current = template.checklist_items.find(item => item.id === itemId);
-      if (!current) throw notFound(`Checklist parameter with ID ${itemId} not found in template ${templateId}`);
+      if (!current) throw notFound(`Parameter checklist dengan ID ${itemId} tidak ditemukan pada template ${templateId}.`);
       const item = mergeTemplateItemPatch(current, patch);
       const rule = item.validation_rule || {};
       try {
@@ -239,7 +239,7 @@ class PostgresTemplateRepository {
           ]
         );
       } catch (error) {
-        if (error?.code === '23505') throw conflict(`Checklist position already exists in template ${templateId}`);
+        if (error?.code === '23505') throw conflict(`Posisi checklist sudah ada pada template ${templateId}.`);
         throw error;
       }
       await client.query('update public.qc_templates set updated_at = now() where id = $1', [templateId]);
@@ -255,8 +255,8 @@ class PostgresTemplateRepository {
       );
       if (result.rowCount === 0) {
         const template = await this._findById(client, templateId, true);
-        if (!template) throw notFound(`Template with ID ${templateId} not found`);
-        throw notFound(`Checklist parameter with ID ${itemId} not found in template ${templateId}`);
+        if (!template) throw notFound(`Template dengan ID ${templateId} tidak ditemukan.`);
+        throw notFound(`Parameter checklist dengan ID ${itemId} tidak ditemukan pada template ${templateId}.`);
       }
       await client.query('update public.qc_templates set updated_at = now() where id = $1', [templateId]);
       return this._findById(client, templateId);
@@ -269,7 +269,7 @@ class PostgresTemplateRepository {
         'delete from public.qc_templates where id = $1 returning id',
         [id]
       );
-      if (result.rowCount === 0) throw notFound(`Template with ID ${id} not found`);
+      if (result.rowCount === 0) throw notFound(`Template dengan ID ${id} tidak ditemukan.`);
     });
   }
 }

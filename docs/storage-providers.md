@@ -4,20 +4,39 @@ Mobile and web clients always use the Express API. They do not connect to
 Supabase directly. The backend selects one data repository implementation at
 startup with `DATA_PROVIDER`.
 
-`STORAGE_PROVIDER` is reserved for future object/file storage implementations
-such as `supabase`, `s3`, or `gcs`. It does not select the template/report data
-repository.
+`STORAGE_PROVIDER` independently selects QC evidence object storage. `local`
+and `supabase` are implemented. `s3` and `gcs` remain reserved values and fail
+storage initialization because no adapter exists. See
+`../../docs/STORAGE_INTEGRITY.md` from the workspace root for the audited evidence
+lifecycle and known limitations.
 
 ## Local JSON mode
 
 ```env
 DATA_PROVIDER=json
+STORAGE_PROVIDER=local
 ```
 
 This is the default. Templates and reports continue to use
 `data/templates.json` and `data/reports.json`. It requires no database and is
 appropriate for local development and offline fallback. Writes retain the
 existing atomic temporary-file replacement behavior.
+
+Evidence files are written below `.local-storage/qc-evidence` and served from
+`/mock-storage` only outside production. Missing objects are returned through
+the signed-URL endpoint's `failed_paths` field.
+
+## Supabase Storage mode
+
+```env
+STORAGE_PROVIDER=supabase
+SUPABASE_URL=https://PROJECT_REF.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=replace-with-service-role-key
+```
+
+The backend alone uses the service-role credential. It stores evidence in the
+private `qc-evidence` bucket and returns one-hour signed display URLs; reports
+persist object paths, never those URLs.
 
 ## Supabase Postgres mode
 

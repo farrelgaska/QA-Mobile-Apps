@@ -243,7 +243,7 @@ test('JSON item create generates stable IDs and next positions without replacing
   assert.equal(repository.findById('MAT-CONTRACT').checklist_items.length, 2);
   assert.throws(
     () => repository.createChecklistItem('MAT-CONTRACT', { ...created, position: 2 }),
-    error => error.statusCode === 409
+    error => (error.statusCode || error.status) === 409
   );
 });
 
@@ -270,7 +270,7 @@ test('JSON item PATCH merges fields, keeps IDs immutable, and clears fields on t
   assert.equal(updated.required_photo, true);
   assert.throws(
     () => repository.updateChecklistItem('MAT-CONTRACT', 'MISSING', { standard_text: 'x' }),
-    error => error.statusCode === 404
+    error => (error.statusCode || error.status) === 404
   );
 });
 

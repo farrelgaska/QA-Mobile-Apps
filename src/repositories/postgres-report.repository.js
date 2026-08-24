@@ -4,7 +4,10 @@ const {
   notFound,
   translatePostgresError,
   isTransientPostgresError,
-  databaseUnavailable
+  databaseUnavailable,
+  idempotencyConflict,
+  idempotencyInProgress,
+  idempotencyReplayUnavailable
 } = require('./repository-errors');
 const {
   mergeReportReviewRequestPatch,
@@ -13,30 +16,13 @@ const {
 const {
   normalizeQCEvidenceCaptureMetadata
 } = require('../contracts/qc-evidence-capture-metadata');
-const { getQCEvidenceStorage } = require('../storage/qc-evidence-storage');
-
-/**
- * Collect all canonical object paths stored in a report aggregate.
- * Covers: general_photos, checklist item item_photos, and sample photo_paths
- * plus per-answer photo_paths.
- * @param {object} report
- * @returns {string[]}
- */
-function collectReportPhotoPaths(report) {
-  const paths = [];
-  for (const p of report.general_photos ?? []) paths.push(p);
-  for (const item of report.checklist_items ?? []) {
-    for (const p of item.item_photos ?? []) paths.push(p);
-  }
-  for (const sample of report.samples ?? []) {
-    for (const p of sample.photo_paths ?? []) paths.push(p);
-    for (const answer of sample.checklist_answers ?? []) {
-      for (const p of answer.photo_paths ?? []) paths.push(p);
-    }
-  }
-  // Deduplicate
-  return [...new Set(paths)].filter(p => typeof p === 'string' && p.startsWith('reports/'));
-}
+const {
+  collectReportPhotoPaths,
+  getQCEvidenceStorage
+} = require('../storage/qc-evidence-storage');
+const { fingerprintReportCreate } = require('../utils/request-fingerprint');
+const logger = require('../utils/logger');
+const { DATA_PROVIDER, STORAGE_PROVIDER } = require('../config/env');
 
 const ROOT_COLUMNS = `id, type, template_id, form_code, title, status, staff_name,
   staff_nik, site_id, site_name, area, detail_location, general_info, staff_note,
@@ -183,6 +169,16 @@ class PostgresReportRepository {
     return this._readWithTransientRetry(client => this._findById(client, id));
   }
 
+  async isTemplateInUse(templateId) {
+    return this._readWithTransientRetry(async client => {
+      const result = await client.query(
+        'select 1 from public.qc_reports where template_id = $1 limit 1',
+        [templateId]
+      );
+      return result.rows.length > 0;
+    });
+  }
+
   async _writeRoot(client, report, update = false) {
     const values = [
       report.id, report.type, report.template_id || null, report.form_code,
@@ -193,7 +189,8 @@ class PostgresReportRepository {
       report.revision_number, report.migration_metadata, report.sample_count,
       report.review_requested, report.review_requested_at,
       report.review_requested_by_role, report.review_failed_sample_count,
-      report.review_failed_sample_ids, report.review_failed_sample_numbers
+      report.review_failed_sample_ids, report.review_failed_sample_numbers,
+      report.template_snapshot || null
     ];
     if (update) {
       await client.query(
@@ -204,6 +201,7 @@ class PostgresReportRepository {
           sample_count=$18, review_requested=$19, review_requested_at=$20,
           review_requested_by_role=$21, review_failed_sample_count=$22,
           review_failed_sample_ids=$23, review_failed_sample_numbers=$24,
+          template_snapshot=$25,
           updated_at=now()
          where id=$1`,
         values
@@ -215,8 +213,8 @@ class PostgresReportRepository {
           site_name,area,detail_location,general_info,staff_note,submitted_at,
           revision_number,migration_metadata,sample_count,review_requested,
           review_requested_at,review_requested_by_role,review_failed_sample_count,
-          review_failed_sample_ids,review_failed_sample_numbers
-        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
+          review_failed_sample_ids,review_failed_sample_numbers,template_snapshot
+        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)`,
         values
       );
     }
@@ -323,11 +321,75 @@ class PostgresReportRepository {
     }
   }
 
+  async createWithIdempotency(input, key) {
+    const report = canonicalReportInput(normalizeQCEvidenceCaptureMetadata(input, {
+      now: this.now
+    }));
+    const fingerprint = fingerprintReportCreate(report);
+    const scope = 'create_report';
+
+    try {
+      return await this._transaction(async client => {
+        // 1. Try to claim the idempotency slot with the resource_id natively attached.
+        // If a concurrent transaction is currently inserting the SAME key, this will BLOCK
+        // until the other transaction commits or rolls back.
+        const insertResult = await client.query(
+          `insert into public.api_idempotency_keys
+             (key, scope, request_hash, resource_id)
+           values ($1, $2, $3, $4)
+           on conflict (key, scope) do nothing`,
+          [key, scope, fingerprint, report.id]
+        );
+
+        if (insertResult.rowCount > 0) {
+          // --- First request: won the slot ---
+          // Write the actual report
+          await this._writeRoot(client, report, false);
+          await this._writeChildren(client, report);
+
+          const created = await this._findById(client, report.id);
+          return { report: created, replayed: false };
+        }
+
+        // --- Key already exists: read current state ---
+        // If we reach here, either the key was inserted previously, or a concurrent
+        // transaction just finished committing it and our `insert on conflict` unblocked.
+        const existing = await client.query(
+          `select request_hash, resource_id
+           from public.api_idempotency_keys
+           where key = $1 and scope = $2`,
+          [key, scope]
+        );
+        const row = existing.rows[0];
+
+        if (!row) {
+          // If the concurrent transaction rolled back, our insert wouldn't return rowCount=0
+          // (it would succeed). So this means it was deleted concurrently between insert and select.
+          throw idempotencyInProgress();
+        }
+
+        if (row.request_hash !== fingerprint) {
+          throw idempotencyConflict();
+        }
+
+        // replay
+        const original = await this._findById(client, row.resource_id);
+        if (!original) throw idempotencyReplayUnavailable();
+        return { report: original, replayed: true };
+      });
+    } catch (error) {
+      if (error.code === 'IDEMPOTENCY_CONFLICT') {
+        throw error;
+      }
+      throw translatePostgresError(error, 'Report', report.id);
+    }
+  }
+
   async update(id, patch) {
     try {
       return await this._transaction(async client => {
         const current = await this._findById(client, id, true);
-        if (!current) throw notFound(`Report with ID ${id} not found`);
+        if (!current) throw notFound(`Laporan dengan ID ${id} tidak ditemukan.`);
         const merged = { ...current, ...patch, id };
         const aliases = [
           ['templateId', 'template_id'], ['formCode', 'form_code'],
@@ -360,13 +422,13 @@ class PostgresReportRepository {
     }
   }
 
-  async delete(id, { storageProvider = getQCEvidenceStorage } = {}) {
+  async delete(id, { storageProvider = getQCEvidenceStorage, requestId = null } = {}) {
     let photoPaths = [];
 
     // 1 & 2. Fetch the report inside the transaction (with lock) and delete it.
     await this._transaction(async client => {
       const report = await this._findById(client, id, true);
-      if (!report) throw notFound(`Report with ID ${id} not found`);
+      if (!report) throw notFound(`Laporan dengan ID ${id} tidak ditemukan.`);
 
       photoPaths = collectReportPhotoPaths(report);
 
@@ -374,7 +436,7 @@ class PostgresReportRepository {
         'delete from public.qc_reports where id = $1 returning id',
         [id]
       );
-      if (result.rowCount === 0) throw notFound(`Report with ID ${id} not found`);
+      if (result.rowCount === 0) throw notFound(`Laporan dengan ID ${id} tidak ditemukan.`);
     });
 
     // 3. Remove evidence objects from Storage (best-effort).
@@ -385,10 +447,14 @@ class PostgresReportRepository {
       try {
         await storageProvider().remove(photoPaths);
       } catch (storageErr) {
-        console.warn(
-          `[Storage] Failed to remove ${photoPaths.length} evidence object(s) for report ${id}:`,
-          storageErr.message
-        );
+        logger.warn('storage_cleanup_failed', {
+          request_id: requestId,
+          report_id: id,
+          object_count: photoPaths.length,
+          storage_provider: STORAGE_PROVIDER ||
+            (DATA_PROVIDER === 'json' ? 'local' : 'unconfigured'),
+          error_name: storageErr.name || 'Error'
+        });
       }
     }
   }

@@ -2,30 +2,39 @@
 require('./instrument');
 
 const express = require('express');
+const { LOCAL_QC_EVIDENCE_ROOT } = require('./storage/qc-evidence-storage');
 let Sentry;
 try {
   Sentry = require('@sentry/node');
 } catch (_) {}
 const cors = require('cors');
-const { CORS_ORIGINS } = require('./config/env');
+const { CORS_ORIGINS, CORS_ALLOW_LOCALHOST, APP_ENV } = require('./config/env');
 const healthRoutes = require('./routes/health.routes');
 const reportRoutes = require('./routes/report.routes');
 const templateRoutes = require('./routes/template.routes');
 const uploadRoutes = require('./routes/upload.routes');
+const observabilityMiddleware = require('./middleware/observability');
 const notFoundMiddleware = require('./middleware/not-found');
 const errorHandlerMiddleware = require('./middleware/error-handler');
 const demoAuthMiddleware = require('./middleware/auth');
 
 const app = express();
 
-// Dynamic CORS origin handler supporting Vercel previews & production
+app.use(observabilityMiddleware);
+
+// CORS origin handler.
+// - Explicit CORS_ORIGINS list is always checked.
+// - Localhost (127.0.0.1 / localhost) is allowed only in development (CORS_ALLOW_LOCALHOST=true).
+// - Staging and production must enumerate all allowed origins in CORS_ORIGINS explicitly.
+// - The previous blanket *.vercel.app and localhost:* wildcards have been removed.
 const isAllowedOrigin = (origin) => {
-  if (!origin) return true;
+  if (!origin) return true; // same-origin / non-browser requests
   if (Array.isArray(CORS_ORIGINS)) {
     if (CORS_ORIGINS.includes('*') || CORS_ORIGINS.includes(origin)) return true;
   }
-  if (origin.endsWith('.vercel.app')) return true;
-  if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return true;
+  if (CORS_ALLOW_LOCALHOST) {
+    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return true;
+  }
   return false;
 };
 
@@ -38,6 +47,8 @@ app.use(cors({
     }
   },
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Request-Id'],
+  exposedHeaders: ['Idempotency-Replayed', 'X-Request-Id'],
   credentials: true
 }));
 
@@ -58,6 +69,9 @@ app.use('/health', healthRoutes);
 app.use('/reports', demoAuthMiddleware, reportRoutes);
 app.use('/templates', demoAuthMiddleware, templateRoutes);
 app.use('/uploads', demoAuthMiddleware, uploadRoutes);
+if (APP_ENV !== 'production') {
+  app.use('/mock-storage', express.static(LOCAL_QC_EVIDENCE_ROOT));
+}
 
 // Fallbacks
 app.use(notFoundMiddleware);

@@ -219,6 +219,46 @@ const migrationMetadataSchema = z.object({
   unknown_fields: z.record(z.any()).optional()
 }).nullable().optional();
 
+const templateSnapshotSchema = z.object({
+  id: z.string(),
+  type: z.enum(["MATERIAL", "WORK"]),
+  name: z.string(),
+  description: z.string().nullable().optional().default(""),
+  form_code: z.string().nullable().optional().default(""),
+  category: z.string().nullable().optional().default(""),
+  segment: z.string().nullable().optional().default("construction"),
+  is_active: z.boolean().default(true),
+  checklist_items: z.array(z.object({
+    id: z.string(),
+    parameter_name: z.string(),
+    input_type: z.enum(['number', 'text', 'choice', 'boolean']),
+    standard_text: z.string().default(''),
+    min_value: z.number().nullable().default(null),
+    max_value: z.number().nullable().default(null),
+    unit: z.string().nullable().default(null),
+    is_required: z.boolean().default(false),
+    required_photo: z.boolean().default(false),
+    is_active: z.boolean().default(true),
+    is_critical: z.boolean().default(false),
+    position: z.number().int().default(0),
+    category: z.string().nullable().optional().default(""),
+    choices: z.array(z.string()).nullable().optional().default([]),
+    choice_options: z.array(z.object({
+      id: z.string().trim().min(1),
+      label: z.string().trim().min(1),
+      value: z.string(),
+      outcome: z.enum(['PASS', 'FAIL']),
+      position: z.number().int().min(0).default(0)
+    })).default([]),
+    validation_rule: z.object({
+      type: z.string().nullable().optional(),
+      min_value: z.number().nullable().optional(),
+      max_value: z.number().nullable().optional(),
+      exact_value: z.union([z.string(), z.number(), z.boolean()]).nullable().optional()
+    }).nullable().optional()
+  }))
+}).nullable().optional();
+
 const reviewRequestFieldsSchema = z.object({
   review_requested: z.boolean().default(false),
   review_requested_at: isoDateSchema.nullable().default(null),
@@ -478,6 +518,7 @@ const reportSchema = z.object({
   review_failed_sample_count: z.number().int().nullable().default(null),
   review_failed_sample_ids: reviewFailedSampleIdsSchema,
   review_failed_sample_numbers: reviewFailedSampleNumbersSchema,
+  template_snapshot: templateSnapshotSchema,
   revision_number: z.number().int().default(1),
   migration_metadata: migrationMetadataSchema
 }).superRefine((report, ctx) => {

@@ -1,4 +1,6 @@
-const { templateRepository } = require('../repositories');
+const { templateRepository, reportRepository } = require('../repositories');
+const AppError = require('../utils/AppError');
+
 
 const getTemplates = async (req, res, next) => {
   try {
@@ -26,7 +28,11 @@ const getTemplateById = async (req, res, next) => {
   try {
     const template = await templateRepository.findById(req.params.id);
     if (!template) {
-      return res.status(404).json({ error: `Template with ID ${req.params.id} not found` });
+      return next(new AppError({
+        status: 404,
+        code: 'NOT_FOUND',
+        message: `Template dengan ID ${req.params.id} tidak ditemukan.`
+      }));
     }
     res.json(template);
   } catch (err) {
@@ -96,6 +102,14 @@ const patchTemplateItem = async (req, res, next) => {
 
 const deleteTemplate = async (req, res, next) => {
   try {
+    const inUse = await reportRepository.isTemplateInUse(req.params.id);
+    if (inUse) {
+      return next(new AppError({
+        status: 409,
+        code: 'TEMPLATE_IN_USE',
+        message: 'Template sedang digunakan oleh satu atau beberapa laporan dan tidak dapat dihapus.'
+      }));
+    }
     await templateRepository.delete(req.params.id);
     res.status(204).end();
   } catch (err) {

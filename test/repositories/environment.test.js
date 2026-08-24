@@ -69,10 +69,10 @@ test('PostgreSQL pool preserves configurable Supabase SSL and logs idle client e
   );
   assert.doesNotThrow(() => pool.listeners.error(idleError));
   assert.deepEqual(logged, [[
-    'Unexpected idle PostgreSQL client error.',
+    'database_idle_client_error',
     {
       code: 'ECONNRESET',
-      message: 'Connection terminated unexpectedly'
+      error_name: 'Error'
     }
   ]]);
 });

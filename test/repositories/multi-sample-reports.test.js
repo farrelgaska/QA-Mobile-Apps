@@ -263,7 +263,7 @@ test('canonical object paths are unchanged and URL photo references are rejected
   malformed.samples[0].photo_paths = ['https://example.test/signed-image.jpg'];
   assert.throws(
     () => repository.create(malformed),
-    error => error.statusCode === 400 && /canonical QC evidence object_path/.test(error.message)
+    error => (error.statusCode || error.status) === 400 && /canonical QC evidence object_path/.test(error.message)
   );
 });
 
@@ -272,14 +272,14 @@ test('duplicate sample numbers and IDs are rejected with validation errors', () 
   duplicateNumber.samples[1].sample_number = duplicateNumber.samples[0].sample_number;
   assert.throws(
     () => normalizeReportSampleFields(duplicateNumber),
-    error => error.statusCode === 400 && /duplicate sample_number/.test(error.message)
+    error => (error.statusCode || error.status) === 400 && /duplicate sample_number/.test(error.message)
   );
 
   const duplicateId = multiSampleReport();
   duplicateId.samples[1].id = duplicateId.samples[0].id;
   assert.throws(
     () => normalizeReportSampleFields(duplicateId),
-    error => error.statusCode === 400 && /duplicate sample id/.test(error.message)
+    error => (error.statusCode || error.status) === 400 && /duplicate sample id/.test(error.message)
   );
 });
 
@@ -287,7 +287,7 @@ test('invalid sample_count values are rejected', () => {
   for (const sampleCount of [0, -1, 1.5, '2']) {
     assert.throws(
       () => normalizeReportSampleFields({ sample_count: sampleCount, samples: [] }),
-      error => error.statusCode === 400 && /sample_count/.test(error.message)
+      error => (error.statusCode || error.status) === 400 && /sample_count/.test(error.message)
     );
   }
 });
@@ -341,8 +341,9 @@ test('malformed sample payload receives a structured HTTP 400 response', async t
     });
     assert.equal(response.status, 400);
     const body = await response.json();
-    assert.deepEqual(Object.keys(body), ['error']);
-    assert.match(body.error, /duplicate sample_number/);
+    assert.equal(body.code, 'BAD_REQUEST');
+    assert.equal(body.status, 400);
+    assert.match(body.message, /duplicate sample_number/);
   } finally {
     console.error = originalConsoleError;
   }

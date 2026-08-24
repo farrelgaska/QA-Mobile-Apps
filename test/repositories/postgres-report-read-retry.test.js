@@ -111,7 +111,10 @@ test('repeated transient report read failure returns a clean HTTP 503', async t 
 
   assert.equal(response.status, 503);
   assert.deepEqual(body, {
-    error: 'Database temporarily unavailable. Please try again.'
+    code: 'SERVICE_UNAVAILABLE',
+    message: 'Layanan sementara tidak tersedia. Silakan coba lagi.',
+    status: 503,
+    error: { code: 'SERVICE_UNAVAILABLE', message: 'Layanan sementara tidak tersedia. Silakan coba lagi.' }
   });
   assert.equal(pool.connectCount, 2);
   assert.equal(JSON.stringify(body).includes('stack'), false);
@@ -132,7 +135,10 @@ test('non-transient database errors are not retried', async t => {
 
   assert.equal(response.status, 500);
   assert.deepEqual(await response.json(), {
-    error: 'Internal Server Error'
+    code: 'INTERNAL_ERROR',
+    message: 'Terjadi kesalahan internal.',
+    status: 500,
+    error: { code: 'INTERNAL_ERROR', message: 'Terjadi kesalahan internal.' }
   });
   assert.equal(pool.connectCount, 1);
   assert.deepEqual(pool.clients[0].releaseArguments, [undefined]);

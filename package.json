@@ -14,7 +14,12 @@
     "test": "node scripts/run-repository-tests.js",
     "test:repositories": "npm test",
     "normalize:templates": "node scripts/normalize-templates.js",
-    "normalize:reports": "node scripts/normalize-reports.js"
+    "normalize:reports": "node scripts/normalize-reports.js",
+    "backup:json": "node scripts/json-state.js backup",
+    "restore:json": "node scripts/json-state.js restore",
+    "db:seed": "node scripts/seed/cli.js seed",
+    "db:reset": "node scripts/seed/cli.js reset",
+    "db:reseed": "node scripts/seed/cli.js reseed"
   },
   "dependencies": {
     "@sentry/node": "^8.55.2",

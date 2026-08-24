@@ -27,10 +27,12 @@ const demoAuthMiddleware = (req, res, next) => {
     : null;
 
   if (token !== ADMIN_DEMO_TOKEN) {
-    return res.status(401).json({
-      error: 'Unauthorized',
-      hint: 'Provide a valid Authorization: Bearer <token> header.'
-    });
+    const AppError = require('../utils/AppError');
+    return next(new AppError({
+      status: 401,
+      code: 'UNAUTHORIZED',
+      message: 'Akses tidak sah. Silakan masuk kembali.'
+    }));
   }
 
   next();

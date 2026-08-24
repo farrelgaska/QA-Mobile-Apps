@@ -22,7 +22,7 @@ const multipartUpload = multer({
   },
   fileFilter: (req, file, callback) => {
     if (!Object.hasOwn(MIME_EXTENSIONS, file.mimetype)) {
-      const error = new Error('file must be JPEG, PNG, WebP, or HEIC');
+      const error = new Error('Format foto harus JPEG, PNG, WebP, atau HEIC.');
       error.statusCode = 415;
       return callback(error);
     }
@@ -42,7 +42,7 @@ const createUploadRouter = ({ getStorage = getQCEvidenceStorage } = {}) => {
       if (error.code === 'LIMIT_FILE_SIZE') {
         return res.status(413).json({ error: QC_EVIDENCE_TOO_LARGE_MESSAGE });
       }
-      return res.status(400).json({ error: 'Invalid multipart upload' });
+      return res.status(400).json({ error: 'Unggahan foto tidak valid.' });
     }
     next(error);
   });

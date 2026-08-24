@@ -5,7 +5,8 @@ const { createUploadRouter, MAX_FILE_SIZE } = require('../../src/routes/upload.r
 const errorHandler = require('../../src/middleware/error-handler');
 const {
   createQCEvidenceStorage,
-  createQCEvidenceStorageProvider
+  createQCEvidenceStorageProvider,
+  LOCAL_QC_EVIDENCE_ROOT
 } = require('../../src/storage/qc-evidence-storage');
 
 const JPEG_BYTES = Buffer.from([
@@ -56,9 +57,12 @@ const createSupabaseStorage = response => createQCEvidenceStorage({
   }
 });
 
-const withServer = async (storage, callback) => {
+const withServer = async (storage, callback, { serveLocalStorage = false } = {}) => {
   const app = express();
   app.use('/uploads', createUploadRouter({ getStorage: () => storage }));
+  if (serveLocalStorage) {
+    app.use('/mock-storage', express.static(LOCAL_QC_EVIDENCE_ROOT));
+  }
   app.use(errorHandler);
   const server = app.listen(0);
   await new Promise(resolve => server.once('listening', resolve));
@@ -74,10 +78,11 @@ const uploadForm = ({
   mimeType = 'image/jpeg',
   reportId = 'QC-REP-001',
   category = 'general',
-  itemId
+  itemId,
+  filename = 'client-filename.jpg'
 } = {}) => {
   const form = new FormData();
-  form.append('file', new Blob([bytes], { type: mimeType }), 'client-filename.jpg');
+  form.append('file', new Blob([bytes], { type: mimeType }), filename);
   form.append('report_id', reportId);
   form.append('category', category);
   if (itemId !== undefined) form.append('item_id', itemId);
@@ -151,7 +156,10 @@ test('rejects an upload with no file', async () => {
     const response = await fetch(`${baseUrl}/uploads/qc-evidence`, { method: 'POST', body: form });
 
     assert.equal(response.status, 400);
-    assert.deepEqual(await response.json(), { error: 'file is required' });
+    assert.deepEqual(await response.json(), {
+      code: 'BAD_REQUEST', message: 'Foto wajib disertakan.', status: 400,
+      error: { code: 'BAD_REQUEST', message: 'Foto wajib disertakan.' }
+    });
     assert.equal(storage.uploads.length, 0);
   });
 });
@@ -165,7 +173,10 @@ test('rejects a zero-byte file', async () => {
     });
 
     assert.equal(response.status, 400);
-    assert.deepEqual(await response.json(), { error: 'file must not be empty' });
+    assert.deepEqual(await response.json(), {
+      code: 'BAD_REQUEST', message: 'Foto tidak boleh kosong.', status: 400,
+      error: { code: 'BAD_REQUEST', message: 'Foto tidak boleh kosong.' }
+    });
     assert.equal(storage.uploads.length, 0);
   });
 });
@@ -179,7 +190,10 @@ test('rejects an invalid image MIME type', async () => {
     });
 
     assert.equal(response.status, 415);
-    assert.deepEqual(await response.json(), { error: 'file must be JPEG, PNG, WebP, or HEIC' });
+    assert.deepEqual(await response.json(), {
+      code: 'UNSUPPORTED_MEDIA_TYPE', message: 'Format foto harus JPEG, PNG, WebP, atau HEIC.', status: 415,
+      error: { code: 'UNSUPPORTED_MEDIA_TYPE', message: 'Format foto harus JPEG, PNG, WebP, atau HEIC.' }
+    });
     assert.equal(storage.uploads.length, 0);
   });
 });
@@ -193,7 +207,10 @@ test('rejects a spoofed image MIME type', async () => {
     });
 
     assert.equal(response.status, 415);
-    assert.deepEqual(await response.json(), { error: 'file MIME type does not match its content' });
+    assert.deepEqual(await response.json(), {
+      code: 'UNSUPPORTED_MEDIA_TYPE', message: 'Jenis berkas foto tidak sesuai dengan isinya.', status: 415,
+      error: { code: 'UNSUPPORTED_MEDIA_TYPE', message: 'Jenis berkas foto tidak sesuai dengan isinya.' }
+    });
     assert.equal(storage.uploads.length, 0);
   });
 });
@@ -238,12 +255,15 @@ test('requires item_id for checklist evidence', async () => {
     });
 
     assert.equal(response.status, 400);
-    assert.deepEqual(await response.json(), { error: 'item_id is required' });
+    assert.deepEqual(await response.json(), {
+      code: 'BAD_REQUEST', message: 'ID parameter wajib diisi.', status: 400,
+      error: { code: 'BAD_REQUEST', message: 'ID parameter wajib diisi.' }
+    });
     assert.equal(storage.uploads.length, 0);
   });
 });
 
-test('generates a safe checklist object path from valid identifiers', async () => {
+test('ignores a traversal-style client filename when generating the object path', async () => {
   const storage = createStorageMock();
   await withServer(storage, async baseUrl => {
     const response = await fetch(`${baseUrl}/uploads/qc-evidence`, {
@@ -251,7 +271,8 @@ test('generates a safe checklist object path from valid identifiers', async () =
       body: uploadForm({
         reportId: 'QC-Report-002',
         category: 'checklist',
-        itemId: 'item-safe-01'
+        itemId: 'item-safe-01',
+        filename: '../../escape.jpg'
       })
     });
     const body = await response.json();
@@ -274,7 +295,7 @@ test('rejects an unsafe report_id instead of transforming it', async () => {
     });
 
     assert.equal(response.status, 400);
-    assert.match((await response.json()).error, /^report_id must be at most 128 characters/);
+    assert.match((await response.json()).message, /^ID laporan maksimal 128 karakter/);
     assert.equal(storage.uploads.length, 0);
   });
 });
@@ -288,7 +309,7 @@ test('rejects an unsafe item_id instead of transforming it', async () => {
     });
 
     assert.equal(response.status, 400);
-    assert.match((await response.json()).error, /^item_id must be at most 128 characters/);
+    assert.match((await response.json()).message, /^ID parameter maksimal 128 karakter/);
     assert.equal(storage.uploads.length, 0);
   });
 });
@@ -307,7 +328,10 @@ test('returns an upstream error when Storage upload fails', async () => {
     });
 
     assert.equal(response.status, 502);
-    assert.deepEqual(await response.json(), { error: 'QC evidence storage upload failed' });
+    assert.deepEqual(await response.json(), {
+      code: 'INTERNAL_ERROR', message: 'Terjadi kesalahan internal.', status: 502,
+      error: { code: 'INTERNAL_ERROR', message: 'Terjadi kesalahan internal.' }
+    });
   });
 });
 
@@ -361,7 +385,7 @@ test('returns valid signed URLs and reports only missing paths in a mixed batch'
   const storage = createSupabaseStorage({
     data: [
       { path: validPath, signedUrl },
-      { path: missingPath, signedUrl: null, error: 'Object not found' }
+      { path: missingPath, signedUrl: null, error: { code: 'INTERNAL_ERROR', message: 'Object not found', details: [] } }
     ],
     error: null
   });
@@ -388,7 +412,7 @@ test('returns an empty signed URL list when every object is missing', async () =
     'reports/QC-REP-001/general/123e4567-e89b-42d3-a456-426614174001.jpg'
   ];
   const storage = createSupabaseStorage({
-    data: paths.map(path => ({ path, signedUrl: null, error: 'Object not found' })),
+    data: paths.map(path => ({ path, signedUrl: null, error: { code: 'INTERNAL_ERROR', message: 'Object not found', details: [] } })),
     error: null
   });
 
@@ -414,7 +438,7 @@ test('Supabase adapter still throws on a top-level signed URL failure', async ()
 
   await assert.rejects(
     storage.createSignedUrls([path]),
-    error => error.statusCode === 502 && error.message === 'QC evidence signed URL creation failed'
+    error => (error.statusCode || error.status) === 502 && error.message === 'QC evidence signed URL creation failed'
   );
 });
 
@@ -424,7 +448,7 @@ test('Supabase adapter still throws on a malformed signed URL response', async (
 
   await assert.rejects(
     storage.createSignedUrls([path]),
-    error => error.statusCode === 502 && error.message === 'QC evidence signed URL creation failed'
+    error => (error.statusCode || error.status) === 502 && error.message === 'QC evidence signed URL creation failed'
   );
 });
 
@@ -438,7 +462,10 @@ test('rejects an invalid signed URL path', async () => {
     });
 
     assert.equal(response.status, 400);
-    assert.deepEqual(await response.json(), { error: 'paths contains an invalid QC evidence object path' });
+    assert.deepEqual(await response.json(), {
+      code: 'BAD_REQUEST', message: 'Daftar dokumentasi memuat path yang tidak valid.', status: 400,
+      error: { code: 'BAD_REQUEST', message: 'Daftar dokumentasi memuat path yang tidak valid.' }
+    });
     assert.equal(storage.signedUrlRequests.length, 0);
   });
 });
@@ -463,6 +490,65 @@ test('non-Supabase providers cannot initialize the Supabase adapter', () => {
       clientFactory: () => assert.fail('client factory must not be called')
     });
 
-    assert.throws(getStorage, /requires STORAGE_PROVIDER=supabase/);
+    assert.throws(getStorage, /requires STORAGE_PROVIDER=supabase or local/);
   }
+});
+
+test('local storage uploads, resolves, and serves a retrievable object', async () => {
+  const getStorage = createQCEvidenceStorageProvider({
+    config: { STORAGE_PROVIDER: 'local', PORT: 3002 },
+    clientFactory: () => assert.fail('client factory must not be called')
+  });
+
+  const storage = getStorage();
+  let objectPath;
+  try {
+    await withServer(storage, async baseUrl => {
+      const uploadResponse = await fetch(`${baseUrl}/uploads/qc-evidence`, {
+        method: 'POST',
+        body: uploadForm({
+          bytes: PNG_BYTES,
+          mimeType: 'image/png',
+          reportId: 'QC-REP-LOCAL'
+        })
+      });
+      const uploadBody = await uploadResponse.json();
+      objectPath = uploadBody.object_path;
+
+      const signedResponse = await fetch(`${baseUrl}/uploads/qc-evidence/signed-urls`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ paths: [objectPath] })
+      });
+      const signedBody = await signedResponse.json();
+
+      assert.equal(uploadResponse.status, 201);
+      assert.equal(signedResponse.status, 200);
+      assert.deepEqual(signedBody.failed_paths, []);
+      assert.equal(signedBody.signed_urls[0].signed_url, `${baseUrl}/mock-storage/${objectPath}`);
+
+      const objectResponse = await fetch(signedBody.signed_urls[0].signed_url);
+      assert.equal(objectResponse.status, 200);
+      assert.equal(objectResponse.headers.get('content-type'), 'image/png');
+      assert.deepEqual(Buffer.from(await objectResponse.arrayBuffer()), PNG_BYTES);
+    }, { serveLocalStorage: true });
+  } finally {
+    if (objectPath) await storage.remove([objectPath]);
+  }
+});
+
+test('local storage reports a canonical missing object without issuing a URL', async () => {
+  const getStorage = createQCEvidenceStorageProvider({
+    config: { STORAGE_PROVIDER: 'local', PORT: 3002 },
+    clientFactory: () => assert.fail('client factory must not be called')
+  });
+
+  const storage = getStorage();
+  const missingPath =
+    'reports/QC-REP-MISSING/general/123e4567-e89b-42d3-a456-426614174099.jpg';
+
+  assert.deepEqual(await storage.createSignedUrls([missingPath]), {
+    signedUrls: [],
+    failedPaths: [missingPath]
+  });
 });

@@ -44,11 +44,17 @@ test('aggregate DELETE endpoints return 204 once and 404 for missing IDs', async
   try {
     const templateMissing = await fetch(`${baseUrl}/templates/MAT-MISSING`, { method: 'DELETE' });
     assert.equal(templateMissing.status, 404);
-    assert.deepEqual(await templateMissing.json(), { error: 'Template with ID MAT-MISSING not found' });
+    assert.deepEqual(await templateMissing.json(), {
+      code: 'NOT_FOUND', message: 'Template with ID MAT-MISSING not found', status: 404,
+      error: { code: 'NOT_FOUND', message: 'Template with ID MAT-MISSING not found' }
+    });
 
     const reportMissing = await fetch(`${baseUrl}/reports/QC-MISSING`, { method: 'DELETE' });
     assert.equal(reportMissing.status, 404);
-    assert.deepEqual(await reportMissing.json(), { error: 'Report with ID QC-MISSING not found' });
+    assert.deepEqual(await reportMissing.json(), {
+      code: 'NOT_FOUND', message: 'Report with ID QC-MISSING not found', status: 404,
+      error: { code: 'NOT_FOUND', message: 'Report with ID QC-MISSING not found' }
+    });
   } finally {
     console.error = originalConsoleError;
   }
@@ -88,7 +94,13 @@ test('known final-conclusion domain violations return HTTP 422', async t => {
 
     assert.equal(response.status, 422);
     assert.deepEqual(await response.json(), {
-      error: 'Report QC-INVALID-FINAL with status NEEDS_FOLLOW_UP requires an explicit final conclusion'
+      code: 'UNPROCESSABLE_ENTITY',
+      message: 'Report QC-INVALID-FINAL with status NEEDS_FOLLOW_UP requires an explicit final conclusion',
+      status: 422,
+      error: {
+        code: 'UNPROCESSABLE_ENTITY',
+        message: 'Report QC-INVALID-FINAL with status NEEDS_FOLLOW_UP requires an explicit final conclusion'
+      }
     });
   } finally {
     console.error = originalConsoleError;

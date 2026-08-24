@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { TEMPLATES_FILE } = require('../config/env');
+const logger = require('../utils/logger');
 const {
   canonicalTemplateInput,
   canonicalTemplateItemInput,
@@ -52,7 +53,10 @@ class JsonTemplateRepository {
           fs.unlinkSync(tempPath);
         }
       } catch (_) {}
-      console.warn(`[JsonTemplateRepository] Disk write bypassed (${e.message}). Data kept in memory.`);
+      logger.warn('json_storage_write_bypassed', {
+        resource: 'templates',
+        error_name: e.name || 'Error'
+      });
     }
   }
 
@@ -69,7 +73,7 @@ class JsonTemplateRepository {
   create(template) {
     const templates = this._read();
     if (templates.some(t => t.id === template.id)) {
-      const err = new Error(`Template with ID ${template.id} already exists`);
+      const err = new Error(`Template dengan ID ${template.id} sudah ada.`);
       err.statusCode = 409;
       throw err;
     }
@@ -83,7 +87,7 @@ class JsonTemplateRepository {
     const templates = this._read();
     const index = templates.findIndex(t => t.id === id);
     if (index === -1) {
-      const err = new Error(`Template with ID ${id} not found`);
+      const err = new Error(`Template dengan ID ${id} tidak ditemukan.`);
       err.statusCode = 404;
       throw err;
     }
@@ -118,14 +122,14 @@ class JsonTemplateRepository {
     const templates = this._read();
     const templateIndex = templates.findIndex(template => template.id === templateId);
     if (templateIndex === -1) {
-      const error = new Error(`Template with ID ${templateId} not found`);
+      const error = new Error(`Template dengan ID ${templateId} tidak ditemukan.`);
       error.statusCode = 404;
       throw error;
     }
     const template = normalizeTemplateRead(templates[templateIndex]);
     const id = input.id || this._nextItemId(templateId, template.checklist_items);
     if (template.checklist_items.some(item => item.id === id)) {
-      const error = new Error(`Checklist parameter with ID ${id} already exists in template ${templateId}`);
+      const error = new Error(`Parameter checklist dengan ID ${id} sudah ada pada template ${templateId}.`);
       error.statusCode = 409;
       throw error;
     }
@@ -135,7 +139,7 @@ class JsonTemplateRepository {
     ) + 1;
     const position = input.position ?? nextPosition;
     if (template.checklist_items.some(item => item.position === position)) {
-      const error = new Error(`Checklist position ${position} already exists in template ${templateId}`);
+      const error = new Error(`Posisi checklist ${position} sudah ada pada template ${templateId}.`);
       error.statusCode = 409;
       throw error;
     }
@@ -152,20 +156,20 @@ class JsonTemplateRepository {
     const templates = this._read();
     const templateIndex = templates.findIndex(template => template.id === templateId);
     if (templateIndex === -1) {
-      const error = new Error(`Template with ID ${templateId} not found`);
+      const error = new Error(`Template dengan ID ${templateId} tidak ditemukan.`);
       error.statusCode = 404;
       throw error;
     }
     const template = normalizeTemplateRead(templates[templateIndex]);
     const itemIndex = template.checklist_items.findIndex(item => item.id === itemId);
     if (itemIndex === -1) {
-      const error = new Error(`Checklist parameter with ID ${itemId} not found in template ${templateId}`);
+      const error = new Error(`Parameter checklist dengan ID ${itemId} tidak ditemukan pada template ${templateId}.`);
       error.statusCode = 404;
       throw error;
     }
     const item = mergeTemplateItemPatch(template.checklist_items[itemIndex], patch);
     if (template.checklist_items.some((candidate, index) => index !== itemIndex && candidate.position === item.position)) {
-      const error = new Error(`Checklist position ${item.position} already exists in template ${templateId}`);
+      const error = new Error(`Posisi checklist ${item.position} sudah ada pada template ${templateId}.`);
       error.statusCode = 409;
       throw error;
     }
@@ -181,7 +185,7 @@ class JsonTemplateRepository {
     const templates = this._read();
     const index = templates.findIndex(template => template.id === id);
     if (index === -1) {
-      const err = new Error(`Template with ID ${id} not found`);
+      const err = new Error(`Template dengan ID ${id} tidak ditemukan.`);
       err.statusCode = 404;
       throw err;
     }
@@ -193,7 +197,7 @@ class JsonTemplateRepository {
     const templates = this._read();
     const templateIndex = templates.findIndex(t => t.id === templateId);
     if (templateIndex === -1) {
-      const err = new Error(`Template with ID ${templateId} not found`);
+      const err = new Error(`Template dengan ID ${templateId} tidak ditemukan.`);
       err.statusCode = 404;
       throw err;
     }
@@ -201,7 +205,7 @@ class JsonTemplateRepository {
     const template = normalizeTemplateRead(templates[templateIndex]);
     const itemIndex = template.checklist_items.findIndex(item => item.id === itemId);
     if (itemIndex === -1) {
-      const err = new Error(`Checklist parameter with ID ${itemId} not found in template ${templateId}`);
+      const err = new Error(`Parameter checklist dengan ID ${itemId} tidak ditemukan pada template ${templateId}.`);
       err.statusCode = 404;
       throw err;
     }

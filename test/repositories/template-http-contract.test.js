@@ -103,7 +103,7 @@ test('template routes emit snake_case, preserve items on metadata PATCH, and rej
       }]
     });
     assert.equal(invalidResponse.status, 400);
-    assert.match((await invalidResponse.json()).error, /label|FAIL option/);
+    assert.match((await invalidResponse.json()).message, /label|FAIL option/);
   } finally {
     console.error = originalConsoleError;
   }

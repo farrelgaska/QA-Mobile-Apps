@@ -1,13 +1,40 @@
 const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs/promises');
+const path = require('path');
 const environment = require('../config/env');
+const {
+  CANONICAL_QC_EVIDENCE_PATH_PATTERN
+} = require('../contracts/report.contract');
 
 const QC_EVIDENCE_BUCKET = 'qc-evidence';
 const SIGNED_URL_EXPIRY_SECONDS = 3600;
+const LOCAL_QC_EVIDENCE_ROOT = path.join(__dirname, '../../.local-storage/qc-evidence');
 
 const storageFailure = message => {
   const error = new Error(message);
   error.statusCode = 502;
   return error;
+};
+
+const collectReportPhotoPaths = report => {
+  const paths = [
+    ...(report.general_photos ?? []),
+    ...(report.checklist_items ?? []).flatMap(item => item.item_photos ?? []),
+    ...(report.samples ?? []).flatMap(sample => [
+      ...(sample.photo_paths ?? []),
+      ...(sample.checklist_answers ?? []).flatMap(answer => answer.photo_paths ?? [])
+    ])
+  ];
+  return [...new Set(paths)].filter(value =>
+    typeof value === 'string' && CANONICAL_QC_EVIDENCE_PATH_PATTERN.test(value)
+  );
+};
+
+const localObjectPath = objectPath => {
+  if (!CANONICAL_QC_EVIDENCE_PATH_PATTERN.test(objectPath)) {
+    throw storageFailure('Invalid QC evidence object path');
+  }
+  return path.join(LOCAL_QC_EVIDENCE_ROOT, objectPath);
 };
 
 const createQCEvidenceStorage = supabaseClient => ({
@@ -62,6 +89,47 @@ const createQCEvidenceStorage = supabaseClient => ({
   }
 });
 
+const createLocalEvidenceStorage = (config) => ({
+  async upload(objectPath, file) {
+    const fullPath = localObjectPath(objectPath);
+    await fs.mkdir(path.dirname(fullPath), { recursive: true });
+    await fs.writeFile(fullPath, file.buffer);
+  },
+
+  async remove(paths) {
+    if (!Array.isArray(paths) || paths.length === 0) return;
+    for (const p of paths) {
+      try {
+        await fs.unlink(localObjectPath(p));
+      } catch (err) {
+        if (err.code !== 'ENOENT') throw storageFailure('Local storage remove failed');
+      }
+    }
+  },
+
+  async createSignedUrls(paths, { baseUrl } = {}) {
+    const defaultBaseUrl = `http://127.0.0.1:${config.PORT || 3002}`;
+    const urlPrefix = baseUrl || defaultBaseUrl;
+
+    const result = { signedUrls: [], failedPaths: [] };
+    for (const p of paths) {
+      const fullPath = localObjectPath(p);
+      try {
+        await fs.access(fullPath);
+        result.signedUrls.push({
+          object_path: p,
+          signed_url: `${urlPrefix}/mock-storage/${p}`,
+          expires_in: SIGNED_URL_EXPIRY_SECONDS
+        });
+      } catch (error) {
+        if (error.code === 'ENOENT') result.failedPaths.push(p);
+        else throw storageFailure('Local storage signed URL creation failed');
+      }
+    }
+    return result;
+  }
+});
+
 const createQCEvidenceStorageProvider = ({
   config = environment,
   clientFactory = createClient
@@ -70,8 +138,14 @@ const createQCEvidenceStorageProvider = ({
 
   return () => {
     if (sharedStorage) return sharedStorage;
+
+    if (config.STORAGE_PROVIDER === 'local' || (!config.STORAGE_PROVIDER && config.DATA_PROVIDER === 'json')) {
+      sharedStorage = createLocalEvidenceStorage(config);
+      return sharedStorage;
+    }
+
     if (config.STORAGE_PROVIDER !== 'supabase') {
-      const error = new Error('QC evidence Storage requires STORAGE_PROVIDER=supabase');
+      const error = new Error('QC evidence Storage requires STORAGE_PROVIDER=supabase or local');
       error.statusCode = 503;
       throw error;
     }
@@ -102,6 +176,8 @@ const getQCEvidenceStorage = createQCEvidenceStorageProvider();
 module.exports = {
   QC_EVIDENCE_BUCKET,
   SIGNED_URL_EXPIRY_SECONDS,
+  LOCAL_QC_EVIDENCE_ROOT,
+  collectReportPhotoPaths,
   createQCEvidenceStorage,
   createQCEvidenceStorageProvider,
   getQCEvidenceStorage

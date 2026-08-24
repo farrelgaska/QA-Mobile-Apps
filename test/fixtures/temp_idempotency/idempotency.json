@@ -1,0 +1,18 @@
+{
+  "create_report::IDEM-JSON-1": {
+    "request_hash": "eeb9979d92eb6baf5bb5b10f04b47326011400bca7f397538f68f7851ed003ea",
+    "resource_id": "QC-WRK-JSON-1"
+  },
+  "create_report::IDEM-JSON-2": {
+    "request_hash": "179533ddb132d496df4b8deb13846d233b44b8c061dc631f67a834da4b592d25",
+    "resource_id": "QC-WRK-JSON-2"
+  },
+  "create_report::IDEM-JSON-3": {
+    "request_hash": "67ae77bb7b7dd6b980292eb9ec5a601fc45cf9e4b33d072a82182f515f86e46f",
+    "resource_id": "QC-WRK-JSON-3"
+  },
+  "create_report::IDEM-JSON-5": {
+    "request_hash": "00b8dccaf55cd1b5c76c48ff04316c6660e3e7f1673c7b95501c8286e30d104c",
+    "resource_id": "QC-WRK-JSON-5"
+  }
+}

@@ -1,9 +1,18 @@
-try {
-  const Sentry = require("@sentry/node");
-  Sentry.init({
-    dsn: "https://c11ff5fe20bd9eaa3ac4bbf5cc29c7ff@o4511900970188800.ingest.us.sentry.io/4511900987359232",
-    tracesSampleRate: 1.0,
-  });
-} catch (e) {
-  console.warn('[Sentry] Could not load @sentry/node:', e.message);
+const {
+  SENTRY_DSN: dsn,
+  SENTRY_TRACES_SAMPLE_RATE
+} = require('./config/env');
+
+if (dsn) {
+  try {
+    const Sentry = require('@sentry/node');
+    const configuredRate = Number(SENTRY_TRACES_SAMPLE_RATE);
+    const tracesSampleRate = Number.isFinite(configuredRate) &&
+      configuredRate >= 0 && configuredRate <= 1
+      ? configuredRate
+      : 0;
+    Sentry.init({ dsn, tracesSampleRate });
+  } catch (_) {
+    // Local structured logs remain available when the optional integration fails.
+  }
 }

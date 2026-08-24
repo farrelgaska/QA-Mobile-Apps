@@ -14,21 +14,23 @@ const nullableNumber = value => value === undefined || value === null || value =
 
 const canonicalTemplateItemShape = (item, index = 0) => {
   const rule = valueOf(item, 'validation_rule', 'validationRule', null);
+  const rawInputType = valueOf(item, 'input_type', 'inputType', 'text');
+  const isLegacyBoolean = rawInputType === 'booleanCheck';
   return {
     id: item.id,
     parameter_name: valueOf(item, 'parameter_name', 'parameterName', item.name || ''),
-    input_type: valueOf(item, 'input_type', 'inputType', 'text'),
+    input_type: isLegacyBoolean ? 'boolean' : rawInputType,
     standard_text: String(valueOf(item, 'standard_text', 'standardText', item.standardLabel || '') ?? ''),
-    min_value: nullableNumber(valueOf(item, 'min_value', 'minValue', item.minVal)),
-    max_value: nullableNumber(valueOf(item, 'max_value', 'maxValue', item.maxVal)),
+    min_value: isLegacyBoolean ? null : nullableNumber(valueOf(item, 'min_value', 'minValue', item.minVal)),
+    max_value: isLegacyBoolean ? null : nullableNumber(valueOf(item, 'max_value', 'maxValue', item.maxVal)),
     unit: item.unit === undefined || item.unit === '' ? null : item.unit,
     is_required: valueOf(item, 'is_required', 'isRequired', valueOf(item, 'required', null, false)),
     required_photo: valueOf(item, 'required_photo', 'requiredPhoto', false),
     is_active: valueOf(item, 'is_active', 'isActive', true),
     is_critical: valueOf(item, 'is_critical', 'isCritical', false),
     position: item.position ?? index,
-    choices: item.choices || [],
-    choice_options: valueOf(item, 'choice_options', 'choiceOptions', []),
+    choices: isLegacyBoolean ? [] : (item.choices || []),
+    choice_options: isLegacyBoolean ? [] : valueOf(item, 'choice_options', 'choiceOptions', []),
     category: item.category || '',
     validation_rule: rule,
     migration_metadata: item.migration_metadata || null
@@ -227,6 +229,7 @@ const mapReportAggregate = (
     review_failed_sample_ids: row.review_failed_sample_ids || [],
     review_failed_sample_numbers: (row.review_failed_sample_numbers || []).map(Number),
     revision_number: row.revision_number,
+    template_snapshot: row.template_snapshot || null,
     ...(row.migration_metadata ? { migration_metadata: row.migration_metadata } : {})
   };
   return {
@@ -294,6 +297,7 @@ const canonicalReportInput = report => {
   samples: sampleFields.samples,
   ...reviewRequestFields,
   revision_number: valueOf(report, 'revision_number', 'revisionNumber', 1),
+  template_snapshot: valueOf(report, 'template_snapshot', 'templateSnapshot', null),
   migration_metadata: report.migration_metadata || null
   };
 };
