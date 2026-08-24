@@ -29,7 +29,16 @@ const ROOT_COLUMNS = `id, type, template_id, form_code, title, status, staff_nam
   submitted_at, revision_number, migration_metadata, sample_count,
   review_requested, review_requested_at, review_requested_by_role,
   review_failed_sample_count, review_failed_sample_ids, review_failed_sample_numbers,
-  created_at, updated_at`;
+  template_snapshot, created_at, updated_at`;
+
+const batchValues = (rows, casts = {}) => ({
+  // ponytail: one batch per table; chunk only if reports can approach PostgreSQL's parameter limit.
+  parameters: rows.flat(),
+  placeholders: rows.map((row, rowIndex) => `(${row.map((_, columnIndex) => {
+    const parameter = rowIndex * row.length + columnIndex + 1;
+    return `$${parameter}${casts[columnIndex] || ''}`;
+  }).join(',')})`).join(',')
+});
 
 class PostgresReportRepository {
   constructor(pool = getPool(), { now = () => new Date() } = {}) {
@@ -221,50 +230,62 @@ class PostgresReportRepository {
   }
 
   async _writeChildren(client, report) {
-    for (const item of report.checklist_items) {
+    const itemRows = report.checklist_items.map(item => [
+      report.id, item.id, item.parameter_name, item.input_type, item.standard_text,
+      item.unit, item.actual_value, item.staff_note, item.admin_evaluation, item.admin_note
+    ]);
+    if (itemRows.length > 0) {
+      const batch = batchValues(itemRows);
       await client.query(
         `insert into public.qc_report_items (
           report_id,id,parameter_name,input_type,standard_text,unit,actual_value,
           staff_note,admin_evaluation,admin_note
-        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-        [
-          report.id, item.id, item.parameter_name, item.input_type, item.standard_text,
-          item.unit, item.actual_value, item.staff_note, item.admin_evaluation, item.admin_note
-        ]
+        ) values ${batch.placeholders}`,
+        batch.parameters
       );
     }
 
+    const sampleRows = [];
+    const answerRows = [];
     for (let sampleIndex = 0; sampleIndex < report.samples.length; sampleIndex++) {
       const sample = report.samples[sampleIndex];
+      sampleRows.push([
+        report.id, sample.id, sample.sample_number, sample.inspection_status,
+        sample.notes, sample.photo_paths, sampleIndex, sample.created_at, sample.updated_at
+      ]);
+      for (let answerIndex = 0; answerIndex < sample.checklist_answers.length; answerIndex++) {
+        const answer = sample.checklist_answers[answerIndex];
+        answerRows.push([
+          report.id, sample.id, answer.checklist_item_id, answer.input_type,
+          JSON.stringify(answer.actual_value), answer.note, answer.photo_paths,
+          answer.standard_text, answer.standard_value, answer.unit,
+          answer.upper_tolerance, answer.lower_tolerance, answer.minimum_value,
+          answer.maximum_value, answer.evaluation_status,
+          answer.admin_evaluation, answer.admin_note, answerIndex
+        ]);
+      }
+    }
+    if (sampleRows.length > 0) {
+      const batch = batchValues(sampleRows);
       await client.query(
         `insert into public.qc_report_samples (
           report_id,id,sample_number,inspection_status,notes,photo_paths,position,
           created_at,updated_at
-        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-        [
-          report.id, sample.id, sample.sample_number, sample.inspection_status,
-          sample.notes, sample.photo_paths, sampleIndex, sample.created_at, sample.updated_at
-        ]
+        ) values ${batch.placeholders}`,
+        batch.parameters
       );
-      for (let answerIndex = 0; answerIndex < sample.checklist_answers.length; answerIndex++) {
-        const answer = sample.checklist_answers[answerIndex];
-        await client.query(
-          `insert into public.qc_report_sample_answers (
-            report_id,sample_id,checklist_item_id,input_type,actual_value,note,
-            photo_paths,standard_text,standard_value,unit,upper_tolerance,
-            lower_tolerance,minimum_value,maximum_value,evaluation_status,
-            admin_evaluation,admin_note,position
-          ) values ($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
-          [
-            report.id, sample.id, answer.checklist_item_id, answer.input_type,
-            JSON.stringify(answer.actual_value), answer.note, answer.photo_paths,
-            answer.standard_text, answer.standard_value, answer.unit,
-            answer.upper_tolerance, answer.lower_tolerance, answer.minimum_value,
-            answer.maximum_value, answer.evaluation_status,
-            answer.admin_evaluation, answer.admin_note, answerIndex
-          ]
-        );
-      }
+    }
+    if (answerRows.length > 0) {
+      const batch = batchValues(answerRows, { 4: '::jsonb' });
+      await client.query(
+        `insert into public.qc_report_sample_answers (
+          report_id,sample_id,checklist_item_id,input_type,actual_value,note,
+          photo_paths,standard_text,standard_value,unit,upper_tolerance,
+          lower_tolerance,minimum_value,maximum_value,evaluation_status,
+          admin_evaluation,admin_note,position
+        ) values ${batch.placeholders}`,
+        batch.parameters
+      );
     }
 
     const review = report.admin_review;
@@ -286,23 +307,24 @@ class PostgresReportRepository {
       );
     }
 
-    for (let index = 0; index < report.general_photos.length; index++) {
+    const attachmentRows = report.general_photos.map((uri, index) => [
+      report.id, null, 'GENERAL', uri, index
+    ]);
+    for (const item of report.checklist_items) {
+      for (let index = 0; index < item.item_photos.length; index++) {
+        attachmentRows.push([
+          report.id, item.id, 'ITEM', item.item_photos[index], index
+        ]);
+      }
+    }
+    if (attachmentRows.length > 0) {
+      const batch = batchValues(attachmentRows);
       await client.query(
         `insert into public.qc_report_attachments
           (report_id,report_item_id,attachment_scope,uri,sort_order)
-         values ($1,null,'GENERAL',$2,$3)`,
-        [report.id, report.general_photos[index], index]
+         values ${batch.placeholders}`,
+        batch.parameters
       );
-    }
-    for (const item of report.checklist_items) {
-      for (let index = 0; index < item.item_photos.length; index++) {
-        await client.query(
-          `insert into public.qc_report_attachments
-            (report_id,report_item_id,attachment_scope,uri,sort_order)
-           values ($1,$2,'ITEM',$3,$4)`,
-          [report.id, item.id, item.item_photos[index], index]
-        );
-      }
     }
   }
 
@@ -390,7 +412,12 @@ class PostgresReportRepository {
       return await this._transaction(async client => {
         const current = await this._findById(client, id, true);
         if (!current) throw notFound(`Laporan dengan ID ${id} tidak ditemukan.`);
-        const merged = { ...current, ...patch, id };
+        const merged = {
+          ...current,
+          ...patch,
+          id,
+          template_snapshot: current.template_snapshot
+        };
         const aliases = [
           ['templateId', 'template_id'], ['formCode', 'form_code'],
           ['checklistItems', 'checklist_items'], ['staffNote', 'staff_note'],

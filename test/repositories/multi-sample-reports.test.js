@@ -108,6 +108,160 @@ class RecordingPool {
   }
 }
 
+const updateFixture = () => {
+  const reportId = 'QC-PERF-UPDATE';
+  const templateSnapshot = {
+    id: 'template-perf',
+    type: 'MATERIAL',
+    name: 'Immutable template',
+    checklist_items: []
+  };
+  const items = Array.from({ length: 19 }, (_, index) => ({
+    report_id: reportId,
+    id: `item-${index + 1}`,
+    parameter_name: `Parameter ${index + 1}`,
+    input_type: 'text',
+    standard_text: '',
+    unit: '',
+    actual_value: `value-${index + 1}`,
+    staff_note: '',
+    admin_evaluation: 'PENDING',
+    admin_note: null
+  }));
+  const samples = Array.from({ length: 3 }, (_, index) => ({
+    report_id: reportId,
+    id: `sample-${index + 1}`,
+    sample_number: index + 1,
+    inspection_status: 'COMPLETED',
+    notes: '',
+    photo_paths: [],
+    position: index,
+    created_at: CREATED_AT,
+    updated_at: CREATED_AT
+  }));
+  const answers = samples.flatMap(sampleRow => items.map((item, index) => ({
+    report_id: reportId,
+    sample_id: sampleRow.id,
+    checklist_item_id: item.id,
+    input_type: 'text',
+    actual_value: `answer-${sampleRow.sample_number}-${index + 1}`,
+    note: '',
+    photo_paths: [],
+    standard_text: '',
+    standard_value: null,
+    unit: '',
+    upper_tolerance: null,
+    lower_tolerance: null,
+    minimum_value: null,
+    maximum_value: null,
+    evaluation_status: 'WITHIN_STANDARD',
+    admin_evaluation: 'NEEDS_REVIEW',
+    admin_note: null,
+    position: index
+  })));
+  const attachments = [
+    {
+      id: 1,
+      report_id: reportId,
+      report_item_id: null,
+      attachment_scope: 'GENERAL',
+      uri: `reports/${reportId}/general/00000000-0000-4000-8000-000000000001.jpg`,
+      sort_order: 0
+    },
+    ...Array.from({ length: 3 }, (_, index) => ({
+      id: index + 2,
+      report_id: reportId,
+      report_item_id: items[index].id,
+      attachment_scope: 'ITEM',
+      uri: `reports/${reportId}/checklist/${items[index].id}/00000000-0000-4000-8000-${String(index + 2).padStart(12, '0')}.jpg`,
+      sort_order: 0
+    }))
+  ];
+  return {
+    root: {
+      id: reportId,
+      type: 'MATERIAL',
+      template_id: templateSnapshot.id,
+      form_code: 'MAT-PERF',
+      title: 'Before update',
+      status: 'DRAFT',
+      staff_name: 'QA Staff',
+      staff_nik: 'QA-1',
+      site_id: 'SITE-1',
+      site_name: 'Site',
+      area: 'Area',
+      detail_location: 'Location',
+      general_info: {},
+      staff_note: '',
+      submitted_at: null,
+      revision_number: 1,
+      migration_metadata: null,
+      sample_count: samples.length,
+      review_requested: false,
+      review_requested_at: null,
+      review_requested_by_role: null,
+      review_failed_sample_count: null,
+      review_failed_sample_ids: [],
+      review_failed_sample_numbers: [],
+      template_snapshot: templateSnapshot,
+      created_at: CREATED_AT,
+      updated_at: CREATED_AT
+    },
+    items,
+    samples,
+    answers,
+    attachments,
+    review: {
+      report_id: reportId,
+      admin_note: 'Reviewed',
+      conclusion: 'PASSED',
+      reviewed_at: CREATED_AT,
+      reviewed_by: 'Admin One'
+    }
+  };
+};
+
+class UpdateRecordingPool {
+  constructor(fixture = updateFixture()) {
+    this.fixture = fixture;
+    this.queries = [];
+    this.client = {
+      query: async (text, parameters = []) => {
+        this.queries.push({ text, parameters });
+        if (text.includes('update public.qc_reports set')) {
+          this.fixture.root.title = parameters[4];
+          this.fixture.root.status = parameters[5];
+          this.fixture.root.template_snapshot = parameters[24];
+        }
+        if (text.includes('from public.qc_reports where id = $1')) {
+          return { rows: [this.fixture.root], rowCount: 1 };
+        }
+        if (text.includes('from public.qc_report_items')) {
+          return { rows: this.fixture.items, rowCount: this.fixture.items.length };
+        }
+        if (text.includes('from public.qc_report_admin_reviews')) {
+          return { rows: [this.fixture.review], rowCount: 1 };
+        }
+        if (text.includes('from public.qc_report_attachments')) {
+          return { rows: this.fixture.attachments, rowCount: this.fixture.attachments.length };
+        }
+        if (text.includes('from public.qc_report_samples')) {
+          return { rows: this.fixture.samples, rowCount: this.fixture.samples.length };
+        }
+        if (text.includes('from public.qc_report_sample_answers')) {
+          return { rows: this.fixture.answers, rowCount: this.fixture.answers.length };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+      release: () => {}
+    };
+  }
+
+  async connect() {
+    return this.client;
+  }
+}
+
 test('creates and reads multiple samples in recorded order', t => {
   const { repository } = repositoryFixture(t);
   repository.create(multiSampleReport());
@@ -233,7 +387,7 @@ test('legacy sample answers without note or evaluation receive additive defaults
   );
 });
 
-test('PostgreSQL aggregate writes ordered sample and answer records', async () => {
+test('PostgreSQL aggregate batches ordered sample and answer records', async () => {
   const pool = new RecordingPool();
   await new PostgresReportRepository(pool).create(multiSampleReport());
 
@@ -242,14 +396,91 @@ test('PostgreSQL aggregate writes ordered sample and answer records', async () =
   const answerWrites = pool.queries.filter(query =>
     query.text.includes('insert into public.qc_report_sample_answers'));
 
-  assert.equal(sampleWrites.length, 2);
-  assert.deepEqual(sampleWrites.map(query => query.parameters[1]), ['sample-a', 'sample-b']);
-  assert.deepEqual(sampleWrites.map(query => query.parameters[6]), [0, 1]);
-  assert.equal(answerWrites.length, 4);
+  assert.equal(sampleWrites.length, 1);
+  assert.deepEqual([sampleWrites[0].parameters[1], sampleWrites[0].parameters[10]], ['sample-a', 'sample-b']);
+  assert.deepEqual([sampleWrites[0].parameters[6], sampleWrites[0].parameters[15]], [0, 1]);
+  assert.equal(answerWrites.length, 1);
   assert.equal(answerWrites[0].parameters[4], '3.1');
-  assert.equal(answerWrites[1].parameters[4], 'true');
+  assert.equal(answerWrites[0].parameters[22], 'true');
   assert.equal(answerWrites[0].parameters[7], '2,9 mm +15% / -12,5%');
   assert.deepEqual(answerWrites[0].parameters[6], [ITEM_PHOTO]);
+  assert.match(answerWrites[0].text, /\$5::jsonb/);
+  assert.match(answerWrites[0].text, /\$23::jsonb/);
+});
+
+test('PostgreSQL update preserves template snapshot and batches every child table', async () => {
+  const pool = new UpdateRecordingPool();
+  const repository = new PostgresReportRepository(pool);
+
+  const updated = await repository.update('QC-PERF-UPDATE', { title: 'After update' });
+
+  assert.equal(updated.title, 'After update');
+  assert.deepEqual(updated.template_snapshot, pool.fixture.root.template_snapshot);
+  const rootReads = pool.queries.filter(query =>
+    query.text.includes('from public.qc_reports where id = $1'));
+  assert.equal(rootReads.length, 2);
+  assert.match(rootReads[0].text, /template_snapshot/);
+
+  const rootWrite = pool.queries.find(query =>
+    query.text.includes('update public.qc_reports set'));
+  assert.deepEqual(rootWrite.parameters[24], pool.fixture.root.template_snapshot);
+
+  const childTables = [
+    'qc_report_items',
+    'qc_report_samples',
+    'qc_report_sample_answers',
+    'qc_report_admin_reviews',
+    'qc_report_attachments'
+  ];
+  for (const table of childTables) {
+    assert.equal(
+      pool.queries.filter(query => query.text.includes(`insert into public.${table}`)).length,
+      1,
+      `${table} must use one batched INSERT`
+    );
+  }
+
+  const sampleWrite = pool.queries.find(query =>
+    query.text.includes('insert into public.qc_report_samples'));
+  assert.deepEqual(
+    [sampleWrite.parameters[6], sampleWrite.parameters[15], sampleWrite.parameters[24]],
+    [0, 1, 2]
+  );
+  const answerWrite = pool.queries.find(query =>
+    query.text.includes('insert into public.qc_report_sample_answers'));
+  assert.equal(answerWrite.parameters.length, 57 * 18);
+  assert.equal(answerWrite.parameters[8], null);
+  assert.equal(answerWrite.parameters[16], '');
+  assert.deepEqual(
+    [answerWrite.parameters[17], answerWrite.parameters[(19 * 18) + 17]],
+    [0, 0]
+  );
+  const attachmentWrite = pool.queries.find(query =>
+    query.text.includes('insert into public.qc_report_attachments'));
+  assert.deepEqual(
+    [attachmentWrite.parameters[1], attachmentWrite.parameters[2], attachmentWrite.parameters[6], attachmentWrite.parameters[7]],
+    [null, 'GENERAL', 'item-1', 'ITEM']
+  );
+
+  const formerRowByRowCount = 19 + 19 + 3 + 57 + 1 + 4;
+  assert.equal(formerRowByRowCount, 103);
+  assert.equal(pool.queries.length, 24);
+});
+
+test('PostgreSQL update cannot replace an existing template snapshot with null', async () => {
+  const pool = new UpdateRecordingPool();
+  const snapshot = pool.fixture.root.template_snapshot;
+
+  const updated = await new PostgresReportRepository(pool).update(
+    'QC-PERF-UPDATE',
+    { title: 'Still updated', template_snapshot: null }
+  );
+
+  assert.equal(updated.title, 'Still updated');
+  assert.deepEqual(updated.template_snapshot, snapshot);
+  const rootWrite = pool.queries.find(query =>
+    query.text.includes('update public.qc_reports set'));
+  assert.deepEqual(rootWrite.parameters[24], snapshot);
 });
 
 test('canonical object paths are unchanged and URL photo references are rejected', t => {

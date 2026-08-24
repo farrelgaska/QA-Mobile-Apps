@@ -127,13 +127,13 @@ test('PostgreSQL writes sample Admin values beside the composite answer identity
   const writes = pool.queries.filter(query =>
     query.text.includes('insert into public.qc_report_sample_answers'));
 
-  assert.equal(writes.length, 2);
+  assert.equal(writes.length, 1);
   assert.deepEqual(
-    writes.map(query => [
-      query.parameters[1],
-      query.parameters[2],
-      query.parameters[15],
-      query.parameters[16]
+    [0, 18].map(offset => [
+      writes[0].parameters[offset + 1],
+      writes[0].parameters[offset + 2],
+      writes[0].parameters[offset + 15],
+      writes[0].parameters[offset + 16]
     ]),
     [
       ['sample-1', 'dimension', 'PASS', 'Sampel satu diterima'],

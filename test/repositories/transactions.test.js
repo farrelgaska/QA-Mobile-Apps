@@ -103,15 +103,16 @@ test('template aggregate write rolls back when an item write fails', async () =>
   assert.equal(pool.released, true);
 });
 
-test('report aggregate write rolls back when an item write fails', async () => {
+test('report aggregate write rolls back when a batched item write fails', async () => {
   const pool = new FailingPool('insert into public.qc_report_items');
   const repository = new PostgresReportRepository(pool);
   await assert.rejects(
     repository.create({
       id: 'QC-ROLLBACK', type: 'MATERIAL', title: 'Rollback', status: 'DRAFT',
-      staff: { name: '', nik: '' }, location: {}, checklist_items: [{
-        id: 'I-1', parameter_name: 'Value', input_type: 'text'
-      }]
+      staff: { name: '', nik: '' }, location: {}, checklist_items: [
+        { id: 'I-1', parameter_name: 'Value 1', input_type: 'text' },
+        { id: 'I-2', parameter_name: 'Value 2', input_type: 'text' }
+      ]
     }),
     error => error.code === 'INTERNAL_ERROR' && error.cause?.message === 'forced child write failure'
   );
@@ -131,10 +132,19 @@ test('staff report creation does not insert a placeholder admin review', async (
     adminReview: { reviewedBy: '', conclusion: 'Belum Lengkap', adminNote: '' }
   });
 
-  assert.equal(
-    pool.commands.some(command => command.startsWith('insert into public.qc_report_admin_reviews')),
-    false
-  );
+  for (const table of [
+    'qc_report_items',
+    'qc_report_samples',
+    'qc_report_sample_answers',
+    'qc_report_admin_reviews',
+    'qc_report_attachments'
+  ]) {
+    assert.equal(
+      pool.commands.some(command => command.startsWith(`insert into public.${table}`)),
+      false,
+      `${table} must skip empty input`
+    );
+  }
   assert.equal(pool.commands[0], 'BEGIN');
   assert.equal(pool.commands.at(-1), 'COMMIT');
   assert.equal(pool.released, true);
