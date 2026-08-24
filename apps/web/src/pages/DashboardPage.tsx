@@ -47,7 +47,7 @@ export const DashboardPage: React.FC = () => {
   const quickActions = [
     {
       id: 'review-laporan',
-      label: 'Review Laporan Masuk',
+      label: 'Tinjau Laporan Masuk',
       description: 'Tinjau & evaluasi laporan dari lapangan',
       icon: <ClipboardList className="h-5 w-5" />,
       path: '/approval',
@@ -98,7 +98,7 @@ export const DashboardPage: React.FC = () => {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
             </span>
-            {menungguReview} laporan menunggu review
+            {menungguReview} laporan siap ditinjau
             <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
           </button>
         )}
@@ -114,7 +114,7 @@ export const DashboardPage: React.FC = () => {
           description="Semua laporan QC"
         />
         <StatCard
-          title="Menunggu Review"
+          title="Dikirim"
           value={menungguReview}
           icon={<Clock className="h-6 w-6" />}
           tone="yellow"

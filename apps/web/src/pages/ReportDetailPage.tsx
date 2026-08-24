@@ -266,7 +266,7 @@ export const ReportDetailPage: React.FC = () => {
               {hasFailures
                 ? 'Sistem mendeteksi minimal satu parameter gagal. Direkomendasikan untuk meminta perbaikan atau mengubah hasil evaluasi.'
                 : hasPendingReviews
-                  ? 'Silakan periksa foto bukti dan ubah hasil evaluasi tiap parameter sebelum melakukan approval.'
+                  ? 'Periksa foto dokumentasi dan ubah hasil evaluasi tiap parameter sebelum memberikan persetujuan.'
                   : 'Anda dapat langsung menyetujui laporan ini.'}
             </p>
           </div>
@@ -341,7 +341,7 @@ export const ReportDetailPage: React.FC = () => {
                     <div className="text-lg font-extrabold text-amber-700">
                       {adminReviewItems.filter(c => c.result === 'NEEDS_REVIEW').length}
                     </div>
-                    <div className="text-[10px] text-amber-600 font-semibold mt-0.5">Review</div>
+                    <div className="text-[10px] text-amber-600 font-semibold mt-0.5">Perlu Ditinjau</div>
                   </div>
                 </div>
               </div>
@@ -400,7 +400,7 @@ export const ReportDetailPage: React.FC = () => {
                 <div className="flex items-start gap-2 p-3 mb-4 bg-blue-50/60 border border-blue-200/60 rounded-xl text-xs text-blue-700 leading-relaxed">
                   <Info className="h-4 w-4 flex-shrink-0 mt-0.5 text-blue-500" />
                   <span>
-                    Klik tombol <strong>Lulus</strong>, <strong>Gagal</strong>, atau <strong>Review</strong> pada setiap baris untuk memperbarui hasil evaluasi parameter.
+                    Klik tombol <strong>Lulus</strong>, <strong>Gagal</strong>, atau <strong>Tinjau</strong> pada setiap baris untuk memperbarui hasil evaluasi parameter.
                   </span>
                 </div>
               )}
@@ -460,7 +460,7 @@ export const ReportDetailPage: React.FC = () => {
                   <div>
                     <label htmlFor="admin-feedback" className="block text-xs font-bold text-gray-700 mb-1.5">
                       Catatan Evaluasi / Instruksi Revisi{' '}
-                      <span className="text-gray-400 font-normal">(opsional untuk approval, wajib untuk perbaikan)</span>
+                      <span className="text-gray-400 font-normal">(opsional untuk persetujuan, wajib untuk perbaikan)</span>
                     </label>
                     <textarea
                       id="admin-feedback"

@@ -182,7 +182,7 @@ export const ApprovalPage: React.FC = () => {
       {/* ── Header ───────────────────────────────── */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-extrabold text-gray-900">Antrean Approval</h2>
+          <h2 className="text-xl font-extrabold text-gray-900">Antrean Persetujuan</h2>
           <p className="text-xs text-gray-500 mt-1">
             Laporan dari lapangan yang menunggu evaluasi dan keputusan admin.
           </p>
@@ -194,7 +194,7 @@ export const ApprovalPage: React.FC = () => {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
               </span>
-              {pendingReports.length} menunggu review
+              {pendingReports.length} siap ditinjau
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-full">
@@ -253,7 +253,7 @@ export const ApprovalPage: React.FC = () => {
                   <TableCell isHeader>Judul Laporan</TableCell>
                   <TableCell isHeader className="w-36">Lokasi</TableCell>
                   <TableCell isHeader className="w-36">Staff Warehouse</TableCell>
-                  <TableCell isHeader className="w-28">Tgl Submit</TableCell>
+                  <TableCell isHeader className="w-28">Tgl Dikirim</TableCell>
                   <TableCell isHeader className="w-28 text-center">Hasil Standar</TableCell>
                   <TableCell isHeader className="w-48 text-center">Aksi</TableCell>
                 </TableRow>
@@ -266,7 +266,7 @@ export const ApprovalPage: React.FC = () => {
                         {pendingReports.length === 0 ? (
                           <>
                             <CheckCircle className="h-12 w-12 text-emerald-300" />
-                            <p className="text-sm font-semibold text-emerald-700">Tidak ada laporan yang menunggu review</p>
+                            <p className="text-sm font-semibold text-emerald-700">Tidak ada laporan yang perlu ditinjau</p>
                             <p className="text-xs text-gray-400">Semua laporan telah ditangani. Kerja bagus!</p>
                           </>
                         ) : (
@@ -294,7 +294,7 @@ export const ApprovalPage: React.FC = () => {
                               ? 'bg-blue-50 text-blue-700 border-blue-200/60'
                               : 'bg-violet-50 text-violet-700 border-violet-200/60'
                           }`}>
-                            {rep.type === 'material' ? 'Material' : 'Pekerjaan'}
+                            {rep.type === 'material' ? 'QC Material' : 'QC Pekerjaan'}
                           </span>
                         </TableCell>
                         {/* Title */}
@@ -376,7 +376,7 @@ export const ApprovalPage: React.FC = () => {
             <div className="px-6 py-3 border-t border-gray-50 bg-gray-50/30">
               <p className="text-xs text-gray-400">
                 Menampilkan <span className="font-semibold text-gray-600">{filtered.length}</span> dari{' '}
-                <span className="font-semibold text-gray-600">{pendingReports.length}</span> laporan menunggu review
+                <span className="font-semibold text-gray-600">{pendingReports.length}</span> laporan siap ditinjau
               </p>
             </div>
           )}
@@ -444,7 +444,7 @@ export const ApprovalPage: React.FC = () => {
             {/* Optional note */}
             <div>
               <label htmlFor="approve-note" className="block text-xs font-semibold text-gray-700 mb-1.5">
-                Catatan Approval <span className="text-gray-400 font-normal">(opsional)</span>
+                Catatan Persetujuan <span className="text-gray-400 font-normal">(opsional)</span>
               </label>
               <textarea
                 id="approve-note"

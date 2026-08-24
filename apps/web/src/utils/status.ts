@@ -8,7 +8,7 @@ import type {
 
 export const STATUS_LABELS: Record<ReportStatus, string> = {
   DRAFT: 'Draft',
-  SUBMITTED: 'Menunggu Review',
+  SUBMITTED: 'Dikirim',
   NEEDS_FOLLOW_UP: 'Perlu Tindak Lanjut',
   APPROVED: 'Disetujui',
 };
@@ -32,7 +32,7 @@ export function normalizeReportStatus(status: any): ReportStatus {
   if (!status) return 'DRAFT';
   const val = status.toString().toUpperCase().trim();
   if (val === 'DRAFT') return 'DRAFT';
-  if (val === 'SUBMITTED' || val === 'WAITING' || val === 'MENUNGGU REVIEW' || val === 'MENUNGGU' || val === 'PENDING') {
+  if (val === 'SUBMITTED' || val === 'DIKIRIM' || val === 'WAITING' || val === 'MENUNGGU REVIEW' || val === 'MENUNGGU' || val === 'PENDING') {
     return 'SUBMITTED';
   }
   if (val === 'NEEDS_FOLLOW_UP' || val === 'NEEDFOLLOWUP' || val === 'NEED_FOLLOW_UP' || val === 'REVISION' || val === 'REVISI' || val === 'PERLU PERBAIKAN' || val === 'PERLU TINDAK LANJUT' || val === 'DITOLAK') {
@@ -62,6 +62,10 @@ export function getStandardResultBadgeVariant(result: StandardResult): 'green' |
     default:
       return 'yellow';
   }
+}
+
+export function getStandardResultLabel(result: StandardResult): string {
+  return result === 'Perlu Review' ? 'Perlu Ditinjau' : result;
 }
 
 export function getStatusColor(status: ReportStatus): string {

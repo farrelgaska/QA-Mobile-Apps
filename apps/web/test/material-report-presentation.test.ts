@@ -1218,8 +1218,12 @@ test('sample image rendering resolves display URLs without replacing object path
     '../src/components/reports/MaterialSampleEvaluation.tsx',
     import.meta.url
   ), 'utf8');
+  const evidenceCardSource = fs.readFileSync(new URL(
+    '../src/components/reports/EvidenceCard.tsx',
+    import.meta.url
+  ), 'utf8');
 
   assert.match(source, /report\.evidenceDisplayUrls\?\.\[objectPath\]/);
-  assert.match(source, /src=\{displayUrl\}/);
+  assert.match(evidenceCardSource, /src=\{displayUrl\}/);
   assert.doesNotMatch(source, /answer\.photo_paths\s*=/);
 });

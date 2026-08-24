@@ -43,7 +43,7 @@ export const ReportTable: React.FC<ReportTableProps> = ({ reports, onDetail }) =
                 Dibuat Oleh
               </th>
               <th className="px-6 py-4 text-left align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
-                Tanggal Submit
+                Tanggal Dikirim
               </th>
               <th className="px-6 py-4 text-center align-middle text-xs font-bold uppercase tracking-wide text-slate-500">
                 Status
@@ -85,7 +85,7 @@ export const ReportTable: React.FC<ReportTableProps> = ({ reports, onDetail }) =
                           : 'bg-violet-50 text-violet-700 border-violet-200/60'
                       }`}
                     >
-                      {report.type === 'material' ? 'Material' : 'Pekerjaan'}
+                      {report.type === 'material' ? 'QC Material' : 'QC Pekerjaan'}
                     </span>
                   </td>
 

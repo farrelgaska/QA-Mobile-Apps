@@ -15,6 +15,7 @@ import type {
   SampleChecklistAnswer,
 } from '../../types/report';
 import {
+  evidenceCapturePresentation,
   hasCurrentSampleOutOfStandard,
   isPersistedStopDecision,
   PARAMETER_EVALUATION_LABELS,
@@ -53,7 +54,7 @@ const evaluationColor = (
 const adminDecisionLabel = (result: ChecklistResult): string => {
   if (result === 'PASS') return 'Lulus';
   if (result === 'FAIL') return 'Gagal';
-  return 'Review';
+  return 'Tinjau';
 };
 
 const adminDecisionColor = (
@@ -115,9 +116,14 @@ export const MaterialSampleEvaluation: React.FC<MaterialSampleEvaluationProps> =
   const failedSampleNumbers = persistedSamplingFailedNumbers(report.general_info);
   const hasOutOfStandard = hasCurrentSampleOutOfStandard(sample, sampleStatus);
   const isStop = isPersistedStopDecision(report);
-  // All evidence cards now always render the full canonical metadata layout.
-  // Use the wide column unconditionally to avoid clipping the metadata panel.
-  const evidenceColumnClassName = 'w-[380px] min-w-[380px]';
+  const hasVisibleParameterPhotoMetadata = sample.checklist_answers.some(answer =>
+    answer.photo_paths.some(objectPath =>
+      evidenceCapturePresentation(report.general_info, objectPath).hasMetadata
+    )
+  );
+  const evidenceColumnClassName = hasVisibleParameterPhotoMetadata
+    ? 'w-[380px] min-w-[380px]'
+    : 'w-[112px] min-w-[112px]';
 
   return (
     <>
@@ -149,10 +155,10 @@ export const MaterialSampleEvaluation: React.FC<MaterialSampleEvaluationProps> =
               </div>
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-                  Permintaan review
+                  Permintaan Peninjauan
                 </p>
                 <p className="mt-1 text-sm font-semibold text-gray-800">
-                  {report.review_requested ? 'Review diminta' : 'Review belum diminta'}
+                  {report.review_requested ? 'Peninjauan diminta' : 'Peninjauan belum diminta'}
                 </p>
                 {report.review_requested_at && (
                   <p className="mt-0.5 text-xs text-gray-500">
@@ -231,7 +237,7 @@ export const MaterialSampleEvaluation: React.FC<MaterialSampleEvaluationProps> =
             {sample.photo_paths.length > 0 && (
               <div className="border-b border-gray-100 px-4 py-3">
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-                  Bukti Foto Sampel
+                  Dokumentasi Sampel
                 </p>
                 <div className="flex flex-wrap items-start gap-2">
                   {sample.photo_paths.map((objectPath, index) => {
@@ -255,7 +261,7 @@ export const MaterialSampleEvaluation: React.FC<MaterialSampleEvaluationProps> =
 
             <div className="overflow-x-auto">
               <table
-                className="w-full table-fixed text-left text-sm min-w-[1620px]"
+                className={`w-full table-fixed text-left text-sm ${hasVisibleParameterPhotoMetadata ? 'min-w-[1620px]' : 'min-w-[1360px]'}`}
               >
                 <colgroup>
                   <col className="w-[180px]" />
@@ -274,7 +280,7 @@ export const MaterialSampleEvaluation: React.FC<MaterialSampleEvaluationProps> =
                     <th className="px-4 py-3">Nilai Aktual</th>
                     <th className="px-4 py-3">Status Standar</th>
                     <th className="px-4 py-3">Keputusan Admin</th>
-                    <th className="px-3 py-3">Bukti Foto</th>
+                    <th className="px-3 py-3">Foto Dokumentasi</th>
                     <th className="px-4 py-3">Catatan Staff</th>
                     <th className="px-4 py-3">Catatan Admin</th>
                   </tr>
@@ -444,7 +450,7 @@ export const MaterialSampleEvaluation: React.FC<MaterialSampleEvaluationProps> =
 
       <ImagePreviewModal
         imageUrl={previewImage?.url ?? null}
-        alt={previewImage?.alt ?? 'Bukti parameter sampel'}
+        alt={previewImage?.alt ?? 'Dokumentasi parameter sampel'}
         onClose={() => setPreviewImage(null)}
       />
     </>

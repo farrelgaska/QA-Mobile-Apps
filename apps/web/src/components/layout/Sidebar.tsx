@@ -18,8 +18,8 @@ export const Sidebar: React.FC = () => {
   const menuItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'Laporan Masuk', path: '/laporan', icon: FileText },
-    { label: 'Approval', path: '/approval', icon: CheckSquare },
-    { label: 'Data Management', path: '/data', icon: Database },
+    { label: 'Persetujuan', path: '/approval', icon: CheckSquare },
+    { label: 'Pengelolaan Data', path: '/data', icon: Database },
     { label: 'QC Material', path: '/data/qc-material', icon: Layers },
     { label: 'QC Pekerjaan', path: '/data/qc-pekerjaan', icon: Briefcase },
   ];
@@ -80,7 +80,7 @@ export const Sidebar: React.FC = () => {
           className="flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-all duration-150"
         >
           <LogOut className="h-5 w-5" />
-          Keluar (Logout)
+          Keluar
         </button>
       </div>
     </aside>

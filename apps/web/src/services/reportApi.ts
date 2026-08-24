@@ -104,6 +104,20 @@ interface QCEvidenceSignedUrlsResponse {
 
 // ─── API helpers ─────────────────────────────────────────────────────────────
 
+export class ApiError extends Error {
+  public status: number;
+  public code: string;
+  public details: unknown[];
+
+  constructor(status: number, code: string, message: string, details: unknown[] = []) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+    this.details = details;
+  }
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
@@ -114,8 +128,30 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(`API ${res.status}: ${text}`);
+    let code = 'UNKNOWN_ERROR';
+    let message = res.statusText || `API Error ${res.status}`;
+    let details: unknown[] = [];
+
+    try {
+      const body = await res.json();
+      if (body?.code && body?.message) {
+        code = body.code;
+        message = body.message;
+        details = body.details ?? details;
+      } else if (body?.error) {
+        if (typeof body.error === 'string') {
+          message = body.error;
+        } else {
+          code = body.error.code ?? code;
+          message = body.error.message ?? message;
+          details = body.error.details ?? details;
+        }
+      }
+    } catch {
+      // Fallback for non-JSON or empty bodies
+    }
+
+    throw new ApiError(res.status, code, message, details);
   }
 
   return res.json() as Promise<T>;

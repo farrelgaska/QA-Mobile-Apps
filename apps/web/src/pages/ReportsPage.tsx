@@ -110,7 +110,7 @@ export const ReportsPage: React.FC = () => {
         <div>
           <h2 className="text-xl font-extrabold text-gray-900">Laporan Masuk</h2>
           <p className="text-xs text-gray-500 mt-1">
-            Review, evaluasi kelayakan parameter, dan kelola persetujuan laporan QC dari lapangan.
+            Tinjau, evaluasi kelayakan parameter, dan kelola persetujuan laporan QC dari lapangan.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -180,7 +180,7 @@ export const ReportsPage: React.FC = () => {
                 onChange={(val) => setStatusFilter(val)}
                 options={[
                   { value: '', label: 'Semua Status' },
-                  { value: 'SUBMITTED', label: 'Menunggu Review' },
+                  { value: 'SUBMITTED', label: 'Dikirim' },
                   { value: 'APPROVED', label: 'Disetujui' },
                   { value: 'NEEDS_FOLLOW_UP', label: 'Perlu Tindak Lanjut' }
                 ]}

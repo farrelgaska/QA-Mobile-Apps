@@ -1,7 +1,10 @@
 import React from 'react';
 import { Badge } from '../ui/Badge';
 import type { StandardResult, ChecklistResult } from '../../types/report';
-import { getStandardResultBadgeVariant } from '../../utils/status';
+import {
+  getStandardResultBadgeVariant,
+  getStandardResultLabel,
+} from '../../utils/status';
 
 interface StandardResultBadgeProps {
   result: StandardResult | ChecklistResult;
@@ -15,5 +18,5 @@ export const StandardResultBadge: React.FC<StandardResultBadgeProps> = ({ result
   else mappedResult = 'Perlu Review';
 
   const color = getStandardResultBadgeVariant(mappedResult);
-  return <Badge color={color}>{mappedResult}</Badge>;
+  return <Badge color={color}>{getStandardResultLabel(mappedResult)}</Badge>;
 };

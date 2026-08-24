@@ -28,7 +28,7 @@ export const LoginPage: React.FC = () => {
       }
       navigate('/dashboard');
     } else {
-      setError('Username atau password salah. Gunakan admin / admin123.');
+      setError('Nama pengguna atau kata sandi salah. Gunakan admin / admin123.');
       setIsLoading(false);
     }
   };
@@ -48,7 +48,7 @@ export const LoginPage: React.FC = () => {
             className="h-30 w-30 object-contain mx-auto mb-4"
           />
           <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">QA Digitalization</h1>
-          <p className="text-sm text-gray-500 mt-1 font-medium">Admin Dashboard · Quality Control Management</p>
+          <p className="text-sm text-gray-500 mt-1 font-medium">Dasbor Admin · Pengelolaan Quality Control</p>
         </div>
 
         {/* Login Card */}
@@ -74,7 +74,7 @@ export const LoginPage: React.FC = () => {
               {/* Username */}
               <div className="space-y-1.5">
                 <label htmlFor="username" className="text-xs font-semibold text-gray-700">
-                  Username
+                  Nama Pengguna
                 </label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
@@ -84,7 +84,7 @@ export const LoginPage: React.FC = () => {
                     autoComplete="username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Masukkan username"
+                    placeholder="Masukkan nama pengguna"
                     required
                     className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#006B5A]/25 focus:border-[#006B5A] transition-all duration-200"
                   />
@@ -94,7 +94,7 @@ export const LoginPage: React.FC = () => {
               {/* Password */}
               <div className="space-y-1.5">
                 <label htmlFor="password" className="text-xs font-semibold text-gray-700">
-                  Password
+                  Kata Sandi
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
@@ -104,7 +104,7 @@ export const LoginPage: React.FC = () => {
                     autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Masukkan password"
+                    placeholder="Masukkan kata sandi"
                     required
                     className="w-full pl-10 pr-10 py-2.5 text-sm border border-gray-300 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#006B5A]/25 focus:border-[#006B5A] transition-all duration-200"
                   />
@@ -113,7 +113,7 @@ export const LoginPage: React.FC = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                     tabIndex={-1}
-                    aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                    aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -149,7 +149,7 @@ export const LoginPage: React.FC = () => {
                     <span>Memverifikasi...</span>
                   </>
                 ) : (
-                  'Masuk ke Dashboard'
+                  'Masuk ke Dasbor'
                 )}
               </button>
             </form>
@@ -158,7 +158,7 @@ export const LoginPage: React.FC = () => {
           {/* Footer hint */}
           <div className="px-8 py-4 bg-gray-50/70 border-t border-gray-100">
             <p className="text-[11px] text-center text-gray-400">
-              Sistem QA Digitalization · Telkom Indonesia · v1.0.0 Prototype
+              Sistem QA Digitalization · Telkom Indonesia · v1.0.0
             </p>
           </div>
         </div>
@@ -166,7 +166,7 @@ export const LoginPage: React.FC = () => {
         {/* Demo credential hint */}
         <div className="mt-5 p-3.5 bg-amber-50/80 border border-amber-200/60 rounded-xl">
           <p className="text-xs text-amber-700 text-center font-medium">
-            🔑 Demo: username <code className="font-mono font-bold">admin</code> · password <code className="font-mono font-bold">admin123</code>
+            🔑 Demo: nama pengguna <code className="font-mono font-bold">admin</code> · kata sandi <code className="font-mono font-bold">admin123</code>
           </p>
         </div>
       </div>

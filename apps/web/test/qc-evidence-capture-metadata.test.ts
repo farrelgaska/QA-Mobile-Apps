@@ -70,7 +70,7 @@ test('capture time remains visible when location evidence is unavailable', () =>
 test('missing metadata renders a compact photo without a metadata placeholder', () => {
   const presentation = evidenceCapturePresentation({}, PHOTO_PATH);
   const source = fs.readFileSync(new URL(
-    '../src/components/reports/MaterialSampleEvaluation.tsx',
+    '../src/components/reports/EvidenceCard.tsx',
     import.meta.url
   ), 'utf8');
 
@@ -87,7 +87,7 @@ test('valid coordinate pairs produce a safely opened Google Maps link', () => {
     longitude: 106.8456,
   }), PHOTO_PATH);
   const source = fs.readFileSync(new URL(
-    '../src/components/reports/MaterialSampleEvaluation.tsx',
+    '../src/components/reports/EvidenceCard.tsx',
     import.meta.url
   ), 'utf8');
 

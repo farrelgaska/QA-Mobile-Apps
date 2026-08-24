@@ -16,12 +16,12 @@ export const AdminLayout: React.FC = () => {
     if (pathname === '/dashboard') return 'Dashboard Admin';
     if (pathname.startsWith('/laporan/')) return 'Detail Laporan QC';
     if (pathname === '/laporan') return 'Laporan Masuk';
-    if (pathname === '/approval') return 'Approval Laporan';
+    if (pathname === '/approval') return 'Persetujuan Laporan';
     if (pathname.includes('/data/qc-material/')) return 'Detail Template QC Material';
-    if (pathname === '/data/qc-material') return 'QC Material List';
+    if (pathname === '/data/qc-material') return 'Daftar QC Material';
     if (pathname.includes('/data/qc-pekerjaan/')) return 'Detail Template QC Pekerjaan';
-    if (pathname === '/data/qc-pekerjaan') return 'QC Pekerjaan List';
-    if (pathname === '/data') return 'Data Management';
+    if (pathname === '/data/qc-pekerjaan') return 'Daftar QC Pekerjaan';
+    if (pathname === '/data') return 'Pengelolaan Data';
     return 'QA Digitalization Admin';
   };
 

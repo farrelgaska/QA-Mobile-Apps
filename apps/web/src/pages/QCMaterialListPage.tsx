@@ -226,7 +226,7 @@ export const QCMaterialListPage: React.FC = () => {
               <Input
                 id="search"
                 label="Cari Template Material"
-                placeholder="Cari berdasarkan ID, nama tiang, atau standard..."
+                placeholder="Cari berdasarkan ID, nama tiang, atau standar..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 icon={<Search className="h-4 w-4 text-gray-400" />}
@@ -277,7 +277,7 @@ export const QCMaterialListPage: React.FC = () => {
                   <TableCell isHeader>ID Material</TableCell>
                   <TableCell isHeader>Nama Template</TableCell>
                   <TableCell isHeader className="text-center">Kategori</TableCell>
-                  <TableCell isHeader>Kode Standard Perusahaan</TableCell>
+                  <TableCell isHeader>Kode Standar Perusahaan</TableCell>
                   <TableCell isHeader className="text-center">Jumlah Parameter</TableCell>
                   <TableCell isHeader className="text-center">Status Standar</TableCell>
                   <TableCell isHeader>Terakhir Diupdate</TableCell>

@@ -240,7 +240,7 @@ export const QCMaterialDetailPage: React.FC = () => {
               <div className="text-sm font-bold text-gray-800 leading-tight">{template.name}</div>
             </div>
             <div>
-              <div className="text-xs text-gray-400 font-semibold">Kode Standard Perusahaan</div>
+              <div className="text-xs text-gray-400 font-semibold">Kode Standar Perusahaan</div>
               <div className="text-sm font-bold text-gray-800">{template.standard}</div>
             </div>
             <div>
@@ -294,7 +294,7 @@ export const QCMaterialDetailPage: React.FC = () => {
                       <TableCell isHeader className="w-12 text-center">No</TableCell>
                       <TableCell isHeader>Nama Parameter</TableCell>
                       <TableCell isHeader className="text-center">Tipe Input</TableCell>
-                      <TableCell isHeader>Label Acuan Standard</TableCell>
+                      <TableCell isHeader>Label Acuan Standar</TableCell>
                       <TableCell isHeader className="text-center">Toleransi</TableCell>
                       <TableCell isHeader className="text-center">Wajib Foto</TableCell>
                       <TableCell isHeader className="text-center">Status</TableCell>
