@@ -143,7 +143,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => ConfirmationModal(
-        title: 'Logout Akun',
+        title: 'Keluar dari Akun',
         message:
             'Apakah Anda yakin ingin keluar dari akun Staff Warehouse Anda?',
         confirmText: 'Keluar',
@@ -341,7 +341,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               // Logout Button
               AppButton(
-                text: 'Keluar Akun (Logout)',
+                text: 'Keluar dari Akun',
                 variant: AppButtonVariant.danger,
                 icon: Icons.logout,
                 onPressed: _handleLogout,

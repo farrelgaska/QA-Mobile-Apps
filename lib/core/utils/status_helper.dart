@@ -9,7 +9,7 @@ class StatusHelper {
       case ReportStatus.draft:
         return 'Draft';
       case ReportStatus.menunggu:
-        return 'Menunggu Review';
+        return 'Dikirim';
       case ReportStatus.disetujui:
         return 'Disetujui';
       case ReportStatus.ditolak:
@@ -61,9 +61,9 @@ class StatusHelper {
       case ChecklistStatus.perluDilengkapi:
         return 'Perlu Dilengkapi';
       case ChecklistStatus.lulus:
-        return 'Lulus';
+        return 'Sesuai Standar';
       case ChecklistStatus.tidakSesuai:
-        return 'Tidak Sesuai';
+        return 'Tidak Sesuai Standar';
       case ChecklistStatus.perluTindakLanjut:
         return 'Perlu Tindak Lanjut';
     }
@@ -126,6 +126,7 @@ class StatusHelper {
       final val = status.toUpperCase().trim();
       if (val == 'DRAFT') return QCReportStatus.DRAFT;
       if (val == 'SUBMITTED' ||
+          val == 'DIKIRIM' ||
           val == 'WAITING' ||
           val == 'MENUNGGU' ||
           val == 'MENUNGGU REVIEW' ||
@@ -156,7 +157,7 @@ class StatusHelper {
       case QCReportStatus.DRAFT:
         return 'Draft';
       case QCReportStatus.SUBMITTED:
-        return 'Menunggu Review';
+        return 'Dikirim';
       case QCReportStatus.NEEDS_FOLLOW_UP:
         return 'Perlu Tindak Lanjut';
       case QCReportStatus.APPROVED:
@@ -196,9 +197,9 @@ class StatusHelper {
       case QCResultStatus.notFilled:
         return 'Belum Diisi';
       case QCResultStatus.pass:
-        return 'Lulus';
+        return 'Sesuai Standar';
       case QCResultStatus.fail:
-        return 'Tidak Sesuai';
+        return 'Tidak Sesuai Standar';
       case QCResultStatus.needFollowUp:
         return 'Perlu Tindak Lanjut';
     }

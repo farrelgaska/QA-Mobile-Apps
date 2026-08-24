@@ -67,6 +67,24 @@ void main() {
         'https://qa-mobile-api.vercel.app',
       );
     });
+
+    test(
+      'staging HTTPS API_BASE_URL is used for web+release — production fallback does not override it',
+      () {
+        // Verifies that --dart-define=API_BASE_URL=https://<staging-api>
+        // works correctly for web release builds. The hardcoded production URL
+        // is ONLY the fallback when API_BASE_URL is absent.
+        expect(
+          resolveApiBaseUrl(
+            configuredBaseUrl: 'https://qa-staging-api.vercel.app',
+            isWeb: true,
+            isReleaseMode: true,
+            isAndroid: false,
+          ),
+          'https://qa-staging-api.vercel.app',
+        );
+      },
+    );
   });
 
   test('HTTP 201 is a successful report create', () async {
@@ -81,6 +99,24 @@ void main() {
 
     expect(await service.postReport(_report(), throwOnError: true), isTrue);
     expect(postCount, 1);
+  });
+
+  test('report create sends the supplied idempotency key', () async {
+    final service = ApiService.withClient(
+      MockClient((request) async {
+        expect(request.headers['Idempotency-Key'], 'IDEM-REGRESSION-1');
+        return http.Response('', 201);
+      }),
+    );
+
+    expect(
+      await service.postReport(
+        _report(),
+        throwOnError: true,
+        idempotencyKey: 'IDEM-REGRESSION-1',
+      ),
+      isTrue,
+    );
   });
 
   test('ambiguous POST failure reconciles an existing report', () async {
@@ -112,7 +148,7 @@ void main() {
       MockClient((request) async {
         expect(request.method, 'POST');
         postCount++;
-        return http.Response('', 409);
+        return http.Response('{"error":{"code":"REPORT_ALREADY_EXISTS","message":"duplicate"}}', 409, headers: {'content-type': 'application/json'});
       }),
     );
 
@@ -127,6 +163,31 @@ void main() {
       ),
     );
     expect(postCount, 1);
+  });
+
+  test('canonical top-level API errors do not require the compatibility mirror',
+      () async {
+    final service = ApiService.withClient(
+      MockClient((_) async => http.Response(
+            '{"code":"DATABASE_TIMEOUT","message":"Database request timed out","status":503}',
+            503,
+            headers: {'content-type': 'application/json'},
+          )),
+    );
+
+    await expectLater(
+      service.fetchReports(),
+      throwsA(
+        isA<ApiRequestException>()
+            .having((error) => error.code, 'code', 'DATABASE_TIMEOUT')
+            .having((error) => error.statusCode, 'statusCode', 503)
+            .having(
+              (error) => error.message,
+              'message',
+              'Database request timed out',
+            ),
+      ),
+    );
   });
 
   test(

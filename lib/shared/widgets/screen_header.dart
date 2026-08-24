@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 
 class ScreenHeader extends StatelessWidget {
@@ -27,11 +26,7 @@ class ScreenHeader extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.arrow_back_ios,
                     color: AppColors.textMain, size: 20),
-                onPressed: () {
-                  if (Navigator.of(context).canPop()) {
-                    context.pop();
-                  }
-                },
+                onPressed: () => Navigator.of(context).maybePop(),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),

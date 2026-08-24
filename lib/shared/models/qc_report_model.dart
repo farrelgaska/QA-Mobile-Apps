@@ -136,6 +136,7 @@ class QCReportModel {
   final String formCode;
   final String templateId;
   final String? finalConclusion;
+  final Map<String, dynamic>? templateSnapshot;
 
   QCReportModel({
     required this.id,
@@ -171,6 +172,7 @@ class QCReportModel {
     this.formCode = '',
     this.templateId = '',
     this.finalConclusion,
+    this.templateSnapshot,
   })  : staff = staff ??
             StaffIdentity(
               name: checkedByName ?? 'Yanuar Luthfi',
@@ -296,6 +298,7 @@ class QCReportModel {
     String? formCode,
     String? templateId,
     String? finalConclusion,
+    Map<String, dynamic>? templateSnapshot,
   }) {
     return QCReportModel(
       id: id ?? this.id,
@@ -317,6 +320,7 @@ class QCReportModel {
       formCode: formCode ?? this.formCode,
       templateId: templateId ?? this.templateId,
       finalConclusion: finalConclusion ?? this.finalConclusion,
+      templateSnapshot: templateSnapshot ?? this.templateSnapshot,
     );
   }
 
@@ -386,6 +390,7 @@ class QCReportModel {
           .toList(),
       formCode: json['form_code'] ?? '',
       templateId: json['template_id'] ?? '',
+      templateSnapshot: json['template_snapshot'],
     );
   }
 

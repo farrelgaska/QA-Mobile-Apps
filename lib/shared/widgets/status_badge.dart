@@ -27,30 +27,34 @@ class StatusBadge extends StatelessWidget {
     } else if (status is String) {
       label = status as String;
       final lowerLabel = label.toLowerCase();
-      if (lowerLabel == 'aktif' ||
-          lowerLabel == 'lulus' ||
-          lowerLabel == 'disetujui' ||
+      if (lowerLabel == 'aktif') {
+        label = 'Aktif';
+      } else if (lowerLabel == 'nonaktif') {
+        label = 'Nonaktif';
+      } else if (lowerLabel == 'disetujui' ||
           lowerLabel == 'diterima' ||
-          lowerLabel == 'selesai' ||
-          lowerLabel == 'pass') {
-        label = 'Lulus';
+          lowerLabel == 'selesai') {
+        label = 'Disetujui';
+      } else if (lowerLabel == 'lulus' ||
+          lowerLabel == 'pass' ||
+          lowerLabel == 'sesuai standar') {
+        label = 'Sesuai Standar';
       } else if (lowerLabel == 'tindak lanjut' ||
           lowerLabel == 'perlu tindak lanjut' ||
           lowerLabel == 'needfollowup' ||
           lowerLabel == 'revisi' ||
           lowerLabel == 'butuh revisi') {
         label = 'Perlu Tindak Lanjut';
-      } else if (lowerLabel == 'perlu perbaikan' ||
-          lowerLabel == 'tidak sesuai' ||
-          lowerLabel == 'fail') {
-        label = 'Perlu Perbaikan';
-      } else if (lowerLabel == 'nonaktif' ||
-          lowerLabel == 'ditolak' ||
+      } else if (lowerLabel == 'perlu perbaikan' || lowerLabel == 'ditolak') {
+        label = 'Perlu Tindak Lanjut';
+      } else if (lowerLabel == 'tidak sesuai' || lowerLabel == 'fail') {
+        label = 'Tidak Sesuai Standar';
+      } else if (lowerLabel == 'dikirim' ||
           lowerLabel == 'pending' ||
           lowerLabel == 'menunggu' ||
           lowerLabel == 'on progress' ||
           lowerLabel == 'menunggu review admin') {
-        label = 'Pending';
+        label = 'Dikirim';
       }
     }
 

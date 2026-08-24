@@ -3,7 +3,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
@@ -19,6 +18,8 @@ import '../../../shared/widgets/work_location_selector.dart';
 import '../../../shared/providers/qc_material_form_provider.dart';
 import '../../../shared/utils/qc_photo_validation.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/qc_draft_protection.dart';
+import '../../../shared/services/qc_local_draft_store.dart';
 
 import '../../../shared/models/qc_material_template_model.dart';
 
@@ -27,6 +28,7 @@ class QCMaterialFormScreen extends StatefulWidget {
   final String? editReportId;
   final bool isRevision;
   final QCMaterialTemplate template;
+  final QCLocalDraftStore draftStore;
 
   const QCMaterialFormScreen({
     super.key,
@@ -34,6 +36,7 @@ class QCMaterialFormScreen extends StatefulWidget {
     this.editReportId,
     this.isRevision = false,
     required this.template,
+    this.draftStore = const QCLocalDraftStore(),
   });
 
   @override
@@ -47,6 +50,7 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
   bool _eligibilityAtLastNavigation = false;
   bool _hasHighlightedReviewEligibility = false;
   bool _highlightReviewWarning = false;
+  final GlobalKey<QCDraftProtectionState> _draftProtectionKey = GlobalKey();
 
   @override
   void dispose() {
@@ -81,50 +85,60 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
             _hasHighlightedReviewEligibility = provider.isSamplingWarningActive;
           }
           final generalFieldContexts = <QCMaterialGeneralField, BuildContext>{};
-          return Scaffold(
-            backgroundColor: AppColors.background,
-            body: SafeArea(
-              child: SingleChildScrollView(
-                key: const Key('qc_material_form_scroll'),
-                controller: _scrollController,
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20.0,
-                  vertical: 16.0,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ScreenHeader(
-                      title: 'Form QC Material',
-                      subtitle: '${tpl.name} (${tpl.code})',
-                    ),
-                    _buildProgressSection(provider),
-                    if (provider.isSamplingWarningActive) ...[
-                      const SizedBox(height: 16),
-                      _buildReviewRequestCard(context, provider),
+          return QCDraftProtection(
+            key: _draftProtectionKey,
+            identity: provider.localDraftIdentity,
+            store: widget.draftStore,
+            createSnapshot: provider.createLocalDraftSnapshot,
+            restoreSnapshot: provider.restoreLocalDraftSnapshot,
+            hasProcessingEvidence: provider.hasProcessingPhotos,
+            preserveEvidence: provider.preserveLocalDraftEvidence,
+            releaseEvidence: provider.releaseLocalDraftEvidence,
+            child: Scaffold(
+              backgroundColor: AppColors.background,
+              body: SafeArea(
+                child: SingleChildScrollView(
+                  key: const Key('qc_material_form_scroll'),
+                  controller: _scrollController,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20.0,
+                    vertical: 16.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ScreenHeader(
+                        title: 'Form QC Material',
+                        subtitle: '${tpl.name} (${tpl.code})',
+                      ),
+                      _buildProgressSection(provider),
+                      if (provider.isSamplingWarningActive) ...[
+                        const SizedBox(height: 16),
+                        _buildReviewRequestCard(context, provider),
+                      ],
+                      const SizedBox(height: 24),
+                      if (provider.isGeneralStep) ...[
+                        _buildGeneralInfoCard(provider, generalFieldContexts),
+                        const SizedBox(height: 20),
+                        _buildLocationSection(provider, generalFieldContexts),
+                        const SizedBox(height: 20),
+                        _buildStaffNoteCard(provider),
+                      ] else ...[
+                        _buildSampleHeading(provider),
+                        const SizedBox(height: 16),
+                        _buildChecklistSection(context, provider, tpl),
+                        _buildSampleNoteCard(provider),
+                      ],
+                      const SizedBox(height: 28),
+                      _buildActionButtons(
+                        context,
+                        provider,
+                        generalFieldContexts,
+                      ),
+                      const SizedBox(height: 36),
                     ],
-                    const SizedBox(height: 24),
-                    if (provider.isGeneralStep) ...[
-                      _buildGeneralInfoCard(provider, generalFieldContexts),
-                      const SizedBox(height: 20),
-                      _buildLocationSection(provider, generalFieldContexts),
-                      const SizedBox(height: 20),
-                      _buildStaffNoteCard(provider),
-                    ] else ...[
-                      _buildSampleHeading(provider),
-                      const SizedBox(height: 16),
-                      _buildChecklistSection(context, provider, tpl),
-                      _buildSampleNoteCard(provider),
-                    ],
-                    const SizedBox(height: 28),
-                    _buildActionButtons(
-                      context,
-                      provider,
-                      generalFieldContexts,
-                    ),
-                    const SizedBox(height: 36),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -951,7 +965,7 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
                         this.context,
                         'Draft berhasil disimpan',
                       );
-                      this.context.pop();
+                      await _draftProtectionKey.currentState?.completeAndPop();
                     } on QCMaterialPersistenceException catch (error) {
                       if (!mounted) return;
                       AppSnackbar.error(this.context, error.message);
@@ -1015,7 +1029,7 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
           context,
           'Pemeriksaan dihentikan. Laporan berhasil dikirim untuk review Admin.',
         );
-        context.pop();
+        await _draftProtectionKey.currentState?.completeAndPop();
       } on QCMaterialPersistenceException catch (error) {
         if (!context.mounted) return;
         AppSnackbar.error(context, error.message);
@@ -1052,7 +1066,7 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
                   ? 'Laporan berhasil dikirim ulang'
                   : 'Laporan berhasil disubmit',
             );
-            context.pop();
+            await _draftProtectionKey.currentState?.completeAndPop();
           } on QCMaterialPersistenceException catch (error) {
             if (!context.mounted) return;
             AppSnackbar.error(context, error.message);
@@ -1093,7 +1107,7 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
           context,
           'Pemeriksaan dihentikan. Laporan berhasil dikirim untuk review Admin.',
         );
-        context.pop();
+        await _draftProtectionKey.currentState?.completeAndPop();
       } on QCMaterialPersistenceException catch (error) {
         if (!mounted) return;
         AppSnackbar.error(context, error.message);
@@ -1239,7 +1253,8 @@ class _SamplingDecisionDialogState extends State<_SamplingDecisionDialog> {
                   final reason = _stopReasonController.text.trim();
                   if (reason.isEmpty) {
                     setState(
-                      () => _stopReasonError = 'Alasan penghentian wajib diisi.',
+                      () =>
+                          _stopReasonError = 'Alasan penghentian wajib diisi.',
                     );
                     return;
                   }

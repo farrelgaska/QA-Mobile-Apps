@@ -3,7 +3,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
@@ -17,18 +16,22 @@ import '../../../shared/widgets/confirmation_modal.dart';
 import '../../../shared/providers/qc_pekerjaan_form_provider.dart';
 import '../../../shared/utils/qc_photo_validation.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/qc_draft_protection.dart';
+import '../../../shared/services/qc_local_draft_store.dart';
 import '../../../shared/models/pekerjaan_model.dart';
 
 class QCPekerjaanFormScreen extends StatefulWidget {
   final PekerjaanModel pekerjaan;
   final String? editReportId;
   final bool isRevision;
+  final QCLocalDraftStore draftStore;
 
   const QCPekerjaanFormScreen({
     super.key,
     required this.pekerjaan,
     this.editReportId,
     this.isRevision = false,
+    this.draftStore = const QCLocalDraftStore(),
   });
 
   @override
@@ -37,6 +40,7 @@ class QCPekerjaanFormScreen extends StatefulWidget {
 
 class _QCPekerjaanFormScreenState extends State<QCPekerjaanFormScreen> {
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey<QCDraftProtectionState> _draftProtectionKey = GlobalKey();
 
   @override
   void dispose() {
@@ -62,36 +66,46 @@ class _QCPekerjaanFormScreenState extends State<QCPekerjaanFormScreen> {
               ),
             );
           }
-          return Scaffold(
-            backgroundColor: AppColors.background,
-            body: SafeArea(
-              child: SingleChildScrollView(
-                key: const Key('qc_pekerjaan_form_scroll'),
-                controller: _scrollController,
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20.0,
-                  vertical: 16.0,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ScreenHeader(
-                      title: 'Inspeksi Pekerjaan',
-                      subtitle: provider.pekerjaan.name,
-                    ),
-                    _buildProgressSection(provider),
-                    const SizedBox(height: 24),
-                    if (provider.isInformationStep)
-                      _buildDetailCard(provider)
-                    else ...[
-                      _buildChecklistSection(context, provider),
-                      _buildStaffNoteCard(provider),
+          return QCDraftProtection(
+            key: _draftProtectionKey,
+            identity: provider.localDraftIdentity,
+            store: widget.draftStore,
+            createSnapshot: provider.createLocalDraftSnapshot,
+            restoreSnapshot: provider.restoreLocalDraftSnapshot,
+            hasProcessingEvidence: provider.hasProcessingPhotos,
+            preserveEvidence: provider.preserveLocalDraftEvidence,
+            releaseEvidence: provider.releaseLocalDraftEvidence,
+            child: Scaffold(
+              backgroundColor: AppColors.background,
+              body: SafeArea(
+                child: SingleChildScrollView(
+                  key: const Key('qc_pekerjaan_form_scroll'),
+                  controller: _scrollController,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20.0,
+                    vertical: 16.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ScreenHeader(
+                        title: 'Inspeksi Pekerjaan',
+                        subtitle: provider.pekerjaan.name,
+                      ),
+                      _buildProgressSection(provider),
+                      const SizedBox(height: 24),
+                      if (provider.isInformationStep)
+                        _buildDetailCard(provider)
+                      else ...[
+                        _buildChecklistSection(context, provider),
+                        _buildStaffNoteCard(provider),
+                      ],
+                      const SizedBox(height: 28),
+                      _buildActionButtons(context, provider),
+                      const SizedBox(height: 32),
                     ],
-                    const SizedBox(height: 28),
-                    _buildActionButtons(context, provider),
-                    const SizedBox(height: 32),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -557,7 +571,7 @@ class _QCPekerjaanFormScreenState extends State<QCPekerjaanFormScreen> {
       await provider.persistReport(status);
       if (!context.mounted) return;
       AppSnackbar.success(context, successMessage);
-      context.pop();
+      await _draftProtectionKey.currentState?.completeAndPop();
     } on ReportPersistenceException catch (error) {
       if (!context.mounted) return;
       AppSnackbar.error(context, error.message);

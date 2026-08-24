@@ -24,6 +24,32 @@ class StatusStyleMapper {
     }
     if (status is String) {
       final lower = status.toLowerCase().trim();
+      if (lower == 'sesuai standar') {
+        return StatusStyle(
+          background:
+              StatusHelper.getQCResultStatusBgColor(QCResultStatus.pass),
+          foreground:
+              StatusHelper.getQCResultStatusTextColor(QCResultStatus.pass),
+        );
+      }
+      if (lower == 'tidak sesuai standar') {
+        return StatusStyle(
+          background:
+              StatusHelper.getQCResultStatusBgColor(QCResultStatus.fail),
+          foreground:
+              StatusHelper.getQCResultStatusTextColor(QCResultStatus.fail),
+        );
+      }
+      if (lower == 'aktif') {
+        return StatusStyle(
+          background: StatusHelper.getQCReportStatusBgColor(
+            QCReportStatus.APPROVED,
+          ),
+          foreground: StatusHelper.getQCReportStatusTextColor(
+            QCReportStatus.APPROVED,
+          ),
+        );
+      }
       if (lower.startsWith('checkliststatus.')) {
         for (var val in ChecklistStatus.values) {
           if (val.toString().toLowerCase() == lower) {

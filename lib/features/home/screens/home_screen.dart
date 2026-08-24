@@ -339,13 +339,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () => context.go('/reports?status=Semua'),
                     ),
                     StatCard(
-                      title: 'Menunggu Review',
+                      title: 'Dikirim',
                       value: '$waitingQc',
                       icon: Icons.hourglass_empty,
                       color: AppColors.waitingBg,
                       textColor: AppColors.waitingText,
-                      onTap: () =>
-                          context.go('/reports?status=Menunggu Review'),
+                      onTap: () => context.go('/reports?status=Dikirim'),
                     ),
                     StatCard(
                       title: 'Perlu Perbaikan',

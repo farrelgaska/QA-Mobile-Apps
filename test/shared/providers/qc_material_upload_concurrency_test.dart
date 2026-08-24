@@ -107,6 +107,7 @@ class _ConcurrentPersistenceApi implements QCMaterialPersistenceApi {
   @override
   Future<bool> postReport(
     QCReportModel report, {
+    String? idempotencyKey,
     bool throwOnError = false,
   }) async {
     postCalls++;

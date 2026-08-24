@@ -52,4 +52,24 @@ void main() {
     expect(restored.checklistItems.single.adminNote, isEmpty);
     expect(restored.checklistItems.single.issueNote, 'Melebihi batas');
   });
+
+  test('historical template snapshot is read from the backend wire contract', () {
+    final wire = QCReportModel(
+      id: 'historical-report',
+      title: 'Historical inspection',
+      type: QCType.material,
+      status: QCReportStatus.APPROVED,
+      staffNote: '',
+    ).toJson()
+      ..['template_snapshot'] = {
+        'id': 'template-v1',
+        'name': 'Template version 1',
+        'checklist_items': const [],
+      };
+
+    final restored = QCReportModel.fromJson(wire);
+
+    expect(restored.templateSnapshot?['id'], 'template-v1');
+    expect(restored.templateSnapshot?['name'], 'Template version 1');
+  });
 }

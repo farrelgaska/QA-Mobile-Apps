@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -61,7 +62,7 @@ void main() {
   test(
     'watermarked final output is visible and remains at or below 2 MB',
     () async {
-      final sourceImage = image.Image(width: 1200, height: 900)
+      final sourceImage = image.Image(width: 3000, height: 2200)
         ..clear(image.ColorRgb8(235, 235, 235));
       final sourceBytes = Uint8List.fromList(
         image.encodeJpg(sourceImage, quality: 95),
@@ -87,14 +88,37 @@ void main() {
 
       expect(result.isGenerated, isTrue);
       expect(result.file.mimeType, 'image/jpeg');
+      expect(File(result.file.path).existsSync(), isTrue);
       expect(result.bytes.length, lessThanOrEqualTo(maxQCPhotoSizeBytes));
       expect(decoded, isNotNull);
-      final topPixel = decoded!.getPixel(10, 10);
+      expect(decoded!.width, lessThanOrEqualTo(maxQCEvidenceLongEdge));
+      expect(decoded.height, lessThanOrEqualTo(maxQCEvidenceLongEdge));
+      final topPixel = decoded.getPixel(10, 10);
       final bottomPixel = decoded.getPixel(10, decoded.height - 10);
       expect(_brightness(topPixel), greaterThan(200));
       expect(_brightness(bottomPixel), lessThan(150));
     },
   );
+
+  test('watermarked output preserves capture orientation', () async {
+    final sourceImage = image.Image(width: 50, height: 30);
+    sourceImage.exif.imageIfd.orientation = 6;
+    final source = XFile.fromData(
+      Uint8List.fromList(image.encodeJpg(sourceImage, quality: 92)),
+      name: 'portrait.jpg',
+      mimeType: 'image/jpeg',
+    );
+    final processor = BoundedQCPhotoProcessor();
+
+    final result =
+        await processor.process(source, captureMetadata: _metadata());
+    addTearDown(() => processor.deleteGeneratedFile(result.file));
+    final decoded = image.decodeJpg(result.bytes);
+
+    expect(decoded, isNotNull);
+    expect(decoded!.width, 30);
+    expect(decoded.height, 50);
+  });
 }
 
 QCEvidenceCaptureMetadata _metadata({

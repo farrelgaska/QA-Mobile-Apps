@@ -82,7 +82,7 @@ class _AccountSettingPageState extends State<AccountSettingPage> {
     showDialog(
       context: context,
       builder: (context) => ConfirmationModal(
-        title: 'Logout Akun',
+        title: 'Keluar dari Akun',
         message:
             'Apakah Anda yakin ingin keluar dari akun Staff Warehouse Anda?',
         confirmText: 'Keluar',
@@ -436,7 +436,7 @@ class _AccountSettingPageState extends State<AccountSettingPage> {
                     _buildActionRow(
                       context,
                       icon: Icons.lock_outline,
-                      title: 'Ubah Password Akun',
+                      title: 'Ubah Kata Sandi',
                       subtitle: 'Diperbarui 3 bulan lalu',
                     ),
                   ],
@@ -446,7 +446,7 @@ class _AccountSettingPageState extends State<AccountSettingPage> {
 
               // SECTION D: AKSI AKUN
               AppButton(
-                text: 'Keluar Akun (Logout)',
+                text: 'Keluar dari Akun',
                 variant: AppButtonVariant.danger,
                 icon: Icons.logout,
                 onPressed: () => _handleLogout(context),

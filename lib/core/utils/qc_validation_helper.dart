@@ -92,7 +92,7 @@ class QCValidationHelper {
       return QCValidationResult(
         status: statusForOutcome(outcome),
         warningMessage: null,
-        isValid: outcome == 'PASS' || outcome == 'FAIL',
+        isValid: outcome == 'PASS' || outcome   == 'FAIL',
       );
     }
 

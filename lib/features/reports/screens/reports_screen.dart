@@ -28,7 +28,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   final List<String> _tabs = [
     'Semua',
     'Draft',
-    'Menunggu Review',
+    'Dikirim',
     'Disetujui',
     'Perlu Tindak Lanjut'
   ];
@@ -51,7 +51,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         norm == 'perlu tindak lanjut') {
       return 'Perlu Tindak Lanjut';
     }
-    return 'Menunggu Review';
+    return 'Dikirim';
   }
 
   bool _isLoading = false;
@@ -117,7 +117,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     switch (tab) {
       case 'Draft':
         return QCReportStatus.DRAFT;
-      case 'Menunggu Review':
+      case 'Dikirim':
         return QCReportStatus.SUBMITTED;
       case 'Disetujui':
         return QCReportStatus.APPROVED;

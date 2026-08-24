@@ -20,7 +20,9 @@ import '../../shared/models/work_location_model.dart';
 import '../../shared/models/site_model.dart';
 import '../../shared/utils/qc_photo_validation.dart';
 import '../../shared/services/qc_photo_processor.dart';
+import '../../shared/services/qc_photo_output.dart';
 import '../../shared/services/qc_capture_location_service.dart';
+import '../../shared/utils/request_fingerprint.dart';
 import '../../core/utils/validators.dart';
 import '../../core/utils/qc_validation_helper.dart';
 import '../../shared/models/template_choice_option.dart';
@@ -67,7 +69,11 @@ abstract class QCMaterialPersistenceApi {
     Uint8List? bytes,
   });
 
-  Future<bool> postReport(QCReportModel report, {bool throwOnError = false});
+  Future<bool> postReport(
+    QCReportModel report, {
+    bool throwOnError = false,
+    String? idempotencyKey,
+  });
 
   Future<bool> patchReport(QCReportModel report, {bool throwOnError = false});
 }
@@ -90,8 +96,13 @@ class _DefaultQCMaterialPersistenceApi implements QCMaterialPersistenceApi {
       );
 
   @override
-  Future<bool> postReport(QCReportModel report, {bool throwOnError = false}) =>
-      _apiService.postReport(report, throwOnError: throwOnError);
+  Future<bool> postReport(
+    QCReportModel report, {
+    bool throwOnError = false,
+    String? idempotencyKey,
+  }) =>
+      _apiService.postReport(report,
+          throwOnError: throwOnError, idempotencyKey: idempotencyKey);
 
   @override
   Future<bool> patchReport(QCReportModel report, {bool throwOnError = false}) =>
@@ -183,7 +194,10 @@ class QCMaterialFormProvider extends ChangeNotifier {
   bool _isPersisting = false;
   bool _isNavigating = false;
   bool _isDisposed = false;
+  bool _preserveLocalEvidence = false;
   late String _reportId;
+  String? _idempotencyKey;
+  String? _lastSubmitFingerprint;
   final Map<QCMaterialGeneralField, String> _generalFieldErrors = {};
   QCMaterialSamplingDecision? _samplingDecision;
 
@@ -224,6 +238,14 @@ class QCMaterialFormProvider extends ChangeNotifier {
       );
   String get reportId => _reportId;
   QCMaterialTemplate get template => _template;
+  String get localDraftIdentity => [
+        _state.currentUser.nik,
+        _state.currentSite.id,
+        'material',
+        _template.id,
+        editReportId ?? 'new',
+        isRevisionMode ? 'revision' : 'entry',
+      ].join(':');
   QCMaterialSamplingDecision? get samplingDecision => _samplingDecision;
   bool get hasSamplingDecision => _samplingDecision != null;
   bool get isSamplingStopped =>
@@ -854,6 +876,15 @@ class QCMaterialFormProvider extends ChangeNotifier {
     return 'QC-MAT-${DateTime.now().microsecondsSinceEpoch}-$randomPart';
   }
 
+  String _newIdempotencyKey() {
+    final random = Random.secure();
+    final randomPart = List.generate(
+      16,
+      (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
+    return 'IDEM-$randomPart';
+  }
+
   void updateAnswer(int index, dynamic value) {
     final item = _template.checklistItems[index];
     final valueText = value?.toString() ?? '';
@@ -946,7 +977,11 @@ class QCMaterialFormProvider extends ChangeNotifier {
     }
     try {
       final selectedPhoto = await (photoPicker?.call(ImageSource.camera) ??
-          _imagePicker.pickImage(source: ImageSource.camera));
+          _imagePicker.pickImage(
+            source: ImageSource.camera,
+            maxWidth: maxQCEvidenceLongEdge.toDouble(),
+            maxHeight: maxQCEvidenceLongEdge.toDouble(),
+          ));
       if (selectedPhoto == null) return QCMaterialPhotoAddResult.cancelled;
       if (_isDisposed) return QCMaterialPhotoAddResult.cancelled;
 
@@ -1084,7 +1119,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
         localItemPhotoBytes[index].removeAt(localIndex);
         activeSample.localPhotoMetadata.remove(removed);
         _uploadedObjectPaths.remove(removed);
-        unawaited(_photoProcessor.deleteGeneratedFile(removed));
+        unawaited(_deleteLocalPhoto(removed));
       } else {
         final processingIndex = localIndex - localItemPhotos[index].length;
         processingItemPhotos[index].removeAt(processingIndex);
@@ -1151,6 +1186,272 @@ class QCMaterialFormProvider extends ChangeNotifier {
         staffNoteController.text.trim().isNotEmpty ||
         samples.any((sample) => sample.hasContent);
   }
+
+  Map<String, dynamic> createLocalDraftSnapshot() {
+    return {
+      'version': 1,
+      'type': 'material',
+      'templateId': _template.id,
+      'editReportId': editReportId,
+      'isRevision': isRevisionMode,
+      'currentStep': _currentStep,
+      'general': {
+        'poNumber': poNumberController.text,
+        'poDate': poDateController.text,
+        'doNumber': doNumberController.text,
+        'vendorName': vendorNameController.text,
+        'materialId': materialIdController.text,
+        'arrivalVolume': arrivalVolumeController.text,
+        'samplingVolume': samplingVolumeController.text,
+        'sampleCount': sampleCountController.text,
+        'brandName': brandNameController.text,
+        'warehouseLocation': warehouseLocationController.text,
+        'stelVersion': stelVersionController.text,
+        'qaExpiryDate': qaExpiryDateController.text,
+        'tkdnNumber': tkdnNumberController.text,
+        'tkdnCertDate': tkdnCertDateController.text,
+        'tkdnValue': tkdnValueController.text,
+        'staffNote': staffNoteController.text,
+        'selectedSiteId': selectedSite?.id,
+        'isCustomLocation': isCustomLocation,
+        'customLocationName': customLocNameController.text,
+        'customLocationArea': customLocAreaController.text,
+        'customLocationSegment': customLocSegmentController.text,
+        'customLocationNote': customLocNoteController.text,
+      },
+      'samplingDecision': _samplingDecision == null
+          ? null
+          : {
+              'type': _samplingDecision!.type.name,
+              'decidedAt': _samplingDecision!.decidedAt.toIso8601String(),
+              'stopReason': _samplingDecision!.stopReason,
+              'failedSampleIds': _samplingDecision!.failedSampleIds,
+              'failedSampleNumbers': _samplingDecision!.failedSampleNumbers,
+            },
+      'samples': [
+        for (final sample in samples)
+          {
+            'id': sample.id,
+            'sampleNumber': sample.sampleNumber,
+            'inspectionStatus': sample.inspectionStatus.name,
+            'notes': sample.notesController.text,
+            'photoPaths': sample.photoPaths,
+            'answers': [
+              for (var index = 0; index < sample.answers.length; index++)
+                {
+                  'itemId': sample.answers[index].itemId,
+                  'value': sample.answers[index].value,
+                  'status': sample.answers[index].status.name,
+                  'evaluationStatus': sample.answers[index].evaluationStatus,
+                  'issueNote': sample.answers[index].issueNote,
+                  'photoPaths': sample.answers[index].photoPaths,
+                  'photoMetadata': {
+                    for (final entry
+                        in sample.answers[index].photoMetadataByPath.entries)
+                      entry.key: entry.value.toJson(),
+                  },
+                  'localPhotos': [
+                    for (final photo in sample.localItemPhotos[index])
+                      {
+                        'path': photo.path,
+                        'name': photo.name,
+                        'mimeType': photo.mimeType,
+                        'metadata': sample.localPhotoMetadata[photo]?.toJson(),
+                      },
+                  ],
+                },
+            ],
+          },
+      ],
+    };
+  }
+
+  Future<void> restoreLocalDraftSnapshot(Map<String, dynamic> draft) async {
+    if (draft['version'] != 1 ||
+        draft['type'] != 'material' ||
+        draft['templateId'] != _template.id ||
+        draft['editReportId'] != editReportId ||
+        draft['isRevision'] != isRevisionMode) {
+      throw const FormatException('Draft material tidak cocok.');
+    }
+
+    final general = draft['general'] is Map
+        ? Map<String, dynamic>.from(draft['general'] as Map)
+        : <String, dynamic>{};
+    poNumberController.text = general['poNumber']?.toString() ?? '';
+    poDateController.text = general['poDate']?.toString() ?? '';
+    doNumberController.text = general['doNumber']?.toString() ?? '';
+    vendorNameController.text = general['vendorName']?.toString() ?? '';
+    materialIdController.text = general['materialId']?.toString() ?? '';
+    arrivalVolumeController.text = general['arrivalVolume']?.toString() ?? '';
+    samplingVolumeController.text = general['samplingVolume']?.toString() ?? '';
+    sampleCountController.text = general['sampleCount']?.toString() ?? '1';
+    brandNameController.text = general['brandName']?.toString() ?? '';
+    warehouseLocationController.text =
+        general['warehouseLocation']?.toString() ?? '';
+    stelVersionController.text = general['stelVersion']?.toString() ?? '';
+    qaExpiryDateController.text = general['qaExpiryDate']?.toString() ?? '';
+    tkdnNumberController.text = general['tkdnNumber']?.toString() ?? '';
+    tkdnCertDateController.text = general['tkdnCertDate']?.toString() ?? '';
+    tkdnValueController.text = general['tkdnValue']?.toString() ?? '';
+    staffNoteController.text = general['staffNote']?.toString() ?? '';
+    isCustomLocation = general['isCustomLocation'] == true;
+    customLocNameController.text =
+        general['customLocationName']?.toString() ?? '';
+    customLocAreaController.text =
+        general['customLocationArea']?.toString() ?? '';
+    customLocSegmentController.text =
+        general['customLocationSegment']?.toString() ?? '';
+    customLocNoteController.text =
+        general['customLocationNote']?.toString() ?? '';
+    final selectedSiteId = general['selectedSiteId']?.toString();
+    selectedSite = isCustomLocation
+        ? null
+        : dummySites.where((site) => site.id == selectedSiteId).firstOrNull;
+
+    final rawDecision = draft['samplingDecision'];
+    _samplingDecision = rawDecision is Map
+        ? _draftSamplingDecision(Map<String, dynamic>.from(rawDecision))
+        : null;
+    for (final sample in samples) {
+      _disposeSampleState(sample);
+    }
+    samples.clear();
+
+    for (final rawSample
+        in (draft['samples'] as List? ?? const []).whereType<Map>()) {
+      final sampleMap = Map<String, dynamic>.from(rawSample);
+      final rawAnswers = (sampleMap['answers'] as List? ?? const [])
+          .whereType<Map>()
+          .map((answer) => Map<String, dynamic>.from(answer))
+          .toList(growable: false);
+      final byItemId = {
+        for (final answer in rawAnswers) answer['itemId']?.toString(): answer,
+      };
+      final answers = _template.checklistItems.map((item) {
+        final raw = byItemId[item.id];
+        if (raw == null) return _emptyAnswerForItem(item);
+        final photoMetadata = raw['photoMetadata'] is Map
+            ? Map<String, dynamic>.from(raw['photoMetadata'] as Map)
+            : const <String, dynamic>{};
+        return _emptyAnswerForItem(item).copyWith(
+          value: raw['value'] ?? '',
+          status: _draftResultStatus(raw['status']),
+          issueNote: raw['issueNote']?.toString() ?? '',
+          evaluationStatus:
+              raw['evaluationStatus']?.toString() ?? 'NOT_EVALUATED',
+          photoPaths: List<String>.from(
+            raw['photoPaths'] as List? ?? const [],
+          )
+              .where((path) => _isCanonicalObjectPath(path) || _isHttpUrl(path))
+              .toList(growable: false),
+          photoMetadataByPath: {
+            for (final entry in photoMetadata.entries)
+              if (entry.value is Map)
+                entry.key: QCEvidenceCaptureMetadata.fromJson(
+                  Map<String, dynamic>.from(entry.value as Map),
+                ),
+          },
+        );
+      }).toList(growable: false);
+      final now = DateTime.now();
+      final sample = QCMaterialSampleState(
+        id: sampleMap['id']?.toString() ??
+            '$_reportId-sample-${samples.length + 1}',
+        sampleNumber: sampleMap['sampleNumber'] is int
+            ? sampleMap['sampleNumber'] as int
+            : samples.length + 1,
+        inspectionStatus: _draftInspectionStatus(sampleMap['inspectionStatus']),
+        answers: answers,
+        notes: sampleMap['notes']?.toString() ?? '',
+        photoPaths: List<String>.from(
+          sampleMap['photoPaths'] as List? ?? const [],
+        ).where(_isCanonicalObjectPath).toList(growable: false),
+        createdAt: now,
+        updatedAt: now,
+      );
+      for (var index = 0; index < answers.length; index++) {
+        final raw = byItemId[answers[index].itemId];
+        if (raw == null) continue;
+        for (final rawPhoto
+            in (raw['localPhotos'] as List? ?? const []).whereType<Map>()) {
+          final photoMap = Map<String, dynamic>.from(rawPhoto);
+          final path = photoMap['path']?.toString() ?? '';
+          if (path.isEmpty) continue;
+          final photo = XFile(
+            path,
+            name: photoMap['name']?.toString(),
+            mimeType: photoMap['mimeType']?.toString(),
+          );
+          try {
+            final bytes = await photo.readAsBytes();
+            if (bytes.isEmpty || exceedsQCPhotoSizeLimit(bytes)) continue;
+            sample.localItemPhotos[index].add(photo);
+            sample.localItemPhotoBytes[index].add(bytes);
+            if (photoMap['metadata'] is Map) {
+              sample.localPhotoMetadata[photo] =
+                  QCEvidenceCaptureMetadata.fromJson(
+                Map<String, dynamic>.from(photoMap['metadata'] as Map),
+              );
+            }
+          } catch (_) {
+            // Missing local evidence is omitted while the rest of the draft loads.
+          }
+        }
+      }
+      samples.add(sample);
+    }
+    if (samples.isEmpty) samples.add(_newSampleState(1));
+    _sampleCount = samples.length;
+    final restoredStep =
+        draft['currentStep'] is int ? draft['currentStep'] as int : 0;
+    _currentStep = restoredStep.clamp(0, totalSteps - 1);
+    _generalFieldErrors.clear();
+    notifyListeners();
+  }
+
+  QCMaterialSamplingDecision? _draftSamplingDecision(
+    Map<String, dynamic> value,
+  ) {
+    final decidedAt = DateTime.tryParse(value['decidedAt']?.toString() ?? '');
+    final type = QCMaterialSamplingDecisionType.values
+        .where(
+          (entry) => entry.name == value['type']?.toString(),
+        )
+        .firstOrNull;
+    if (decidedAt == null || type == null) return null;
+    return QCMaterialSamplingDecision(
+      type: type,
+      decidedAt: decidedAt,
+      stopReason: value['stopReason']?.toString(),
+      failedSampleIds: List<String>.from(
+        value['failedSampleIds'] as List? ?? const [],
+      ),
+      failedSampleNumbers: List<int>.from(
+        value['failedSampleNumbers'] as List? ?? const [],
+      ),
+    );
+  }
+
+  QCResultStatus _draftResultStatus(dynamic value) {
+    final name = value?.toString();
+    return QCResultStatus.values.firstWhere(
+      (status) => status.name == name,
+      orElse: () => QCResultStatus.notFilled,
+    );
+  }
+
+  QCSampleInspectionStatus _draftInspectionStatus(dynamic value) {
+    final name = value?.toString();
+    return QCSampleInspectionStatus.values.firstWhere(
+      (status) => status.name == name,
+      orElse: () => QCSampleInspectionStatus.notStarted,
+    );
+  }
+
+  void preserveLocalDraftEvidence() => _preserveLocalEvidence = true;
+
+  void releaseLocalDraftEvidence() => _preserveLocalEvidence = false;
 
   String? validateSample(int sampleIndex) {
     final sample = samples[sampleIndex];
@@ -1232,15 +1533,16 @@ class QCMaterialFormProvider extends ChangeNotifier {
   String? validateForm() {
     final generalError = validateGeneralInformation();
     if (generalError != null) return generalError;
-    
+
     final sampleCountError = _synchronizeSampleCount();
     if (sampleCountError != null) return sampleCountError;
-    
+
     final locationError = validateLocation();
     if (locationError != null) return locationError;
-    
+
     for (var index = 0; index < samples.length; index++) {
-      if (hasSamplingDecision && samplingDecision!.failedSampleIds.contains(samples[index].id)) {
+      if (hasSamplingDecision &&
+          samplingDecision!.failedSampleIds.contains(samples[index].id)) {
         // Skip validation for samples that caused inspection stop, as they might be incomplete
         continue;
       }
@@ -1272,10 +1574,15 @@ class QCMaterialFormProvider extends ChangeNotifier {
     return null;
   }
 
-  void _disposeSampleState(QCMaterialSampleState sample) {
-    for (final photos in sample.localItemPhotos) {
-      for (final photo in photos) {
-        unawaited(_photoProcessor.deleteGeneratedFile(photo));
+  void _disposeSampleState(
+    QCMaterialSampleState sample, {
+    bool deleteEvidence = true,
+  }) {
+    if (deleteEvidence) {
+      for (final photos in sample.localItemPhotos) {
+        for (final photo in photos) {
+          unawaited(_deleteLocalPhoto(photo));
+        }
       }
     }
     for (final photos in sample.processingItemPhotos) {
@@ -1283,6 +1590,11 @@ class QCMaterialFormProvider extends ChangeNotifier {
     }
     sample.localPhotoMetadata.clear();
     sample.dispose();
+  }
+
+  Future<void> _deleteLocalPhoto(XFile photo) async {
+    await _photoProcessor.deleteGeneratedFile(photo);
+    await deleteQCPhotoJpegOutput(photo);
   }
 
   Future<String?> nextStep() async {
@@ -1542,7 +1854,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
         staffNote: staffNoteController.text,
         adminNote: status == QCReportStatus.DRAFT
             ? null
-            : 'Menunggu review dari Admin.',
+            : 'Menunggu peninjauan Admin.',
         formCode: _template.code,
         templateId: _template.id,
         generalInfo: genInfo,
@@ -1551,7 +1863,21 @@ class QCMaterialFormProvider extends ChangeNotifier {
         revisionNumber: 1,
         revisionHistory: [],
       );
-      final saved = await _api.postReport(newReport, throwOnError: true);
+
+      final currentFingerprint =
+          generateSemanticFingerprint(newReport.toJson());
+      if (_idempotencyKey == null ||
+          (_lastSubmitFingerprint != null &&
+              _lastSubmitFingerprint != currentFingerprint)) {
+        _idempotencyKey = _newIdempotencyKey();
+      }
+      _lastSubmitFingerprint = currentFingerprint;
+
+      final saved = await _api.postReport(
+        newReport,
+        throwOnError: true,
+        idempotencyKey: _idempotencyKey,
+      );
       if (!saved) {
         throw const QCMaterialPersistenceException(
           'Laporan gagal disimpan. Periksa koneksi lalu coba lagi.',
@@ -1764,7 +2090,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
         photosByItemId[_template.checklistItems[itemIndex].id] =
             persistedPhotos[itemIndex];
         for (final photo in sample.localItemPhotos[itemIndex]) {
-          unawaited(_photoProcessor.deleteGeneratedFile(photo));
+          unawaited(_deleteLocalPhoto(photo));
         }
         sample.localItemPhotos[itemIndex].clear();
         sample.localItemPhotoBytes[itemIndex].clear();
@@ -1803,7 +2129,10 @@ class QCMaterialFormProvider extends ChangeNotifier {
   void dispose() {
     _isDisposed = true;
     for (final sample in samples) {
-      _disposeSampleState(sample);
+      _disposeSampleState(
+        sample,
+        deleteEvidence: !_preserveLocalEvidence,
+      );
     }
     _isPersisting = false;
     poNumberController.dispose();

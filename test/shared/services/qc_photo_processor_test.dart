@@ -202,7 +202,7 @@ void main() {
   );
 
   test(
-      'downscales large images exceeding 2048px to max edge 2048px prior to compression',
+      'downscales large images to the shared evidence edge before final encoding',
       () async {
     final bytes = _jpeg(width: 3000, height: 2200);
     final original = XFile.fromData(
@@ -216,8 +216,8 @@ void main() {
 
     final decoded = image.decodeJpg(result.bytes);
     expect(decoded, isNotNull);
-    expect(decoded!.width, lessThanOrEqualTo(2048));
-    expect(decoded.height, lessThanOrEqualTo(2048));
+    expect(decoded!.width, lessThanOrEqualTo(maxQCEvidenceLongEdge));
+    expect(decoded.height, lessThanOrEqualTo(maxQCEvidenceLongEdge));
     expect(result.bytes.length, lessThanOrEqualTo(maxQCPhotoSizeBytes));
   });
 }

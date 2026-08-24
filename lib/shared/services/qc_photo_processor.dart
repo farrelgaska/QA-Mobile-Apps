@@ -52,11 +52,8 @@ abstract class QCPhotoProcessor {
 }
 
 class BoundedQCPhotoProcessor implements QCPhotoProcessor {
-  // Diturunkan ke 1920px agar decode/encode di browser web jauh lebih ringan
-  static const int _maximumLongEdge = 1920;
   static const int _minimumLongEdge = 1024;
-  // Dioptimasi dari 42 kombinasi loop menjadi max 3 opsi kualitas utama
-  static const List<int> _jpegQualities = [82, 70, 55];
+  static const List<int> _jpegQualities = [70, 55];
 
   final QCHeicConverter _heicConverter;
   final Set<XFile> _generatedFiles = HashSet<XFile>.identity();
@@ -69,11 +66,8 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
     XFile photo, {
     QCEvidenceCaptureMetadata? captureMetadata,
   }) async {
-    final stopwatch = Stopwatch()..start();
     final originalBytes = await photo.readAsBytes();
-    debugPrint('[QCPhotoProfile] A. file selection/read: ${stopwatch.elapsedMilliseconds} ms');
 
-    stopwatch.reset();
     final metadata = inspectInput(photo, originalBytes);
     var processableBytes = originalBytes;
     var requiresJpegOutput = false;
@@ -98,9 +92,6 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
       requiresJpegOutput = true;
     }
     
-    debugPrint('[QCPhotoProfile] B. decode (header checks only): ${stopwatch.elapsedMilliseconds} ms');
-    
-    stopwatch.reset();
     // 1. Jika ada metadata (Watermark)
     if (captureMetadata != null) {
       final processedBytes = await compute(_watermarkAndCompressToLimit, {
@@ -118,7 +109,6 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
         outputName: _createOutputName(photo),
       );
       _generatedFiles.add(processedPhoto);
-      debugPrint('[QCPhotoProfile] D. watermark/metadata processing: ${stopwatch.elapsedMilliseconds} ms');
       return QCProcessedPhoto(
         file: processedPhoto,
         bytes: processedBytes,
@@ -137,7 +127,6 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
       
       final exceedsEdge = await compute(_exceedsMaximumLongEdge, processableBytes);
       if (!exceedsEdge) {
-        debugPrint('[QCPhotoProfile] C. resize/compression: skipped (not needed)');
         return QCProcessedPhoto(
           file: photo,
           bytes: processableBytes,
@@ -147,7 +136,6 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
     }
 
     // 3. Kompresi standar jika diperlukan
-    stopwatch.reset();
     final processedBytes = await compute(_compressToLimit, processableBytes);
     if (processedBytes == null) {
       throw const QCPhotoDecodingException();
@@ -167,7 +155,6 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
       outputName: _createOutputName(photo),
     );
     _generatedFiles.add(processedPhoto);
-    debugPrint('[QCPhotoProfile] C. resize/compression: ${stopwatch.elapsedMilliseconds} ms');
     return QCProcessedPhoto(
       file: processedPhoto,
       bytes: finalBytes,
@@ -206,12 +193,12 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
     var oriented = image.bakeOrientation(decoded);
 
     // Immediate Downscale: Pangkas piksel raksasa langsung di awal
-    if (oriented.width > _maximumLongEdge ||
-        oriented.height > _maximumLongEdge) {
+    if (oriented.width > maxQCEvidenceLongEdge ||
+        oriented.height > maxQCEvidenceLongEdge) {
       oriented = image.copyResize(
         oriented,
-        width: oriented.width >= oriented.height ? _maximumLongEdge : null,
-        height: oriented.height > oriented.width ? _maximumLongEdge : null,
+        width: oriented.width >= oriented.height ? maxQCEvidenceLongEdge : null,
+        height: oriented.height > oriented.width ? maxQCEvidenceLongEdge : null,
         interpolation: image.Interpolation.average,
       );
     }
@@ -250,12 +237,12 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
     var oriented = image.bakeOrientation(decoded);
 
     // Immediate Downscale sebelum apply watermark
-    if (oriented.width > _maximumLongEdge ||
-        oriented.height > _maximumLongEdge) {
+    if (oriented.width > maxQCEvidenceLongEdge ||
+        oriented.height > maxQCEvidenceLongEdge) {
       oriented = image.copyResize(
         oriented,
-        width: oriented.width >= oriented.height ? _maximumLongEdge : null,
-        height: oriented.height > oriented.width ? _maximumLongEdge : null,
+        width: oriented.width >= oriented.height ? maxQCEvidenceLongEdge : null,
+        height: oriented.height > oriented.width ? maxQCEvidenceLongEdge : null,
         interpolation: image.Interpolation.average,
       );
     }
@@ -310,8 +297,8 @@ class BoundedQCPhotoProcessor implements QCPhotoProcessor {
     try {
       final decoded = image.decodeImage(bytes);
       return decoded != null &&
-          (decoded.width > _maximumLongEdge ||
-              decoded.height > _maximumLongEdge);
+          (decoded.width > maxQCEvidenceLongEdge ||
+              decoded.height > maxQCEvidenceLongEdge);
     } catch (_) {
       return false;
     }

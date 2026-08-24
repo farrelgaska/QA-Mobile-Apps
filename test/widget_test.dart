@@ -11,11 +11,11 @@ void main() {
 
     // Verify that the login screen is rendered
     expect(find.text('QA Mobile Apps'), findsOneWidget);
-    expect(find.text('Masuk dengan akun SSO'), findsOneWidget);
+    expect(find.text('Masuk ke QA Digitalization'), findsOneWidget);
 
     // Verify form input elements exist
-    expect(find.text('NIK / Username'), findsOneWidget);
-    expect(find.text('Password'), findsOneWidget);
+    expect(find.text('NIK / Nama Pengguna'), findsOneWidget);
+    expect(find.text('Kata Sandi'), findsOneWidget);
 
     // Verify the Login button is rendered
     expect(find.text('Masuk'), findsOneWidget);
@@ -33,7 +33,7 @@ void main() {
 
         expect(find.byKey(const Key('login-actions-narrow')), findsOneWidget);
         expect(find.text('Ingat Saya'), findsOneWidget);
-        expect(find.text('Lupa Password?'), findsOneWidget);
+        expect(find.text('Lupa Kata Sandi?'), findsOneWidget);
         expect(tester.takeException(), isNull, reason: 'viewport $width');
 
         await tester.tap(find.byType(Checkbox));
@@ -42,7 +42,7 @@ void main() {
 
         await tester.tap(find.byKey(const Key('forgot-password-action')));
         await tester.pump();
-        expect(find.textContaining('hubungi IT Support'), findsOneWidget);
+        expect(find.textContaining('Hubungi dukungan TI'), findsOneWidget);
         expect(tester.takeException(), isNull, reason: 'viewport $width');
       }
       await tester.binding.setSurfaceSize(null);

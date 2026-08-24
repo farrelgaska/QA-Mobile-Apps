@@ -76,7 +76,7 @@ void main() {
   group('QC report workflow status presentation', () {
     for (final entry in {
       QCReportStatus.DRAFT: 'Draft',
-      QCReportStatus.SUBMITTED: 'Menunggu Review',
+      QCReportStatus.SUBMITTED: 'Dikirim',
       QCReportStatus.NEEDS_FOLLOW_UP: 'Perlu Tindak Lanjut',
       QCReportStatus.APPROVED: 'Disetujui',
     }.entries) {
@@ -117,8 +117,31 @@ void main() {
         ),
       );
 
-      expect(find.text('Menunggu Review'), findsOneWidget);
+      expect(find.text('Dikirim'), findsOneWidget);
       expect(find.text('Perlu Tindak Lanjut'), findsNothing);
+    });
+
+    testWidgets('parameter and active badges use canonical labels', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                StatusBadge(status: QCResultStatus.pass),
+                StatusBadge(status: QCResultStatus.fail),
+                StatusBadge(status: 'Aktif'),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Sesuai Standar'), findsOneWidget);
+      expect(find.text('Tidak Sesuai Standar'), findsOneWidget);
+      expect(find.text('Aktif'), findsOneWidget);
+      expect(find.text('Lulus'), findsNothing);
     });
   });
 

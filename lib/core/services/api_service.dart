@@ -28,8 +28,16 @@ class QCEvidenceUploadResult {
 
 class ApiRequestException implements Exception {
   final String message;
+  final String? code;
+  final int? statusCode;
+  final List<dynamic>? details;
 
-  const ApiRequestException(this.message);
+  const ApiRequestException(
+    this.message, {
+    this.code,
+    this.statusCode,
+    this.details,
+  });
 
   @override
   String toString() => message;
@@ -114,14 +122,13 @@ class ApiService {
             )
             .toList();
       }
-      throw ApiRequestException(
-        'Daftar laporan gagal dimuat (HTTP ${response.statusCode}).',
-      );
+      throw _handleApiError(response, 'Daftar laporan gagal dimuat');
     } on ApiRequestException {
       rethrow;
     } catch (error) {
       throw ApiRequestException(
         'Tidak dapat terhubung ke server saat memuat laporan: $error',
+        code: 'NETWORK_ERROR',
       );
     }
   }
@@ -150,11 +157,9 @@ class ApiService {
         );
       }
       if (response.statusCode == 404) {
-        throw ApiRequestException('Laporan $reportId tidak ditemukan.');
+        throw ApiRequestException('Laporan $reportId tidak ditemukan.', code: 'NOT_FOUND', statusCode: 404);
       }
-      throw ApiRequestException(
-        'Detail laporan gagal dimuat (HTTP ${response.statusCode}).',
-      );
+      throw _handleApiError(response, 'Detail laporan gagal dimuat');
     } on ApiRequestException catch (error) {
       if (throwOnError) rethrow;
       debugPrint(
@@ -164,6 +169,7 @@ class ApiService {
     } catch (error) {
       final exception = ApiRequestException(
         'Tidak dapat terhubung ke server saat memuat laporan: $error',
+        code: 'NETWORK_ERROR',
       );
       if (throwOnError) throw exception;
       debugPrint(
@@ -205,34 +211,66 @@ class ApiService {
   }
 
   /// Sync/post a report to the mock API backend.
+  ///
+  /// [idempotencyKey] is optional. When supplied it is sent as the
+  /// `Idempotency-Key` header so the server can deduplicate concurrent/retry
+  /// submissions of the same logical report.
   Future<bool> postReport(
     QCReportModel report, {
     bool throwOnError = false,
+    String? idempotencyKey,
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/reports');
+      final headers = <String, String>{'Content-Type': 'application/json'};
+      if (idempotencyKey != null && idempotencyKey.isNotEmpty) {
+        headers['Idempotency-Key'] = idempotencyKey;
+      }
       final response = await (_client?.post(
                 uri,
-                headers: {'Content-Type': 'application/json'},
+                headers: headers,
                 body: jsonEncode(report.toJson()),
               ) ??
               http.post(
                 uri,
-                headers: {'Content-Type': 'application/json'},
+                headers: headers,
                 body: jsonEncode(report.toJson()),
               ))
           .timeout(const Duration(seconds: 30));
+
+      // 200 = idempotent replay, 201 = first successful create
       if (response.statusCode == 200 || response.statusCode == 201) {
         return true;
       }
       if (response.statusCode == 409) {
-        throw ApiRequestException(
-          'Laporan dengan ID ${report.id} sudah tersimpan. Muat ulang daftar laporan sebelum mencoba lagi.',
-        );
+        final apiErr = _tryParseApiError(response);
+        if (apiErr != null) {
+          switch (apiErr.code) {
+            case 'REPORT_ALREADY_EXISTS':
+              throw ApiRequestException(
+                'Laporan dengan ID ${report.id} sudah tersimpan. Muat ulang daftar laporan sebelum mencoba lagi.',
+                code: apiErr.code,
+                statusCode: 409,
+                details: apiErr.details,
+              );
+            case 'IDEMPOTENCY_CONFLICT':
+              throw ApiRequestException(
+                'Pengiriman laporan ini konflik dengan permintaan sebelumnya yang menggunakan kunci yang sama. Hubungi dukungan jika masalah berlanjut.',
+                code: apiErr.code,
+                statusCode: 409,
+                details: apiErr.details,
+              );
+            case 'IDEMPOTENCY_IN_PROGRESS':
+              throw ApiRequestException(
+                'Laporan sedang diproses. Tunggu sebentar lalu coba lagi.',
+                code: apiErr.code,
+                statusCode: 409,
+                details: apiErr.details,
+              );
+          }
+        }
       }
-      throw ApiRequestException(
-        'Laporan gagal disimpan (HTTP ${response.statusCode}). Silakan coba lagi.',
-      );
+      throw _handleApiError(response, 'Laporan gagal disimpan');
     } on ApiRequestException catch (error) {
       if (throwOnError) rethrow;
       debugPrint(
@@ -243,6 +281,7 @@ class ApiService {
       if (await _reportExists(report.id)) return true;
       final exception = ApiRequestException(
         'Tidak dapat terhubung ke server saat menyimpan laporan: $error',
+        code: 'NETWORK_ERROR',
       );
       if (throwOnError) throw exception;
       debugPrint(
@@ -251,6 +290,7 @@ class ApiService {
       return false;
     }
   }
+
 
   /// Sync/patch a report to the mock API backend.
   Future<bool> patchReport(
@@ -272,13 +312,17 @@ class ApiService {
           .timeout(const Duration(seconds: 30));
       if (response.statusCode == 200) return true;
       if (response.statusCode == 409) {
-        throw ApiRequestException(
-          'Perubahan laporan ${report.id} konflik dengan data yang sudah tersimpan. Muat ulang laporan sebelum mencoba lagi.',
-        );
+        final apiErr = _tryParseApiError(response);
+        if (apiErr != null && apiErr.code == 'REPORT_ALREADY_EXISTS') {
+          throw ApiRequestException(
+            'Perubahan laporan ${report.id} konflik dengan data yang sudah tersimpan. Muat ulang laporan sebelum mencoba lagi.',
+            code: apiErr.code,
+            statusCode: 409,
+            details: apiErr.details,
+          );
+        }
       }
-      throw ApiRequestException(
-        'Laporan gagal diperbarui (HTTP ${response.statusCode}). Silakan coba lagi.',
-      );
+      throw _handleApiError(response, 'Laporan gagal diperbarui');
     } on ApiRequestException catch (error) {
       if (throwOnError) rethrow;
       debugPrint(
@@ -288,6 +332,7 @@ class ApiService {
     } catch (error) {
       final exception = ApiRequestException(
         'Tidak dapat terhubung ke server saat memperbarui laporan: $error',
+        code: 'NETWORK_ERROR',
       );
       if (throwOnError) throw exception;
       debugPrint(
@@ -350,9 +395,8 @@ class ApiService {
       
       final body = _decodeObject(response.body);
       if (response.statusCode != 201) {
-        throw ApiRequestException(
-          body?['error']?.toString() ?? 'Foto gagal diunggah.',
-        );
+        throw _handleApiError(
+            response, 'Foto gagal diunggah.', decodedBody: body);
       }
 
       final objectPath = body?['object_path'];
@@ -377,6 +421,7 @@ class ApiService {
     } catch (_) {
       throw const ApiRequestException(
         'Foto gagal diunggah. Periksa koneksi lalu coba lagi.',
+        code: 'NETWORK_ERROR',
       );
     }
   }
@@ -396,9 +441,8 @@ class ApiService {
           .timeout(const Duration(seconds: 10));
       final body = _decodeObject(response.body);
       if (response.statusCode != 200) {
-        throw ApiRequestException(
-          body?['error']?.toString() ?? 'URL foto tidak dapat dimuat.',
-        );
+        throw _handleApiError(
+            response, 'URL foto tidak dapat dimuat.', decodedBody: body);
       }
 
       final entries = body?['signed_urls'];
@@ -423,6 +467,7 @@ class ApiService {
     } catch (_) {
       throw const ApiRequestException(
         'URL foto tidak dapat dimuat. Periksa koneksi lalu coba lagi.',
+        code: 'NETWORK_ERROR',
       );
     }
   }
@@ -445,6 +490,51 @@ class ApiService {
     if (name.endsWith('.png')) return 'image/png';
     if (name.endsWith('.webp')) return 'image/webp';
     if (name.endsWith('.heic')) return 'image/heic';
+    return null;
+  }
+
+  ApiRequestException _handleApiError(
+      http.Response response, String defaultMessage,
+      {Map<String, dynamic>? decodedBody}) {
+    final apiErr = _tryParseApiError(response, decodedBody: decodedBody);
+    if (apiErr != null) {
+      return apiErr;
+    }
+    
+    // Fallback for legacy { error: "string" }
+    final body = decodedBody ?? _decodeObject(response.body);
+    final fallbackMsg = body?['error']?.toString();
+    if (fallbackMsg != null && fallbackMsg.isNotEmpty && fallbackMsg.toLowerCase() != 'null') {
+      return ApiRequestException(fallbackMsg, statusCode: response.statusCode);
+    }
+
+    return ApiRequestException(
+      '$defaultMessage (HTTP ${response.statusCode}). Silakan coba lagi.',
+      statusCode: response.statusCode,
+    );
+  }
+
+  ApiRequestException? _tryParseApiError(http.Response response,
+      {Map<String, dynamic>? decodedBody}) {
+    try {
+      final body = decodedBody ?? _decodeObject(response.body);
+      final errorObj = body?['code'] != null && body?['message'] != null
+          ? body
+          : body?['error'];
+      if (errorObj is Map) {
+        final code = errorObj['code']?.toString();
+        final message = errorObj['message']?.toString();
+        final details = errorObj['details'] as List<dynamic>?;
+        if (code != null && message != null) {
+          return ApiRequestException(
+            message,
+            code: code,
+            statusCode: response.statusCode,
+            details: details,
+          );
+        }
+      }
+    } catch (_) {}
     return null;
   }
 }

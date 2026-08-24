@@ -1,4 +1,5 @@
 const int maxQCPhotoSizeBytes = 700 * 1024;
+const int maxQCEvidenceLongEdge = 1920;
 
 const String qcPhotoTooLargeMessage =
     'Foto tidak dapat diproses hingga batas 700 KB dengan kualitas yang aman. Silakan ambil ulang foto.';

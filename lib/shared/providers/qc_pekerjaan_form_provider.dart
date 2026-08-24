@@ -19,7 +19,9 @@ import '../../shared/models/pekerjaan_model.dart';
 import '../../shared/models/template_choice_option.dart';
 import '../../shared/utils/qc_photo_validation.dart';
 import '../../shared/services/qc_photo_processor.dart';
+import '../../shared/services/qc_photo_output.dart';
 import '../../shared/services/qc_capture_location_service.dart';
+import '../../shared/utils/request_fingerprint.dart';
 
 enum PhotoAddResult {
   added,
@@ -52,11 +54,14 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   final DateTime Function() _clock;
   final Set<int> _photoCapturesInProgress = <int>{};
   int _processingPhotoSequence = 0;
+  late String _reportId;
+  String? _idempotencyKey;
+  String? _lastSubmitFingerprint;
   bool _isInit = false;
   bool _submitAttempted = false;
   bool _isPersisting = false;
   bool _isDisposed = false;
-  late String _reportId;
+  bool _preserveLocalEvidence = false;
   late PekerjaanModel _pekerjaan;
   int _currentStep = 0;
 
@@ -89,6 +94,14 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   bool get isChecklistStep => _currentStep == 1;
   PekerjaanModel get pekerjaan => _pekerjaan;
   DummyState get state => _state;
+  String get localDraftIdentity => [
+        _state.currentUser.nik,
+        _state.currentSite.id,
+        'pekerjaan',
+        _pekerjaan.id,
+        editReportId ?? 'new',
+        isRevisionMode ? 'revision' : 'entry',
+      ].join(':');
 
   // General controllers
   final TextEditingController areaController = TextEditingController();
@@ -223,6 +236,15 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
       (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
     ).join();
     return 'QC-WRK-${DateTime.now().microsecondsSinceEpoch}-$randomPart';
+  }
+
+  String _newIdempotencyKey() {
+    final random = Random.secure();
+    final randomPart = List.generate(
+      16,
+      (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
+    return 'IDEM-$randomPart';
   }
 
   String? validateGeneralInformation() {
@@ -390,7 +412,11 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
     try {
       final XFile? selectedPhoto =
           await (photoPicker?.call(ImageSource.camera) ??
-              _imagePicker.pickImage(source: ImageSource.camera));
+              _imagePicker.pickImage(
+                source: ImageSource.camera,
+                maxWidth: maxQCEvidenceLongEdge.toDouble(),
+                maxHeight: maxQCEvidenceLongEdge.toDouble(),
+              ));
       if (selectedPhoto == null) {
         return PhotoAddResult.cancelled;
       }
@@ -502,7 +528,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         pendingItemPhotoBytes[index].removeAt(pendingIndex);
         _localPhotoMetadata.remove(removed);
         _uploadedObjectPaths.remove(removed);
-        unawaited(_photoProcessor.deleteGeneratedFile(removed));
+        unawaited(_deleteLocalPhoto(removed));
       } else {
         final processingIndex = pendingIndex - pendingItemPhotos[index].length;
         processingItemPhotos[index].removeAt(processingIndex);
@@ -542,6 +568,117 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         pendingItemPhotos.any((photosList) => photosList.isNotEmpty) ||
         processingItemPhotos.any((photosList) => photosList.isNotEmpty);
   }
+
+  Map<String, dynamic> createLocalDraftSnapshot() {
+    return {
+      'version': 1,
+      'type': 'pekerjaan',
+      'templateId': _pekerjaan.id,
+      'editReportId': editReportId,
+      'isRevision': isRevisionMode,
+      'area': areaController.text,
+      'locationDetail': locationDetailController.text,
+      'mitra': mitraController.text,
+      'staffNote': staffNoteController.text,
+      'currentStep': _currentStep,
+      'items': List.generate(_pekerjaan.checklistItems.length, (index) {
+        return {
+          'itemId': _pekerjaan.checklistItems[index].id,
+          'value': itemResults[index],
+          'status': itemStatuses[index].name,
+          'issue': itemIssues[index],
+          'photos': itemPhotos[index],
+          'localPhotos': [
+            for (final photo in pendingItemPhotos[index])
+              {
+                'path': photo.path,
+                'name': photo.name,
+                'mimeType': photo.mimeType,
+                'metadata': _localPhotoMetadata[photo]?.toJson(),
+              },
+          ],
+        };
+      }),
+    };
+  }
+
+  Future<void> restoreLocalDraftSnapshot(Map<String, dynamic> draft) async {
+    if (draft['version'] != 1 ||
+        draft['type'] != 'pekerjaan' ||
+        draft['templateId'] != _pekerjaan.id ||
+        draft['editReportId'] != editReportId ||
+        draft['isRevision'] != isRevisionMode) {
+      throw const FormatException('Draft pekerjaan tidak cocok.');
+    }
+
+    areaController.text = draft['area']?.toString() ?? '';
+    locationDetailController.text = draft['locationDetail']?.toString() ?? '';
+    mitraController.text = draft['mitra']?.toString() ?? '';
+    staffNoteController.text = draft['staffNote']?.toString() ?? '';
+    _currentStep = draft['currentStep'] == 1 ? 1 : 0;
+    final rawItems = (draft['items'] as List? ?? const [])
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList(growable: false);
+    final byItemId = {
+      for (final item in rawItems) item['itemId']?.toString(): item,
+    };
+
+    for (var index = 0; index < _pekerjaan.checklistItems.length; index++) {
+      final raw = byItemId[_pekerjaan.checklistItems[index].id];
+      if (raw == null) continue;
+      itemResults[index] = raw['value']?.toString() ?? '';
+      itemIssues[index] = raw['issue']?.toString() ?? '';
+      itemStatuses[index] = _draftChecklistStatus(raw['status']);
+      itemWarnings[index] = null;
+      itemPhotos[index]
+        ..clear()
+        ..addAll(
+          List<String>.from(raw['photos'] as List? ?? const [])
+              .where(_isPersistablePhotoReference),
+        );
+      pendingItemPhotos[index].clear();
+      pendingItemPhotoBytes[index].clear();
+      for (final rawPhoto
+          in (raw['localPhotos'] as List? ?? const []).whereType<Map>()) {
+        final photoMap = Map<String, dynamic>.from(rawPhoto);
+        final path = photoMap['path']?.toString() ?? '';
+        if (path.isEmpty) continue;
+        final photo = XFile(
+          path,
+          name: photoMap['name']?.toString(),
+          mimeType: photoMap['mimeType']?.toString(),
+        );
+        try {
+          final bytes = await photo.readAsBytes();
+          if (bytes.isEmpty || exceedsQCPhotoSizeLimit(bytes)) continue;
+          pendingItemPhotos[index].add(photo);
+          pendingItemPhotoBytes[index].add(bytes);
+          if (photoMap['metadata'] is Map) {
+            _localPhotoMetadata[photo] = QCEvidenceCaptureMetadata.fromJson(
+              Map<String, dynamic>.from(photoMap['metadata'] as Map),
+            );
+          }
+        } catch (_) {
+          // Missing local evidence is omitted while the rest of the draft loads.
+        }
+      }
+    }
+    _submitAttempted = false;
+    notifyListeners();
+  }
+
+  ChecklistStatus _draftChecklistStatus(dynamic value) {
+    final name = value?.toString();
+    return ChecklistStatus.values.firstWhere(
+      (status) => status.name == name,
+      orElse: () => ChecklistStatus.belumDiisi,
+    );
+  }
+
+  void preserveLocalDraftEvidence() => _preserveLocalEvidence = true;
+
+  void releaseLocalDraftEvidence() => _preserveLocalEvidence = false;
 
   String? validateForm() {
     if (hasProcessingPhotos) return qcPhotoProcessingMessage;
@@ -723,15 +860,26 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
           staffNote: staffNoteController.text,
           adminNote: status == QCReportStatus.DRAFT
               ? null
-              : 'Menunggu review dari Admin.',
+              : 'Menunggu peninjauan Admin.',
           formCode: 'PEK-CONST-01',
           templateId: _pekerjaan.id,
           revisionNumber: 1,
           revisionHistory: [],
         );
+
+        final currentFingerprint =
+            generateSemanticFingerprint(newReport.toJson());
+        if (_idempotencyKey == null ||
+            (_lastSubmitFingerprint != null &&
+                _lastSubmitFingerprint != currentFingerprint)) {
+          _idempotencyKey = _newIdempotencyKey();
+        }
+        _lastSubmitFingerprint = currentFingerprint;
+
         final saved = await _apiService.postReport(
           newReport,
           throwOnError: true,
+          idempotencyKey: _idempotencyKey,
         );
         if (!saved) {
           throw const ReportPersistenceException(
@@ -799,7 +947,7 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
         uploadedPhotoPreviewBytes[objectPath] = previewBytes;
         pendingItemPhotos[itemIndex].removeAt(0);
         pendingItemPhotoBytes[itemIndex].removeAt(0);
-        unawaited(_photoProcessor.deleteGeneratedFile(photo));
+        unawaited(_deleteLocalPhoto(photo));
         persistedPhotos[itemIndex].add(objectPath);
         if (!_isDisposed) notifyListeners();
       }
@@ -815,6 +963,11 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
       pendingItemPhotos[i].clear();
       pendingItemPhotoBytes[i].clear();
     }
+  }
+
+  Future<void> _deleteLocalPhoto(XFile photo) async {
+    await _photoProcessor.deleteGeneratedFile(photo);
+    await deleteQCPhotoJpegOutput(photo);
   }
 
   bool _isPersistablePhotoReference(String value) =>
@@ -855,9 +1008,11 @@ class QCPekerjaanFormProvider extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
-    for (final photos in pendingItemPhotos) {
-      for (final photo in photos) {
-        unawaited(_photoProcessor.deleteGeneratedFile(photo));
+    if (!_preserveLocalEvidence) {
+      for (final photos in pendingItemPhotos) {
+        for (final photo in photos) {
+          unawaited(_deleteLocalPhoto(photo));
+        }
       }
     }
     _localPhotoMetadata.clear();

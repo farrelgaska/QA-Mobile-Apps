@@ -8,8 +8,10 @@ import '../../../shared/models/enums.dart';
 import '../../../shared/models/qc_checklist_answer_model.dart';
 import '../../../shared/models/qc_material_evaluation_model.dart';
 import '../../../shared/models/qc_material_template_model.dart';
+import '../../../shared/models/pekerjaan_model.dart';
 import '../../../shared/models/qc_report_model.dart';
 import '../../../shared/models/qc_report_sample_model.dart';
+import '../../../shared/models/qc_template_contract.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/photo_grid.dart';
@@ -586,22 +588,32 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                       final tid = report.templateId.isNotEmpty
                           ? report.templateId
                           : 'tiang_besi_7m_3_segmen';
-                      final QCMaterialTemplate? cachedTemplate =
-                          DummyState().templateCache[tid] ??
-                              dummyQCMaterialTemplates
-                                  .cast<QCMaterialTemplate?>()
-                                  .firstWhere(
-                                    (t) => t?.id == tid,
-                                    orElse: () => null,
-                                  );
+                      QCMaterialTemplate? cachedTemplate;
+                      if (report.templateSnapshot != null) {
+                        cachedTemplate = QCTemplateContract.material(
+                            report.templateSnapshot!);
+                      } else {
+                        cachedTemplate = DummyState().templateCache[tid] ??
+                            dummyQCMaterialTemplates
+                                .cast<QCMaterialTemplate?>()
+                                .firstWhere(
+                                  (t) => t?.id == tid,
+                                  orElse: () => null,
+                                );
+                      }
                       context.push(
                         '/qc-material/form/$tid?editReportId=${report.id}${isRevision ? "&isRevision=true" : ""}',
                         extra: cachedTemplate,
                       );
                     } else {
                       final tid = report.templateId;
-                      final cachedTemplate =
-                          DummyState().workTemplateCache[tid];
+                      PekerjaanModel? cachedTemplate;
+                      if (report.templateSnapshot != null) {
+                        cachedTemplate =
+                            QCTemplateContract.work(report.templateSnapshot!);
+                      } else {
+                        cachedTemplate = DummyState().workTemplateCache[tid];
+                      }
                       context.push(
                         '/qc-pekerjaan/form/$tid?editReportId=${report.id}${isRevision ? "&isRevision=true" : ""}',
                         extra: cachedTemplate,
@@ -834,7 +846,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             if (answer.photoPaths.isNotEmpty) ...[
               const SizedBox(height: 12),
               const Text(
-                'Foto Bukti Fisik:',
+                'Foto Dokumentasi:',
                 style: TextStyle(
                   color: AppColors.textMuted,
                   fontSize: 11,
@@ -1013,7 +1025,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             if (result.photos.isNotEmpty) ...[
               const SizedBox(height: 12),
               const Text(
-                'Foto Bukti Fisik:',
+                'Foto Dokumentasi:',
                 style: TextStyle(
                   color: AppColors.textMuted,
                   fontSize: 11,

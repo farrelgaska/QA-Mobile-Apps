@@ -27,11 +27,11 @@ void main() {
 
         // 1. Verify header elements
         expect(find.text('QA Mobile Apps'), findsOneWidget);
-        expect(find.text('Masuk dengan akun SSO'), findsOneWidget);
+        expect(find.text('Masuk ke QA Digitalization'), findsOneWidget);
 
         // 2. Verify inputs are fully visible and editable
-        expect(find.text('NIK / Username'), findsOneWidget);
-        expect(find.text('Password'), findsOneWidget);
+        expect(find.text('NIK / Nama Pengguna'), findsOneWidget);
+        expect(find.text('Kata Sandi'), findsOneWidget);
 
         await tester.enterText(
           find.widgetWithText(TextField, '').first,
@@ -41,7 +41,7 @@ void main() {
 
         // 3. Verify actions (remember me, forgot password)
         expect(find.text('Ingat Saya'), findsOneWidget);
-        expect(find.text('Lupa Password?'), findsOneWidget);
+        expect(find.text('Lupa Kata Sandi?'), findsOneWidget);
 
         await tester.tap(find.byType(Checkbox));
         await tester.pump();
@@ -49,13 +49,13 @@ void main() {
 
         await tester.tap(find.byKey(const Key('forgot-password-action')));
         await tester.pump();
-        expect(find.textContaining('hubungi IT Support'), findsOneWidget);
+        expect(find.textContaining('Hubungi dukungan TI'), findsOneWidget);
 
         // 4. Verify login button remains reachable
         expect(find.text('Masuk'), findsOneWidget);
 
         // 5. Verify credentials box
-        expect(find.textContaining('Demo Akun Kredensial'), findsOneWidget);
+        expect(find.textContaining('Kredensial Akun Demo'), findsOneWidget);
 
         // 6. Ensure no RenderFlex overflow
         expect(tester.takeException(), isNull, reason: 'Viewport $width px');
@@ -82,7 +82,8 @@ void main() {
     ];
 
     for (final width in viewports) {
-      testWidgets('Numeric card with status badge and long title at $width px', (
+      testWidgets('Numeric card with status badge and long title at $width px',
+          (
         tester,
       ) async {
         await tester.binding.setSurfaceSize(Size(width, 800));
@@ -123,7 +124,8 @@ void main() {
         expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
         expect(find.text('Standar: 122.0 - 128.0 mm'), findsOneWidget);
         expect(find.text('mm'), findsOneWidget);
-        expect(tester.takeException(), isNull, reason: 'Numeric pass at $width px');
+        expect(tester.takeException(), isNull,
+            reason: 'Numeric pass at $width px');
 
         // Test OUT_OF_STANDARD (Fail) with issue note
         await tester.pumpWidget(
@@ -141,7 +143,8 @@ void main() {
                   maxValue: 128.0,
                   currentStatus: QCResultStatus.fail,
                   resultValue: '135.0',
-                  issueDescription: 'Nilai ketebalan melebihi toleransi maksimal',
+                  issueDescription:
+                      'Nilai ketebalan melebihi toleransi maksimal',
                   photos: const [],
                   isLocked: false,
                   onStatusChanged: (_) {},
@@ -163,7 +166,8 @@ void main() {
           find.text('Nilai ketebalan melebihi toleransi maksimal'),
           findsOneWidget,
         );
-        expect(tester.takeException(), isNull, reason: 'Numeric fail at $width px');
+        expect(tester.takeException(), isNull,
+            reason: 'Numeric fail at $width px');
       });
 
       testWidgets('Choice card with wrapping chips at $width px', (
@@ -207,7 +211,8 @@ void main() {
         await tester.tap(find.text('Tidak Sesuai Kriteria'));
         await tester.pump();
         expect(selectedValue, 'FAIL');
-        expect(tester.takeException(), isNull, reason: 'Choice chips at $width px');
+        expect(tester.takeException(), isNull,
+            reason: 'Choice chips at $width px');
       });
 
       testWidgets('Boolean check card at $width px', (tester) async {
@@ -248,7 +253,8 @@ void main() {
         await tester.tap(find.text('Sesuai (Ya)'));
         await tester.pump();
         expect(selectedValue, 'Ya');
-        expect(tester.takeException(), isNull, reason: 'Boolean check at $width px');
+        expect(tester.takeException(), isNull,
+            reason: 'Boolean check at $width px');
       });
 
       testWidgets('Text / manual status card at $width px', (tester) async {
@@ -358,7 +364,8 @@ void main() {
         expect(find.byIcon(Icons.error_outline), findsOneWidget);
         expect(find.text('Keterangan Masalah *'), findsOneWidget);
 
-        expect(tester.takeException(), isNull, reason: 'Manual text status at $width px');
+        expect(tester.takeException(), isNull,
+            reason: 'Manual text status at $width px');
       });
     }
   });
@@ -382,10 +389,12 @@ void main() {
         expect(find.text('Provisioning'), findsOneWidget);
         expect(find.text('Assurance'), findsOneWidget);
         expect(find.text('Construction'), findsOneWidget);
-        expect(tester.takeException(), isNull, reason: 'Pekerjaan segment at $width px');
+        expect(tester.takeException(), isNull,
+            reason: 'Pekerjaan segment at $width px');
       });
 
-      testWidgets('QCMaterialListScreen renders header and search at $width px', (
+      testWidgets('QCMaterialListScreen renders header and search at $width px',
+          (
         tester,
       ) async {
         await tester.binding.setSurfaceSize(Size(width, 800));
@@ -400,7 +409,8 @@ void main() {
 
         expect(find.text('QC Material'), findsOneWidget);
         expect(find.byType(TextField), findsOneWidget);
-        expect(tester.takeException(), isNull, reason: 'Material list at $width px');
+        expect(tester.takeException(), isNull,
+            reason: 'Material list at $width px');
       });
     }
   });

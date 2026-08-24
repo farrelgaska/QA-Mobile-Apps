@@ -33,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     if (_passwordController.text.isEmpty) {
-      setState(() => _passwordError = 'Password tidak boleh kosong');
+      setState(() => _passwordError = 'Kata sandi tidak boleh kosong');
       return;
     }
 
@@ -100,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Masuk dengan akun SSO',
+                  'Masuk ke QA Digitalization',
                   style: TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 14,
@@ -114,7 +114,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     children: [
                       AppInput(
-                        label: 'NIK / Username',
+                        label: 'NIK / Nama Pengguna',
                         hintText: 'Masukkan NIK Anda',
                         controller: _nikController,
                         prefixIcon: Icons.person_outline,
@@ -122,8 +122,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 20),
                       AppInput(
-                        label: 'Password',
-                        hintText: 'Masukkan Password',
+                        label: 'Kata Sandi',
+                        hintText: 'Masukkan kata sandi',
                         controller: _passwordController,
                         isObscure: true,
                         prefixIcon: Icons.lock_outline,
@@ -184,13 +184,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                    'Silakan hubungi IT Support untuk reset password',
+                                    'Hubungi dukungan TI untuk mengatur ulang kata sandi',
                                   ),
                                 ),
                               );
                             },
                             child: const Text(
-                              'Lupa Password?',
+                              'Lupa Kata Sandi?',
                               style: TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.bold,
@@ -240,7 +240,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Demo Akun Kredensial (Staff Warehouse):',
+                              'Kredensial Akun Demo (Staff Warehouse):',
                               style: TextStyle(
                                 color: AppColors.waitingText,
                                 fontWeight: FontWeight.bold,
@@ -278,7 +278,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Internal Use Only • v1.0.0',
+                  'Penggunaan Internal • v1.0.0',
                   style: TextStyle(color: AppColors.textSoft, fontSize: 11),
                 ),
               ],

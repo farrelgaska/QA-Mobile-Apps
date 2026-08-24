@@ -60,6 +60,7 @@ class _FakePersistenceApi implements QCMaterialPersistenceApi {
   @override
   Future<bool> postReport(
     QCReportModel report, {
+    String? idempotencyKey,
     bool throwOnError = false,
   }) async {
     if (shouldFail) {

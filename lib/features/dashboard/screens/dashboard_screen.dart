@@ -321,7 +321,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               textColor: AppColors.approvedText,
             ),
             StatCard(
-              title: 'Menunggu Review',
+              title: 'Dikirim',
               value: '$matPending',
               icon: Icons.hourglass_empty,
               color: const Color(0xFFFFF4E5),
@@ -408,7 +408,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 runSpacing: 8,
                 children: [
                   _buildLegendItem(AppColors.approvedText, 'Disetujui'),
-                  _buildLegendItem(const Color(0xFFF59E0B), 'Menunggu Review'),
+                  _buildLegendItem(const Color(0xFFF59E0B), 'Dikirim'),
                   _buildLegendItem(AppColors.rejectedText, 'Perlu Perbaikan'),
                 ],
               ),
@@ -432,7 +432,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (report.status == QCReportStatus.NEEDS_FOLLOW_UP) {
             statusText = 'Perlu Tindak Lanjut';
           } else if (report.status == QCReportStatus.SUBMITTED) {
-            statusText = 'Menunggu Review';
+            statusText = 'Dikirim';
           } else if (report.status == QCReportStatus.DRAFT) {
             statusText = 'Draft';
           }
@@ -512,7 +512,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               textColor: AppColors.approvedText,
             ),
             StatCard(
-              title: 'Menunggu Review',
+              title: 'Dikirim',
               value: '$pekOnProgress',
               icon: Icons.hourglass_bottom_outlined,
               color: AppColors.waitingBg,
@@ -607,7 +607,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         const SizedBox(height: 10),
         ...pekerjaanReports.map((report) {
-          String statusText = 'Menunggu Review';
+          String statusText = 'Dikirim';
           if (report.status == QCReportStatus.APPROVED) {
             statusText = 'Disetujui';
           } else if (report.status == QCReportStatus.NEEDS_FOLLOW_UP) {
