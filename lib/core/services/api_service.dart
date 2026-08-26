@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -110,7 +111,7 @@ class ApiService {
     try {
       final uri = Uri.parse('$baseUrl/reports');
       final response = await (_client?.get(uri) ?? http.get(uri)).timeout(
-        const Duration(seconds: 4),
+        const Duration(seconds: 10),
       );
       if (response.statusCode == 200) {
         final List<dynamic> list = jsonDecode(response.body);
@@ -125,10 +126,20 @@ class ApiService {
       throw _handleApiError(response, 'Daftar laporan gagal dimuat');
     } on ApiRequestException {
       rethrow;
-    } catch (error) {
+    } on TimeoutException catch (error) {
       throw ApiRequestException(
         'Tidak dapat terhubung ke server saat memuat laporan: $error',
         code: 'NETWORK_ERROR',
+      );
+    } on http.ClientException catch (error) {
+      throw ApiRequestException(
+        'Tidak dapat terhubung ke server saat memuat laporan: $error',
+        code: 'NETWORK_ERROR',
+      );
+    } catch (error) {
+      throw ApiRequestException(
+        'Respons daftar laporan tidak valid: $error',
+        code: 'INVALID_RESPONSE',
       );
     }
   }

@@ -267,26 +267,209 @@ void main() {
     },
   );
 
-  test('API offline clears stale reports and exposes an error state', () async {
-    final state = DummyState();
-    final originalReports = List<QCReportModel>.from(state.reports);
-    final originalError = state.reportsLoadError;
-    state.reports = [_report()];
-    addTearDown(() {
+  group('report list loading', () {
+    late DummyState state;
+    late List<QCReportModel> originalReports;
+    late String? originalError;
+
+    setUp(() {
+      state = DummyState();
+      originalReports = List<QCReportModel>.from(state.reports);
+      originalError = state.reportsLoadError;
+      state.reports = [];
+      state.reportsLoadError = null;
+    });
+
+    tearDown(() {
       state.reports = originalReports;
       state.reportsLoadError = originalError;
     });
-    final service = ApiService.withClient(
-      MockClient((_) async => throw http.ClientException('offline')),
-    );
 
-    await expectLater(
-      state.fetchReportsFromApi(apiService: service),
-      throwsA(isA<ApiRequestException>()),
-    );
+    test('initial fetch succeeds on the first attempt', () async {
+      var requestCount = 0;
+      final service = ApiService.withClient(
+        MockClient((_) async {
+          requestCount++;
+          return http.Response(
+            jsonEncode([_reportJson(id: 'first', status: 'SUBMITTED')]),
+            200,
+          );
+        }),
+      );
 
-    expect(state.reports, isEmpty);
-    expect(state.reportsLoadError, contains('tidak dapat dimuat'));
+      await state.fetchReportsFromApi(apiService: service);
+
+      expect(requestCount, 1);
+      expect(state.reports.single.id, 'first');
+      expect(state.reportsLoadError, isNull);
+    });
+
+    test('a timeout is retried without publishing an intermediate error',
+        () async {
+      state.reports = [_report()];
+      final secondAttemptStarted = Completer<void>();
+      final secondResponse = Completer<http.Response>();
+      var requestCount = 0;
+      final service = ApiService.withClient(
+        MockClient((_) async {
+          requestCount++;
+          if (requestCount == 1) throw TimeoutException('cold start');
+          secondAttemptStarted.complete();
+          return secondResponse.future;
+        }),
+      );
+
+      final fetch = state.fetchReportsFromApi(
+        apiService: service,
+        retryDelay: Duration.zero,
+      );
+      await secondAttemptStarted.future;
+
+      expect(state.reports.single.id, _report().id);
+      expect(state.reportsLoadError, isNull);
+
+      secondResponse.complete(
+        http.Response(
+          jsonEncode([_reportJson(id: 'after-retry', status: 'SUBMITTED')]),
+          200,
+        ),
+      );
+      await fetch;
+
+      expect(requestCount, 2);
+      expect(state.reports.single.id, 'after-retry');
+      expect(state.reportsLoadError, isNull);
+    });
+
+    test('error is published only after the retry also times out', () async {
+      state.reports = [_report()];
+      final secondAttemptStarted = Completer<void>();
+      final failSecondAttempt = Completer<void>();
+      var requestCount = 0;
+      final service = ApiService.withClient(
+        MockClient((_) async {
+          requestCount++;
+          if (requestCount == 1) throw TimeoutException('cold start');
+          secondAttemptStarted.complete();
+          await failSecondAttempt.future;
+          throw TimeoutException('still unavailable');
+        }),
+      );
+
+      final fetch = state.fetchReportsFromApi(
+        apiService: service,
+        retryDelay: Duration.zero,
+      );
+      await secondAttemptStarted.future;
+
+      expect(state.reports, isNotEmpty);
+      expect(state.reportsLoadError, isNull);
+
+      failSecondAttempt.complete();
+      await expectLater(fetch, throwsA(isA<ApiRequestException>()));
+
+      expect(requestCount, 2);
+      expect(state.reports, isEmpty);
+      expect(state.reportsLoadError, contains('tidak dapat dimuat'));
+    });
+
+    test('HTTP 401 is not retried', () async {
+      var requestCount = 0;
+      final service = ApiService.withClient(
+        MockClient((_) async {
+          requestCount++;
+          return http.Response('{"message":"unauthorized"}', 401);
+        }),
+      );
+
+      await expectLater(
+        state.fetchReportsFromApi(
+          apiService: service,
+          retryDelay: Duration.zero,
+        ),
+        throwsA(
+          isA<ApiRequestException>().having(
+            (error) => error.statusCode,
+            'statusCode',
+            401,
+          ),
+        ),
+      );
+
+      expect(requestCount, 1);
+      expect(state.reportsLoadError, isNotNull);
+    });
+
+    test('an invalid response is not retried', () async {
+      var requestCount = 0;
+      final service = ApiService.withClient(
+        MockClient((_) async {
+          requestCount++;
+          return http.Response('not-json', 200);
+        }),
+      );
+
+      await expectLater(
+        state.fetchReportsFromApi(apiService: service),
+        throwsA(
+          isA<ApiRequestException>().having(
+            (error) => error.code,
+            'code',
+            'INVALID_RESPONSE',
+          ),
+        ),
+      );
+
+      expect(requestCount, 1);
+    });
+
+    test('concurrent initial fetches share one request', () async {
+      final requestStarted = Completer<void>();
+      final response = Completer<http.Response>();
+      var requestCount = 0;
+      final service = ApiService.withClient(
+        MockClient((_) async {
+          requestCount++;
+          requestStarted.complete();
+          return response.future;
+        }),
+      );
+
+      final first = state.fetchReportsFromApi(apiService: service);
+      final duplicate = state.fetchReportsFromApi(apiService: service);
+      await requestStarted.future;
+
+      expect(identical(first, duplicate), isTrue);
+      expect(requestCount, 1);
+
+      response.complete(http.Response('[]', 200));
+      await Future.wait([first, duplicate]);
+    });
+
+    test('a manual retry clears the error and can load reports', () async {
+      final failingService = ApiService.withClient(
+        MockClient((_) async => http.Response('', 401)),
+      );
+      await expectLater(
+        state.fetchReportsFromApi(apiService: failingService),
+        throwsA(isA<ApiRequestException>()),
+      );
+      expect(state.reportsLoadError, isNotNull);
+
+      final successfulService = ApiService.withClient(
+        MockClient(
+          (_) async => http.Response(
+            jsonEncode([_reportJson(id: 'manual-retry', status: 'SUBMITTED')]),
+            200,
+          ),
+        ),
+      );
+      final retry = state.fetchReportsFromApi(apiService: successfulService);
+
+      expect(state.reportsLoadError, isNull);
+      await retry;
+      expect(state.reports.single.id, 'manual-retry');
+    });
   });
 }
 

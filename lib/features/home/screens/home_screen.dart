@@ -207,6 +207,10 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (_isLoading) ...[
+                  const LinearProgressIndicator(),
+                  const SizedBox(height: 16),
+                ],
                 if (_state.reportsLoadError != null) ...[
                   AppCard(
                     child: Row(
@@ -332,7 +336,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     StatCard(
                       title: 'Total Laporan',
-                      value: '$totalQc',
+                      value: _isLoading && _state.reports.isEmpty
+                          ? '…'
+                          : '$totalQc',
                       icon: Icons.assignment_outlined,
                       color: AppColors.infoBg,
                       textColor: AppColors.infoText,
@@ -340,7 +346,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     StatCard(
                       title: 'Dikirim',
-                      value: '$waitingQc',
+                      value: _isLoading && _state.reports.isEmpty
+                          ? '…'
+                          : '$waitingQc',
                       icon: Icons.hourglass_empty,
                       color: AppColors.waitingBg,
                       textColor: AppColors.waitingText,
@@ -348,7 +356,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     StatCard(
                       title: 'Perlu Perbaikan',
-                      value: '$revisionQc',
+                      value: _isLoading && _state.reports.isEmpty
+                          ? '…'
+                          : '$revisionQc',
                       icon: Icons.edit_note,
                       color: AppColors.rejectedBg,
                       textColor: AppColors.rejectedText,
@@ -357,7 +367,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     StatCard(
                       title: 'Disetujui',
-                      value: '$approvedQc',
+                      value: _isLoading && _state.reports.isEmpty
+                          ? '…'
+                          : '$approvedQc',
                       icon: Icons.check_circle_outline,
                       color: AppColors.approvedBg,
                       textColor: AppColors.approvedText,

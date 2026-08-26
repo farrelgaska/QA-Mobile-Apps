@@ -18,6 +18,7 @@ class DummyState extends ChangeNotifier {
   SiteModel currentSite = dummySites[0];
   List<QCReportModel> reports = [];
   String? reportsLoadError;
+  Future<void>? _reportsFetchInFlight;
 
   /// In-memory cache of QCMaterialTemplate objects keyed by template id.
   /// Populated when a template is first loaded (either from API or dummy list)
@@ -26,22 +27,69 @@ class DummyState extends ChangeNotifier {
   final Map<String, PekerjaanModel> workTemplateCache = {};
 
   /// Fetch latest reports from Mock API backend and update memory state.
-  Future<void> fetchReportsFromApi({ApiService? apiService}) async {
-    try {
-      final serverReports = await (apiService ?? ApiService()).fetchReports();
-      debugPrint('[DummyState] Fetched ${serverReports.length} reports from API');
-      reports = List<QCReportModel>.from(serverReports)
-        ..sort((a, b) => b.submittedAt.compareTo(a.submittedAt));
+  Future<void> fetchReportsFromApi({
+    ApiService? apiService,
+    Duration retryDelay = const Duration(milliseconds: 750),
+  }) {
+    final inFlight = _reportsFetchInFlight;
+    if (inFlight != null) return inFlight;
+
+    late final Future<void> request;
+    request = _fetchReportsWithRetry(apiService ?? ApiService(), retryDelay)
+        .whenComplete(() {
+      if (identical(_reportsFetchInFlight, request)) {
+        _reportsFetchInFlight = null;
+      }
+    });
+    _reportsFetchInFlight = request;
+    return request;
+  }
+
+  Future<void> _fetchReportsWithRetry(
+    ApiService apiService,
+    Duration retryDelay,
+  ) async {
+    if (reportsLoadError != null) {
       reportsLoadError = null;
       notifyListeners();
-    } catch (e) {
-      debugPrint('[DummyState] Error fetching reports: $e');
-      reports = [];
-      reportsLoadError =
-          'Laporan tidak dapat dimuat. Periksa koneksi lalu coba lagi.';
-      notifyListeners();
-      rethrow;
     }
+
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        final serverReports = await apiService.fetchReports();
+        debugPrint(
+          '[DummyState] Fetched ${serverReports.length} reports from API',
+        );
+        reports = List<QCReportModel>.from(serverReports)
+          ..sort((a, b) => b.submittedAt.compareTo(a.submittedAt));
+        reportsLoadError = null;
+        notifyListeners();
+        return;
+      } catch (error) {
+        final canRetry = attempt == 0 && _isTransientReportError(error);
+        if (canRetry) {
+          debugPrint(
+              '[DummyState] Transient report fetch error; retrying: $error');
+          await Future<void>.delayed(retryDelay);
+          continue;
+        }
+
+        debugPrint('[DummyState] Error fetching reports: $error');
+        reports = [];
+        reportsLoadError =
+            'Laporan tidak dapat dimuat. Periksa koneksi lalu coba lagi.';
+        notifyListeners();
+        rethrow;
+      }
+    }
+  }
+
+  bool _isTransientReportError(Object error) {
+    if (error is! ApiRequestException) return false;
+    return error.code == 'NETWORK_ERROR' ||
+        error.statusCode == 502 ||
+        error.statusCode == 503 ||
+        error.statusCode == 504;
   }
 
   /// Refresh one report from the authoritative detail endpoint and replace any
