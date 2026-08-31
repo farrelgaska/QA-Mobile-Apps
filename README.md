@@ -232,6 +232,35 @@ The canonical backend runs on:
 http://localhost:3002
 ```
 
+#### Production regression snapshot
+
+Normal local development continues to use the JSON provider and never calls
+production at runtime. To intentionally refresh a local, ignored snapshot with
+a GET-only production read:
+
+```powershell
+npm.cmd run data:pull-production-baseline
+```
+
+Use `-- --force` only when replacing an existing snapshot. Production evidence
+references and capture metadata are removed so local regression does not depend
+on the production storage bucket.
+
+Applying the snapshot replaces only local `reports.json`, clears local
+idempotency claims, preserves local templates, and prints a temporary safety-copy
+path:
+
+```powershell
+npm.cmd run data:apply-production-baseline -- --confirm-replace
+```
+
+Restore deterministic repository defaults with `npm.cmd run db:reset`. To
+restore the exact pre-apply local state instead, use the printed safety copy:
+
+```powershell
+npm.cmd run restore:json -- --source <safety-copy-path> --confirm-replace
+```
+
 ### Web Admin
 
 ```powershell

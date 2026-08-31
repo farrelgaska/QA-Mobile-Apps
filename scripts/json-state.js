@@ -256,7 +256,9 @@ if (require.main === module) {
 module.exports = {
   STATE_FILES,
   backupJsonState,
+  createSafetyCopy,
   restoreJsonState,
+  writeAtomically,
   validateState,
   verifyManifest
 };

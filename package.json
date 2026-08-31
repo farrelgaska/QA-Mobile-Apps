@@ -17,6 +17,8 @@
     "normalize:reports": "node scripts/normalize-reports.js",
     "backup:json": "node scripts/json-state.js backup",
     "restore:json": "node scripts/json-state.js restore",
+    "data:pull-production-baseline": "node scripts/production-regression.js pull",
+    "data:apply-production-baseline": "node scripts/production-regression.js apply",
     "db:seed": "node scripts/seed/cli.js seed",
     "db:reset": "node scripts/seed/cli.js reset",
     "db:reseed": "node scripts/seed/cli.js reseed"

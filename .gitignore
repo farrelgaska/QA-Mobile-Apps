@@ -6,6 +6,7 @@ tmp/
 test/.tmp/
 *.normalization.tmp
 test/fixtures/*.canonical.json
+data/regression/production-reports.json
 
 supabase/.temp/
 .vercel
