@@ -161,7 +161,7 @@ export const ApprovalPage: React.FC = () => {
     <PageTransition className="space-y-6 max-w-7xl mx-auto">
 
       {/* ── Toast Notifications ──────────────────── */}
-      <div className="fixed top-5 right-5 z-[100] flex flex-col gap-2 pointer-events-none">
+      <div className="fixed top-5 right-5 z-100 flex flex-col gap-2 pointer-events-none">
         {toasts.map(t => (
           <div
             key={t.id}
@@ -172,8 +172,8 @@ export const ApprovalPage: React.FC = () => {
             }`}
           >
             {t.type === 'success'
-              ? <CheckCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-              : <AlertCircle className="h-4 w-4 text-rose-500 flex-shrink-0" />}
+              ? <CheckCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+              : <AlertCircle className="h-4 w-4 text-rose-500 shrink-0" />}
             {t.message}
           </div>
         ))}
@@ -285,7 +285,7 @@ export const ApprovalPage: React.FC = () => {
                       <TableRow key={rep.id} className="hover:bg-amber-50/30 group">
                         {/* ID */}
                         <TableCell>
-                          <span className="font-mono text-xs font-bold text-[#006B5A]">{rep.id}</span>
+                          <span className="font-mono text-xs font-bold text-primary">{rep.id}</span>
                         </TableCell>
                         {/* Type */}
                         <TableCell>
@@ -339,7 +339,7 @@ export const ApprovalPage: React.FC = () => {
                             <button
                               id={`detail-${rep.id}`}
                               onClick={() => navigate(`/laporan/${rep.id}`)}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-[#006B5A] hover:bg-[#006B5A]/5 transition-all"
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-all"
                               title="Lihat Detail"
                             >
                               <Eye className="h-4 w-4" />
@@ -394,7 +394,7 @@ export const ApprovalPage: React.FC = () => {
             <Button
               id="confirm-approve"
               variant="primary"
-              className="bg-[#006B5A] hover:bg-[#005244]"
+              className="bg-primary hover:bg-[#005244]"
               onClick={handleApproveConfirm}
               disabled={
                 approveTarget !== null &&
@@ -424,7 +424,7 @@ export const ApprovalPage: React.FC = () => {
             {/* Checklist outcomes inform the Admin decision without blocking it. */}
             {reviewItemsForReport(approveTarget).some(c => c.result === 'FAIL') && (
               <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 leading-relaxed">
-                <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                 <span>
                   Terdapat parameter yang ditandai Gagal. Admin tetap dapat meminta perbaikan atau menyetujui laporan berdasarkan hasil evaluasi.
                 </span>
@@ -432,7 +432,7 @@ export const ApprovalPage: React.FC = () => {
             )}
             {adminReviewReadiness(reviewItemsForReport(approveTarget), approveNote).failedItemsMissingAdminNote.length > 0 && (
               <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 leading-relaxed">
-                <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                 <span>Semua parameter Gagal harus memiliki Catatan Admin.</span>
               </div>
             )}
@@ -452,7 +452,7 @@ export const ApprovalPage: React.FC = () => {
                 value={approveNote}
                 onChange={(e) => setApproveNote(e.target.value)}
                 placeholder="Contoh: Semua parameter terpenuhi, disetujui untuk dilanjutkan."
-                className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#006B5A]/20 focus:border-[#006B5A] placeholder-gray-300 resize-none transition-all"
+                className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder-gray-300 resize-none transition-all"
               />
             </div>
           </div>
@@ -518,7 +518,7 @@ export const ApprovalPage: React.FC = () => {
                 className={`w-full text-sm px-3 py-2.5 border rounded-lg bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 placeholder-gray-300 resize-none transition-all ${
                   !revisionNote.trim()
                     ? 'border-gray-200 focus:ring-rose-400/20 focus:border-rose-400'
-                    : 'border-gray-200 focus:ring-[#006B5A]/20 focus:border-[#006B5A]'
+                    : 'border-gray-200 focus:ring-primary/20 focus:border-primary'
                 }`}
                 required
               />
