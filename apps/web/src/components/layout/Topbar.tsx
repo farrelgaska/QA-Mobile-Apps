@@ -22,7 +22,7 @@ export const Topbar: React.FC<TopbarProps> = ({
   return (
     <header
       className={cn(
-        'h-[74px] bg-white/80 backdrop-blur-md border-b border-gray-200/80 fixed top-0 right-0 left-[260px] flex items-center justify-between px-8 z-10 transition-all duration-200',
+        'h-[74px] bg-white/80 backdrop-blur-md border-b border-gray-200/80 fixed top-0 right-0 left-[260px] flex items-center justify-between px-8 z-40 transition-all duration-200',
         className
       )}
     >

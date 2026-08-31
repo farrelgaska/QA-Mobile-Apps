@@ -63,7 +63,7 @@ export const Select: React.FC<SelectProps> = ({
   return (
     <div
       ref={containerRef}
-      className={cn('flex flex-col space-y-1.5 relative z-[100]', fullWidth ? 'w-full' : 'w-auto')}
+      className={cn('flex flex-col space-y-1.5 relative z-10', fullWidth ? 'w-full' : 'w-auto')}
     >
       {label && (
         <label className="text-xs font-semibold text-gray-700 select-none">

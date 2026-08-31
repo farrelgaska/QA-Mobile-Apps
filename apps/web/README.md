@@ -182,6 +182,18 @@ npm.cmd install
 npm.cmd run dev
 ```
 
+Set `VITE_API_BASE_URL` in `.env.local` before starting Vite:
+
+```env
+# Local backend development
+VITE_API_BASE_URL=http://localhost:3002
+
+# Production-parity testing from localhost
+VITE_API_BASE_URL=https://qa-mobile-api.vercel.app
+```
+
+When the variable is unset, Web Admin defaults to `http://localhost:3002`.
+
 ### Flutter Application
 
 ```powershell
