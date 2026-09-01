@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_radius.dart';
 import '../services/qc_local_draft_store.dart';
 import '../utils/qc_photo_validation.dart';
 import 'app_snackbar.dart';
@@ -55,19 +57,30 @@ class QCDraftProtectionState extends State<QCDraftProtection> {
     final draft = await widget.store.read(widget.identity);
     if (!mounted || draft == null) return;
 
+    FocusManager.instance.primaryFocus?.unfocus();
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+
     final action = await showDialog<_DraftRestoreAction>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => PopScope(
         canPop: false,
         child: AlertDialog(
-          title: const Text('Draft ditemukan'),
+          backgroundColor: AppColors.surface,
+          surfaceTintColor: Colors.transparent,
+          title: const Text(
+            'Draft ditemukan',
+            style: TextStyle(color: AppColors.textMain),
+          ),
           content: const Text(
             'Ada isian yang belum selesai. Lanjutkan dari draft terakhir?',
+            style: TextStyle(color: AppColors.textMuted),
           ),
           actions: [
             TextButton(
               key: const Key('qc_draft_restart_button'),
+              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
               onPressed: () => Navigator.pop(
                 dialogContext,
                 _DraftRestoreAction.restart,
@@ -76,6 +89,10 @@ class QCDraftProtectionState extends State<QCDraftProtection> {
             ),
             FilledButton(
               key: const Key('qc_draft_restore_button'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.surface,
+              ),
               onPressed: () => Navigator.pop(
                 dialogContext,
                 _DraftRestoreAction.restore,
@@ -128,40 +145,86 @@ class QCDraftProtectionState extends State<QCDraftProtection> {
     }
 
     _exitDialogOpen = true;
+    FocusManager.instance.primaryFocus?.unfocus();
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+
     final action = await showDialog<_DraftExitAction>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => PopScope(
         canPop: false,
         child: AlertDialog(
-          title: const Text('Simpan sebagai draft?'),
+          backgroundColor: AppColors.surface,
+          surfaceTintColor: Colors.transparent,
+          title: const Text(
+            'Simpan sebagai draft?',
+            style: TextStyle(color: AppColors.textMain),
+          ),
           content: const Text(
             'Data yang sudah diisi dapat disimpan dan dilanjutkan nanti.',
+            style: TextStyle(color: AppColors.textMuted),
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
           actions: [
-            TextButton(
-              key: const Key('qc_draft_cancel_button'),
-              onPressed: () => Navigator.pop(
-                dialogContext,
-                _DraftExitAction.cancel,
-              ),
-              child: const Text('Batal'),
-            ),
-            TextButton(
-              key: const Key('qc_draft_discard_button'),
-              onPressed: () => Navigator.pop(
-                dialogContext,
-                _DraftExitAction.discard,
-              ),
-              child: const Text('Keluar Tanpa Menyimpan'),
-            ),
-            FilledButton(
-              key: const Key('qc_draft_save_button'),
-              onPressed: () => Navigator.pop(
-                dialogContext,
-                _DraftExitAction.save,
-              ),
-              child: const Text('Simpan Draft'),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                FilledButton(
+                  key: const Key('qc_draft_cancel_button'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.rejectedText,
+                    foregroundColor: AppColors.surface,
+                    minimumSize: const Size.fromHeight(48),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppRadius.lgBorderRadius,
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(
+                    dialogContext,
+                    _DraftExitAction.cancel,
+                  ),
+                  child: const Text('Batal'),
+                ),
+                const SizedBox(height: 12),
+                FilledButton(
+                  key: const Key('qc_draft_discard_button'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.rejectedText,
+                    foregroundColor: AppColors.surface,
+                    minimumSize: const Size.fromHeight(48),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppRadius.lgBorderRadius,
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(
+                    dialogContext,
+                    _DraftExitAction.discard,
+                  ),
+                  child: const Text('Keluar Tanpa Menyimpan'),
+                ),
+                const SizedBox(height: 12),
+                FilledButton(
+                  key: const Key('qc_draft_save_button'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.surface,
+                    minimumSize: const Size.fromHeight(48),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppRadius.lgBorderRadius,
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(
+                    dialogContext,
+                    _DraftExitAction.save,
+                  ),
+                  child: const Text('Simpan Draft'),
+                ),
+              ],
             ),
           ],
         ),
@@ -198,6 +261,7 @@ class QCDraftProtectionState extends State<QCDraftProtection> {
 
   Future<void> _pop<T extends Object?>([T? result]) async {
     if (!mounted) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _allowPop = true);
     await WidgetsBinding.instance.endOfFrame;
     if (mounted) Navigator.of(context).pop(result);

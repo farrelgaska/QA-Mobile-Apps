@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/core/constants/app_colors.dart';
 import 'package:mobile/shared/services/qc_local_draft_store.dart';
 import 'package:mobile/shared/widgets/qc_draft_protection.dart';
 
@@ -35,10 +36,18 @@ void main() {
   testWidgets('system Back saves the draft and exits', (tester) async {
     final store = _MemoryDraftStore();
     await _openForm(tester, store: store);
-    await tester.enterText(find.byKey(const Key('draft_test_input')), 'Simpan');
+    final input = find.byKey(const Key('draft_test_input'));
+    await tester.enterText(input, 'Simpan');
+    final focusNode = tester
+        .widget<EditableText>(
+          find.descendant(of: input, matching: find.byType(EditableText)),
+        )
+        .focusNode;
+    expect(focusNode.hasFocus, isTrue);
 
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
+    expect(focusNode.hasFocus, isFalse);
     await tester.tap(find.byKey(const Key('qc_draft_save_button')));
     await tester.pumpAndSettle();
 
@@ -94,6 +103,90 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Simpan sebagai draft?'), findsNothing);
     expect(store.records['draft:test'], isNotNull);
+  });
+
+  testWidgets('draft dialogs stay light and fit at 320px under a dark theme', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final store = _MemoryDraftStore();
+    await store.write('draft:test', {'value': 'Nilai lama'});
+    await _openForm(tester, store: store, theme: ThemeData.dark());
+
+    var dialog = tester.widget<AlertDialog>(find.byType(AlertDialog));
+    expect(dialog.backgroundColor, AppColors.surface);
+    expect(dialog.surfaceTintColor, Colors.transparent);
+    expect(
+      tester.widget<Text>(find.text('Draft ditemukan')).style?.color,
+      AppColors.textMain,
+    );
+    expect(
+      tester
+          .widget<Text>(find.text(
+            'Ada isian yang belum selesai. Lanjutkan dari draft terakhir?',
+          ))
+          .style
+          ?.color,
+      AppColors.textMuted,
+    );
+
+    await tester.tap(find.byKey(const Key('qc_draft_restart_button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('draft_test_input')), 'Ubah');
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+
+    dialog = tester.widget<AlertDialog>(find.byType(AlertDialog));
+    expect(dialog.backgroundColor, AppColors.surface);
+    expect(dialog.surfaceTintColor, Colors.transparent);
+    expect(
+      tester.widget<Text>(find.text('Simpan sebagai draft?')).style?.color,
+      AppColors.textMain,
+    );
+    expect(
+      tester
+          .widget<Text>(find.text(
+            'Data yang sudah diisi dapat disimpan dan dilanjutkan nanti.',
+          ))
+          .style
+          ?.color,
+      AppColors.textMuted,
+    );
+
+    final cancel = find.byKey(const Key('qc_draft_cancel_button'));
+    final discard = find.byKey(const Key('qc_draft_discard_button'));
+    final save = find.byKey(const Key('qc_draft_save_button'));
+    final cancelButton = tester.widget<FilledButton>(cancel);
+    final discardButton = tester.widget<FilledButton>(discard);
+    final saveButton = tester.widget<FilledButton>(save);
+    expect(
+      cancelButton.style?.backgroundColor?.resolve({}),
+      AppColors.rejectedText,
+    );
+    expect(
+      discardButton.style?.backgroundColor?.resolve({}),
+      AppColors.rejectedText,
+    );
+    expect(
+      saveButton.style?.backgroundColor?.resolve({}),
+      AppColors.primary,
+    );
+    for (final button in [cancelButton, discardButton, saveButton]) {
+      expect(
+        button.style?.foregroundColor?.resolve({}),
+        AppColors.surface,
+      );
+    }
+    expect(tester.getSize(cancel).height, 48);
+    expect(tester.getSize(discard), tester.getSize(cancel));
+    expect(tester.getSize(save), tester.getSize(cancel));
+    expect(tester.getTopLeft(discard).dy - tester.getBottomLeft(cancel).dy, 12);
+    expect(tester.getTopLeft(save).dy - tester.getBottomLeft(discard).dy, 12);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Start Over deletes the draft and keeps fresh state', (
@@ -157,9 +250,11 @@ void main() {
 Future<void> _openForm(
   WidgetTester tester, {
   required _MemoryDraftStore store,
+  ThemeData? theme,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      theme: theme,
       home: Builder(
         builder: (context) => Scaffold(
           body: Center(
