@@ -30,6 +30,20 @@ describe('STORAGE_PROVIDER', () => {
   });
 });
 
+describe('DATABASE_SSL_CA_PATH', () => {
+  it('defaults to null', () => {
+    assert.equal(parseEnvironment({ ...BASE }).DATABASE_SSL_CA_PATH, null);
+  });
+
+  it('trims a configured path', () => {
+    assert.equal(
+      parseEnvironment({ ...BASE, DATABASE_SSL_CA_PATH: '  certs/supabase-ca.crt  ' })
+        .DATABASE_SSL_CA_PATH,
+      'certs/supabase-ca.crt'
+    );
+  });
+});
+
 // ─── APP_ENV ─────────────────────────────────────────────────────────────────
 
 describe('APP_ENV', () => {

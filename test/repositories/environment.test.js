@@ -1,7 +1,22 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const { parseEnvironment } = require('../../src/config/env');
 const { createPool, createPoolManager } = require('../../src/database/postgres');
+
+class RecordingPool {
+  constructor(options) {
+    this.options = options;
+    this.listeners = {};
+  }
+
+  on(event, listener) {
+    this.listeners[event] = listener;
+    return this;
+  }
+}
 
 test('JSON is the default provider and PostgreSQL requires DATABASE_URL', () => {
   assert.equal(parseEnvironment({}).DATA_PROVIDER, 'json');
@@ -28,18 +43,6 @@ test('PostgreSQL pool uses bounded timeout and keepalive defaults without openin
 });
 
 test('PostgreSQL pool preserves configurable Supabase SSL and logs idle client errors', () => {
-  class RecordingPool {
-    constructor(options) {
-      this.options = options;
-      this.listeners = {};
-    }
-
-    on(event, listener) {
-      this.listeners[event] = listener;
-      return this;
-    }
-  }
-
   const logged = [];
   const pool = createPool(
     parseEnvironment({
@@ -75,6 +78,64 @@ test('PostgreSQL pool preserves configurable Supabase SSL and logs idle client e
       error_name: 'Error'
     }
   ]]);
+});
+
+test('PostgreSQL pool loads a configured CA while respecting certificate verification', t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mock-api-pg-ca-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const caPath = path.join(directory, 'supabase-ca.crt');
+  const certificate = '-----BEGIN CERTIFICATE-----\ntest-ca\n-----END CERTIFICATE-----\n';
+  fs.writeFileSync(caPath, certificate, 'utf8');
+
+  const pool = createPool(
+    parseEnvironment({
+      DATA_PROVIDER: 'postgres',
+      DATABASE_URL: 'postgresql://placeholder:placeholder@localhost:5432/placeholder',
+      DATABASE_SSL: 'true',
+      DATABASE_SSL_REJECT_UNAUTHORIZED: 'true',
+      DATABASE_SSL_CA_PATH: caPath
+    }),
+    RecordingPool
+  );
+
+  assert.deepEqual(pool.options.ssl, {
+    rejectUnauthorized: true,
+    ca: certificate
+  });
+});
+
+test('PostgreSQL pool fails clearly when its configured CA cannot be read', t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mock-api-pg-ca-missing-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const caPath = path.join(directory, 'missing.crt');
+  assert.throws(
+    () => createPool(
+      parseEnvironment({
+        DATA_PROVIDER: 'postgres',
+        DATABASE_URL: 'postgresql://placeholder:placeholder@localhost:5432/placeholder',
+        DATABASE_SSL: 'true',
+        DATABASE_SSL_CA_PATH: caPath
+      }),
+      RecordingPool
+    ),
+    /Unable to read DATABASE_SSL_CA_PATH/
+  );
+});
+
+test('PostgreSQL pool ignores a CA path when SSL is disabled', t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mock-api-pg-ca-disabled-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const pool = createPool(
+    parseEnvironment({
+      DATA_PROVIDER: 'postgres',
+      DATABASE_URL: 'postgresql://placeholder:placeholder@localhost:5432/placeholder',
+      DATABASE_SSL: 'false',
+      DATABASE_SSL_CA_PATH: path.join(directory, 'missing.crt')
+    }),
+    RecordingPool
+  );
+
+  assert.equal(pool.options.ssl, false);
 });
 
 test('STORAGE_PROVIDER is reserved for supported object storage providers', () => {

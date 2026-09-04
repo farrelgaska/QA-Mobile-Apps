@@ -20,6 +20,8 @@
     "data:pull-production-baseline": "node scripts/production-regression.js pull",
     "data:apply-production-baseline": "node scripts/production-regression.js apply",
     "db:seed": "node scripts/seed/cli.js seed",
+    "data:build-cable-families": "node scripts/seed/cable-families.js",
+    "db:seed:master-data": "node scripts/seed/master-data.js",
     "db:reset": "node scripts/seed/cli.js reset",
     "db:reseed": "node scripts/seed/cli.js reseed"
   },

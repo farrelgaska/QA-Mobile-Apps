@@ -54,6 +54,10 @@ describe('Canonical Tooling - Postgres Provider', () => {
     assert.ok(deletes.some(q => q.includes('DELETE FROM public.api_idempotency_keys')), 'report idempotency keys must be deleted');
     assert.ok(deletes.some(q => q.includes('DELETE FROM public.qc_reports')), 'qc_reports must be deleted');
     assert.ok(deletes.some(q => q.includes('DELETE FROM public.qc_templates')), 'qc_templates must be deleted');
+    assert.ok(deletes.some(q => q.includes('DELETE FROM public.qc_vendor_materials')), 'vendor mappings must be deleted');
+    assert.ok(deletes.some(q => q.includes('DELETE FROM public.qc_materials')), 'materials must be deleted');
+    assert.ok(deletes.some(q => q.includes('DELETE FROM public.qc_material_families')), 'material families must be deleted');
+    assert.ok(deletes.some(q => q.includes('DELETE FROM public.qc_warehouse_plants')), 'warehouses must be deleted');
 
     // Must insert templates (we have 13, each has a root and item insert)
     const inserts = executedQueries.filter(q => q.includes('insert into public.qc_templates'));
@@ -93,6 +97,14 @@ describe('Canonical Tooling - Postgres Provider', () => {
     const deletes = executedQueries.filter(q => q.includes('DELETE'));
     assert.ok(!deletes.some(q => q.includes('DELETE FROM public.api_idempotency_keys')), 'idempotency keys must NOT be deleted during seed');
     assert.ok(!deletes.some(q => q.includes('DELETE FROM public.qc_reports')), 'qc_reports must NOT be deleted during seed');
+
+    for (const table of [
+      'qc_material_families', 'qc_materials', 'qc_vendor_materials', 'qc_warehouse_plants'
+    ]) {
+      const upsert = executedQueries.find(q => q.includes(`insert into public.${table}`));
+      assert.ok(upsert, `${table} must be seeded`);
+      assert.match(upsert, /on conflict/i);
+    }
 
     // Still must commit
     assert.strictEqual(executedQueries[executedQueries.length - 2], 'COMMIT');
