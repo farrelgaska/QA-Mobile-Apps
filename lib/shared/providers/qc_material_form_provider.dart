@@ -14,6 +14,7 @@ import '../../shared/models/qc_report_sample_model.dart';
 import '../../shared/models/qc_checklist_answer_model.dart';
 import '../../shared/models/qc_material_template_model.dart';
 import '../../shared/models/qc_material_evaluation_model.dart';
+import '../../shared/models/qc_material_master_data.dart';
 import '../../shared/models/qc_evidence_capture_metadata.dart';
 import '../../shared/models/qc_photo_processing_entry.dart';
 import '../../shared/models/work_location_model.dart';
@@ -43,6 +44,7 @@ enum QCMaterialGeneralField {
   poNumber,
   poDate,
   doNumber,
+  materialFamily,
   vendorName,
   materialId,
   arrivalVolume,
@@ -185,6 +187,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
   final ImagePicker _imagePicker;
   final Future<XFile?> Function(ImageSource source)? photoPicker;
   final QCMaterialPersistenceApi _api;
+  final QCMaterialMasterDataApi _masterDataApi;
   final QCPhotoProcessor _photoProcessor;
   final QCCaptureLocationService _captureLocationService;
   final DateTime Function() _clock;
@@ -200,21 +203,42 @@ class QCMaterialFormProvider extends ChangeNotifier {
   String? _lastSubmitFingerprint;
   final Map<QCMaterialGeneralField, String> _generalFieldErrors = {};
   QCMaterialSamplingDecision? _samplingDecision;
+  QCMaterialFamily? selectedFamily;
+  QCMaterialVendor? selectedVendor;
+  QCMaterialOption? selectedMaterial;
+  QCMaterialBrand? selectedBrand;
+  QCWarehousePlant? selectedWarehouse;
+  List<QCMaterialVendor> vendorChoices = const [];
+  List<QCMaterialBrand> brandChoices = const [];
+  bool isResolvingVendors = false;
+  bool isResolvingBrand = false;
+  String? vendorResolutionMessage;
+  String? brandResolutionMessage;
+  String? warehouseSelectionMessage;
+  bool _familyNeedsReselection = false;
+  bool _vendorNeedsReselection = false;
+  bool _materialNeedsReselection = false;
+  bool _brandNeedsReselection = false;
+  bool _warehouseNeedsReselection = false;
+  int _masterSelectionRevision = 0;
 
   static const _sampleStatusesKey = 'qcSampleEvaluationStatuses';
   static const _failedSampleCountKey = 'qcFailedSampleCount';
   static const _reviewEligibleKey = 'qcReviewRequestEligible';
   static const _evidenceCaptureMetadataKey = 'qcEvidenceCaptureMetadata';
+  static const _masterDataSelectionKey = 'qcMaterialMasterData';
 
   QCMaterialFormProvider({
     ImagePicker? imagePicker,
     this.photoPicker,
     QCMaterialPersistenceApi? api,
+    QCMaterialMasterDataApi? masterDataApi,
     QCPhotoProcessor? photoProcessor,
     QCCaptureLocationService? captureLocationService,
     DateTime Function()? clock,
   })  : _imagePicker = imagePicker ?? ImagePicker(),
         _api = api ?? _DefaultQCMaterialPersistenceApi(),
+        _masterDataApi = masterDataApi ?? ApiService(),
         _photoProcessor = photoProcessor ?? BoundedQCPhotoProcessor(),
         _captureLocationService =
             captureLocationService ?? GeolocatorQCCaptureLocationService(),
@@ -238,6 +262,8 @@ class QCMaterialFormProvider extends ChangeNotifier {
       );
   String get reportId => _reportId;
   QCMaterialTemplate get template => _template;
+  bool get usesCableMasterData =>
+      _template.category.trim().toUpperCase() == 'CABLE';
   String get localDraftIdentity => [
         _state.currentUser.nik,
         _state.currentSite.id,
@@ -247,6 +273,11 @@ class QCMaterialFormProvider extends ChangeNotifier {
         isRevisionMode ? 'revision' : 'entry',
       ].join(':');
   QCMaterialSamplingDecision? get samplingDecision => _samplingDecision;
+  bool get familyNeedsReselection => _familyNeedsReselection;
+  bool get vendorNeedsReselection => _vendorNeedsReselection;
+  bool get materialNeedsReselection => _materialNeedsReselection;
+  bool get brandNeedsReselection => _brandNeedsReselection;
+  bool get warehouseNeedsReselection => _warehouseNeedsReselection;
   bool get hasSamplingDecision => _samplingDecision != null;
   bool get isSamplingStopped =>
       _samplingDecision?.type == QCMaterialSamplingDecisionType.stop;
@@ -306,6 +337,265 @@ class QCMaterialFormProvider extends ChangeNotifier {
   final TextEditingController tkdnCertDateController = TextEditingController();
   final TextEditingController tkdnValueController = TextEditingController();
   final TextEditingController staffNoteController = TextEditingController();
+
+  Future<List<QCMaterialFamily>> searchMaterialFamilies(String query) =>
+      _masterDataApi.fetchMaterialFamilies(query: query);
+
+  Future<List<QCMaterialVendor>> searchVendors(String query) {
+    if (!usesCableMasterData) {
+      return _masterDataApi.fetchMaterialVendors(
+        query: query,
+        materialId: selectedMaterial?.materialId,
+      );
+    }
+    final normalized = query.trim().toLowerCase();
+    return Future.value(vendorChoices
+        .where((item) => item.vendor.toLowerCase().contains(normalized))
+        .toList(growable: false));
+  }
+
+  Future<List<QCMaterialOption>> searchMaterials(String query) {
+    if (usesCableMasterData && selectedFamily == null) {
+      return Future.value(const []);
+    }
+    return _masterDataApi.fetchMaterialOptions(
+      query: query,
+      vendor: usesCableMasterData ? null : selectedVendor?.vendor,
+      familyId: usesCableMasterData ? selectedFamily?.familyId : null,
+    );
+  }
+
+  Future<List<QCWarehousePlant>> searchWarehouses(String query) =>
+      _masterDataApi.fetchWarehousePlants(query: query);
+
+  void selectMaterialFamily(QCMaterialFamily? family) {
+    if (family != null &&
+        (!family.active || family.category.trim().toUpperCase() != 'CABLE')) {
+      return;
+    }
+    _masterSelectionRevision++;
+    selectedFamily = family;
+    _familyNeedsReselection = false;
+    _generalFieldErrors.remove(QCMaterialGeneralField.materialFamily);
+    _clearMaterialAndDownstream();
+    notifyListeners();
+  }
+
+  Future<void> selectVendor(QCMaterialVendor? vendor) async {
+    if (usesCableMasterData) {
+      if (vendor != null &&
+          !vendorChoices.any((choice) =>
+              choice.vendor.toLowerCase() == vendor.vendor.toLowerCase())) {
+        return;
+      }
+      final revision = ++_masterSelectionRevision;
+      selectedVendor = vendor;
+      vendorNameController.text = vendor?.vendor ?? '';
+      _vendorNeedsReselection = false;
+      _clearBrand();
+      _generalFieldErrors.remove(QCMaterialGeneralField.vendorName);
+      notifyListeners();
+      if (vendor != null && selectedMaterial != null) {
+        await _resolveBrand(revision);
+      }
+      return;
+    }
+    final revision = ++_masterSelectionRevision;
+    selectedVendor = vendor;
+    vendorNameController.text = vendor?.vendor ?? '';
+    _vendorNeedsReselection = false;
+    _clearBrand();
+    _generalFieldErrors.remove(QCMaterialGeneralField.vendorName);
+    notifyListeners();
+    if (vendor == null || selectedMaterial == null) return;
+
+    try {
+      final compatible = await _masterDataApi.fetchMaterialOptions(
+        vendor: vendor.vendor,
+      );
+      if (_isDisposed || revision != _masterSelectionRevision) return;
+      final currentId = selectedMaterial!.materialId.toLowerCase();
+      final retained = compatible
+          .where((item) => item.materialId.toLowerCase() == currentId)
+          .firstOrNull;
+      if (retained == null) {
+        selectedMaterial = null;
+        materialIdController.clear();
+        _materialNeedsReselection = false;
+        notifyListeners();
+        return;
+      }
+      selectedMaterial = retained;
+      materialIdController.text = retained.materialId;
+      await _resolveBrand(revision);
+    } on ApiRequestException catch (error) {
+      if (_isDisposed || revision != _masterSelectionRevision) return;
+      brandResolutionMessage = error.message;
+      notifyListeners();
+    }
+  }
+
+  Future<void> selectMaterial(QCMaterialOption? material) async {
+    if (usesCableMasterData && material != null) {
+      final familyId = selectedFamily?.familyId.toLowerCase();
+      if (familyId == null || material.familyId?.toLowerCase() != familyId) {
+        return;
+      }
+    }
+    final revision = ++_masterSelectionRevision;
+    selectedMaterial = material;
+    materialIdController.text = material?.materialId ?? '';
+    _materialNeedsReselection = false;
+    if (usesCableMasterData) {
+      _clearVendor();
+    } else {
+      _clearBrand();
+    }
+    _generalFieldErrors.remove(QCMaterialGeneralField.materialId);
+    notifyListeners();
+    if (usesCableMasterData && material != null) {
+      await _resolveVendors(revision);
+    } else if (material != null && selectedVendor != null) {
+      await _resolveBrand(revision);
+    }
+  }
+
+  void selectBrand(QCMaterialBrand? brand) {
+    if (brand != null &&
+        !brandChoices.any(
+          (choice) => choice.brand.toLowerCase() == brand.brand.toLowerCase(),
+        )) {
+      return;
+    }
+    selectedBrand = brand;
+    brandNameController.text = brand?.brand ?? '';
+    _brandNeedsReselection = false;
+    _generalFieldErrors.remove(QCMaterialGeneralField.brandName);
+    notifyListeners();
+  }
+
+  Future<void> selectWarehouse(QCWarehousePlant? warehouse) async {
+    if (warehouse == null) {
+      selectedWarehouse = null;
+      warehouseLocationController.clear();
+      warehouseSelectionMessage = null;
+      _warehouseNeedsReselection = false;
+      _generalFieldErrors.remove(QCMaterialGeneralField.warehouseLocation);
+      notifyListeners();
+      return;
+    }
+    try {
+      final canonical = await _masterDataApi.fetchWarehousePlant(
+        warehouse.plant,
+      );
+      if (_isDisposed) return;
+      selectedWarehouse = canonical;
+      warehouseLocationController.text = canonical.name;
+      warehouseSelectionMessage = null;
+      _warehouseNeedsReselection = false;
+      _generalFieldErrors.remove(QCMaterialGeneralField.warehouseLocation);
+      notifyListeners();
+    } on ApiRequestException catch (error) {
+      if (_isDisposed) return;
+      warehouseSelectionMessage = error.message;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _resolveBrand(int revision) async {
+    final vendor = selectedVendor;
+    final material = selectedMaterial;
+    if (vendor == null || material == null) return;
+    isResolvingBrand = true;
+    brandResolutionMessage = null;
+    notifyListeners();
+    try {
+      final result = await _masterDataApi.fetchMaterialBrands(
+        vendor: vendor.vendor,
+        materialId: material.materialId,
+      );
+      if (_isDisposed || revision != _masterSelectionRevision) return;
+      brandChoices = result.choices;
+      selectedBrand =
+          result.choices.length == 1 ? result.choices.single : result.resolved;
+      brandNameController.text = selectedBrand?.brand ?? '';
+      brandResolutionMessage = result.choices.isEmpty
+          ? 'Tidak ada merk untuk kombinasi vendor dan material ini.'
+          : selectedBrand == null
+              ? 'Pilih salah satu merk yang tersedia.'
+              : null;
+      _brandNeedsReselection = false;
+    } on ApiRequestException catch (error) {
+      if (_isDisposed || revision != _masterSelectionRevision) return;
+      brandResolutionMessage = error.message;
+    } finally {
+      if (!_isDisposed && revision == _masterSelectionRevision) {
+        isResolvingBrand = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> _resolveVendors(int revision) async {
+    final material = selectedMaterial;
+    if (material == null) return;
+    isResolvingVendors = true;
+    vendorResolutionMessage = null;
+    notifyListeners();
+    try {
+      final choices = await _masterDataApi.fetchMaterialVendors(
+        materialId: material.materialId,
+      );
+      if (_isDisposed || revision != _masterSelectionRevision) return;
+      vendorChoices = choices;
+      if (choices.length == 1) {
+        selectedVendor = choices.single;
+        vendorNameController.text = choices.single.vendor;
+        await _resolveBrand(revision);
+      } else {
+        vendorResolutionMessage = choices.isEmpty
+            ? 'Tidak ada vendor untuk ID material ini.'
+            : 'Pilih salah satu vendor yang tersedia.';
+      }
+    } on ApiRequestException catch (error) {
+      if (_isDisposed || revision != _masterSelectionRevision) return;
+      vendorResolutionMessage = error.message;
+    } finally {
+      if (!_isDisposed && revision == _masterSelectionRevision) {
+        isResolvingVendors = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  void _clearMaterialAndDownstream() {
+    selectedMaterial = null;
+    materialIdController.clear();
+    _materialNeedsReselection = false;
+    _generalFieldErrors.remove(QCMaterialGeneralField.materialId);
+    _clearVendor();
+  }
+
+  void _clearVendor() {
+    selectedVendor = null;
+    vendorChoices = const [];
+    vendorNameController.clear();
+    vendorResolutionMessage = null;
+    isResolvingVendors = false;
+    _vendorNeedsReselection = false;
+    _generalFieldErrors.remove(QCMaterialGeneralField.vendorName);
+    _clearBrand();
+  }
+
+  void _clearBrand() {
+    selectedBrand = null;
+    brandChoices = const [];
+    brandNameController.clear();
+    brandResolutionMessage = null;
+    isResolvingBrand = false;
+    _brandNeedsReselection = false;
+    _generalFieldErrors.remove(QCMaterialGeneralField.brandName);
+  }
 
   // Location
   SiteModel? selectedSite;
@@ -434,6 +724,30 @@ class QCMaterialFormProvider extends ChangeNotifier {
         _generalFieldErrors[entry.key] = '${entry.value.$2} wajib diisi.';
       }
     }
+    if (usesCableMasterData && selectedFamily == null) {
+      _generalFieldErrors[QCMaterialGeneralField.materialFamily] =
+          'QC Material wajib dipilih.';
+    }
+    if (_familyNeedsReselection) {
+      _generalFieldErrors[QCMaterialGeneralField.materialFamily] =
+          'Pilih ulang QC Material dari master data.';
+    }
+    if (_vendorNeedsReselection) {
+      _generalFieldErrors[QCMaterialGeneralField.vendorName] =
+          'Pilih ulang vendor dari master data.';
+    }
+    if (_materialNeedsReselection) {
+      _generalFieldErrors[QCMaterialGeneralField.materialId] =
+          'Pilih ulang ID material dari master data.';
+    }
+    if (_brandNeedsReselection) {
+      _generalFieldErrors[QCMaterialGeneralField.brandName] =
+          'Pilih ulang merk berdasarkan vendor dan material.';
+    }
+    if (_warehouseNeedsReselection) {
+      _generalFieldErrors[QCMaterialGeneralField.warehouseLocation] =
+          'Pilih ulang warehouse dari master data.';
+    }
 
     _validateGeneralNumber(
       QCMaterialGeneralField.arrivalVolume,
@@ -561,6 +875,9 @@ class QCMaterialFormProvider extends ChangeNotifier {
       brandNameController.text = report.generalInfo['brandName'] ?? '';
       warehouseLocationController.text =
           report.generalInfo['warehouseLocation'] ?? '';
+      _restoreMasterDataSelection(
+        report.generalInfo[_masterDataSelectionKey],
+      );
       stelVersionController.text = report.generalInfo['stelVersion'] ?? '';
       qaExpiryDateController.text = report.generalInfo['qaExpiryDate'] ?? '';
       tkdnNumberController.text = report.generalInfo['tkdnNumber'] ?? '';
@@ -633,7 +950,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
     } else {
       _samplingDecision = null;
       // Prepopulate default template fields
-      materialIdController.text = _template.id;
+      materialIdController.clear();
       stelVersionController.text = _template.code == 'TA-FR-048-010-01'
           ? 'STEL-L-017-2024 Ver.2'
           : 'STEL-QA-MYTA-2026';
@@ -1180,11 +1497,96 @@ class QCMaterialFormProvider extends ChangeNotifier {
   }
 
   bool get hasAnyDraftContent {
-    return poNumberController.text.trim().isNotEmpty ||
+    return selectedFamily != null ||
+        poNumberController.text.trim().isNotEmpty ||
         doNumberController.text.trim().isNotEmpty ||
         vendorNameController.text.trim().isNotEmpty ||
         staffNoteController.text.trim().isNotEmpty ||
         samples.any((sample) => sample.hasContent);
+  }
+
+  Map<String, dynamic> _masterDataSelectionToJson() => {
+        if (selectedFamily != null) 'family': selectedFamily!.toJson(),
+        if (selectedVendor != null) 'vendor': selectedVendor!.toJson(),
+        if (selectedMaterial != null) 'material': selectedMaterial!.toJson(),
+        if (selectedBrand != null) 'brand': selectedBrand!.toJson(),
+        if (selectedWarehouse != null) 'warehouse': selectedWarehouse!.toJson(),
+      };
+
+  void _restoreMasterDataSelection(dynamic raw) {
+    selectedFamily = null;
+    selectedVendor = null;
+    selectedMaterial = null;
+    selectedBrand = null;
+    selectedWarehouse = null;
+    vendorChoices = const [];
+    brandChoices = const [];
+
+    if (raw is Map) {
+      final data = Map<String, dynamic>.from(raw);
+      try {
+        if (data['family'] is Map) {
+          selectedFamily = QCMaterialFamily.fromJson(
+            Map<String, dynamic>.from(data['family'] as Map),
+          );
+          if (usesCableMasterData &&
+              (!selectedFamily!.active ||
+                  selectedFamily!.category.trim().toUpperCase() != 'CABLE')) {
+            throw const FormatException('invalid cable material family');
+          }
+        }
+        if (data['vendor'] is Map) {
+          selectedVendor = QCMaterialVendor.fromJson(
+            Map<String, dynamic>.from(data['vendor'] as Map),
+          );
+          vendorNameController.text = selectedVendor!.vendor;
+          vendorChoices = [selectedVendor!];
+        }
+        if (data['material'] is Map) {
+          selectedMaterial = QCMaterialOption.fromJson(
+            Map<String, dynamic>.from(data['material'] as Map),
+          );
+          materialIdController.text = selectedMaterial!.materialId;
+        }
+        if (data['brand'] is Map) {
+          selectedBrand = QCMaterialBrand.fromJson(
+            Map<String, dynamic>.from(data['brand'] as Map),
+          );
+          brandChoices = [selectedBrand!];
+          brandNameController.text = selectedBrand!.brand;
+        }
+        if (data['warehouse'] is Map) {
+          selectedWarehouse = QCWarehousePlant.fromJson(
+            Map<String, dynamic>.from(data['warehouse'] as Map),
+          );
+          warehouseLocationController.text = selectedWarehouse!.name;
+        }
+      } on FormatException {
+        selectedFamily = null;
+        selectedVendor = null;
+        selectedMaterial = null;
+        selectedBrand = null;
+        selectedWarehouse = null;
+        vendorChoices = const [];
+        brandChoices = const [];
+      }
+    }
+
+    _familyNeedsReselection = usesCableMasterData &&
+        selectedFamily == null &&
+        materialIdController.text.trim().isNotEmpty;
+    _vendorNeedsReselection =
+        selectedVendor == null && vendorNameController.text.trim().isNotEmpty;
+    _materialNeedsReselection = materialIdController.text.trim().isNotEmpty &&
+        (selectedMaterial == null ||
+            (usesCableMasterData &&
+                selectedFamily != null &&
+                selectedMaterial!.familyId?.toLowerCase() !=
+                    selectedFamily!.familyId.toLowerCase()));
+    _brandNeedsReselection =
+        selectedBrand == null && brandNameController.text.trim().isNotEmpty;
+    _warehouseNeedsReselection = selectedWarehouse == null &&
+        warehouseLocationController.text.trim().isNotEmpty;
   }
 
   Map<String, dynamic> createLocalDraftSnapshot() {
@@ -1206,6 +1608,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
         'sampleCount': sampleCountController.text,
         'brandName': brandNameController.text,
         'warehouseLocation': warehouseLocationController.text,
+        _masterDataSelectionKey: _masterDataSelectionToJson(),
         'stelVersion': stelVersionController.text,
         'qaExpiryDate': qaExpiryDateController.text,
         'tkdnNumber': tkdnNumberController.text,
@@ -1289,6 +1692,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
     brandNameController.text = general['brandName']?.toString() ?? '';
     warehouseLocationController.text =
         general['warehouseLocation']?.toString() ?? '';
+    _restoreMasterDataSelection(general[_masterDataSelectionKey]);
     stelVersionController.text = general['stelVersion']?.toString() ?? '';
     qaExpiryDateController.text = general['qaExpiryDate']?.toString() ?? '';
     tkdnNumberController.text = general['tkdnNumber']?.toString() ?? '';
@@ -1735,6 +2139,7 @@ class QCMaterialFormProvider extends ChangeNotifier {
       'samplingVolume': samplingVolumeController.text.trim(),
       'brandName': brandNameController.text.trim(),
       'warehouseLocation': warehouseLocationController.text.trim(),
+      _masterDataSelectionKey: _masterDataSelectionToJson(),
       'stelVersion': stelVersionController.text.trim(),
       'qaExpiryDate': qaExpiryDateController.text.trim(),
       'tkdnNumber': tkdnNumberController.text.trim(),

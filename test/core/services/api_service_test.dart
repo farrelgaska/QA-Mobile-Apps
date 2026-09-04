@@ -87,6 +87,133 @@ void main() {
     );
   });
 
+  group('QC Material master data', () {
+    test('family, vendor, and material searches send dependent filters',
+        () async {
+      final requests = <http.Request>[];
+      final service = ApiService.withClient(MockClient((request) async {
+        requests.add(request);
+        if (request.url.path == '/master-data/material-families') {
+          return http.Response(
+            '[{"family_id":"cable-family-a","name":"Cable A","category":"CABLE","active":true}]',
+            200,
+          );
+        }
+        if (request.url.path == '/master-data/vendors') {
+          return http.Response('[{"vendor":"Vendor A","active":true}]', 200);
+        }
+        return http.Response(
+          '[{"material_id":"MAT-1","material_description":null,"material_name":"Mapped material","family_id":"cable-family-a","active":true}]',
+          200,
+        );
+      }));
+
+      final families = await service.fetchMaterialFamilies(query: 'cable');
+      final vendors = await service.fetchMaterialVendors(
+        query: 'vendor',
+        materialId: 'MAT-1',
+      );
+      final materials = await service.fetchMaterialOptions(
+        query: 'MAT',
+        familyId: 'cable-family-a',
+      );
+
+      expect(families.single.familyId, 'cable-family-a');
+      expect(vendors.single.vendor, 'Vendor A');
+      expect(materials.single.materialDescription, isNull);
+      expect(materials.single.description, 'Mapped material');
+      expect(materials.single.familyId, 'cable-family-a');
+      expect(requests[0].url.queryParameters, {
+        'q': 'cable',
+        'category': 'CABLE',
+      });
+      expect(requests[1].url.queryParameters, {
+        'q': 'vendor',
+        'material_id': 'MAT-1',
+      });
+      expect(requests[2].url.queryParameters, {
+        'q': 'MAT',
+        'family_id': 'cable-family-a',
+      });
+    });
+
+    test('material detail and brand resolution parse typed responses',
+        () async {
+      final service = ApiService.withClient(MockClient((request) async {
+        if (request.url.path == '/master-data/brands') {
+          return http.Response(
+            '{"vendor":"Vendor A","material_id":"MAT-1","choices":[{"brand":"Brand A","manufacturer":"Factory","material_name":"Material","material_description":"Description","sap_material_id":"SAP-1","category":"Cable","active":true}],"resolved":{"brand":"Brand A","manufacturer":"Factory","material_name":"Material","material_description":"Description","sap_material_id":"SAP-1","category":"Cable","active":true}}',
+            200,
+          );
+        }
+        return http.Response(
+          '{"material_id":"MAT-1","material_description":"Description","material_name":"Material","family_id":"cable-family-a","active":true}',
+          200,
+        );
+      }));
+
+      final material = await service.fetchMaterialDetail('MAT-1');
+      final brands = await service.fetchMaterialBrands(
+        vendor: 'Vendor A',
+        materialId: 'MAT-1',
+      );
+
+      expect(material.materialDescription, 'Description');
+      expect(material.familyId, 'cable-family-a');
+      expect(brands.resolved?.brand, 'Brand A');
+      expect(brands.choices.single.manufacturer, 'Factory');
+    });
+
+    test('warehouse search and detail preserve plant metadata', () async {
+      const warehouse =
+          '{"plant":"1308","name":"Batam","area":"1","branch":"Batam","region":"SUMBAGTENG","active":true}';
+      final service = ApiService.withClient(MockClient((request) async {
+        return http.Response(
+          request.url.path == '/master-data/warehouses'
+              ? '[$warehouse]'
+              : warehouse,
+          200,
+        );
+      }));
+
+      final results = await service.fetchWarehousePlants(query: 'Batam');
+      final detail = await service.fetchWarehousePlant('1308');
+
+      expect(results.single.plant, '1308');
+      expect(detail.region, 'SUMBAGTENG');
+    });
+
+    test('transient master-data failure retries once', () async {
+      var requests = 0;
+      final service = ApiService.withClient(MockClient((_) async {
+        requests++;
+        return requests == 1
+            ? http.Response('', 503)
+            : http.Response('[]', 200);
+      }));
+
+      expect(await service.fetchMaterialVendors(), isEmpty);
+      expect(requests, 2);
+    });
+
+    test('malformed master-data response fails as INVALID_RESPONSE', () async {
+      final service = ApiService.withClient(
+        MockClient((_) async => http.Response('{}', 200)),
+      );
+
+      await expectLater(
+        service.fetchMaterialOptions(),
+        throwsA(
+          isA<ApiRequestException>().having(
+            (error) => error.code,
+            'code',
+            'INVALID_RESPONSE',
+          ),
+        ),
+      );
+    });
+  });
+
   test('HTTP 201 is a successful report create', () async {
     var postCount = 0;
     final service = ApiService.withClient(
@@ -148,7 +275,10 @@ void main() {
       MockClient((request) async {
         expect(request.method, 'POST');
         postCount++;
-        return http.Response('{"error":{"code":"REPORT_ALREADY_EXISTS","message":"duplicate"}}', 409, headers: {'content-type': 'application/json'});
+        return http.Response(
+            '{"error":{"code":"REPORT_ALREADY_EXISTS","message":"duplicate"}}',
+            409,
+            headers: {'content-type': 'application/json'});
       }),
     );
 

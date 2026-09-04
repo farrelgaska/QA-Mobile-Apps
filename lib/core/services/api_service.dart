@@ -14,6 +14,33 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../shared/models/qc_report_model.dart';
+import '../../shared/models/qc_material_master_data.dart';
+
+abstract class QCMaterialMasterDataApi {
+  Future<List<QCMaterialFamily>> fetchMaterialFamilies({String query = ''});
+
+  Future<List<QCMaterialVendor>> fetchMaterialVendors({
+    String query = '',
+    String? materialId,
+  });
+
+  Future<List<QCMaterialOption>> fetchMaterialOptions({
+    String query = '',
+    String? vendor,
+    String? familyId,
+  });
+
+  Future<QCMaterialOption> fetchMaterialDetail(String materialId);
+
+  Future<QCMaterialBrandResolution> fetchMaterialBrands({
+    required String vendor,
+    required String materialId,
+  });
+
+  Future<List<QCWarehousePlant>> fetchWarehousePlants({String query = ''});
+
+  Future<QCWarehousePlant> fetchWarehousePlant(String plant);
+}
 
 class QCEvidenceUploadResult {
   final String objectPath;
@@ -78,7 +105,7 @@ String resolveApiBaseUrl({
   return 'http://127.0.0.1:3002';
 }
 
-class ApiService {
+class ApiService implements QCMaterialMasterDataApi {
   static const String _configuredBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
   );
@@ -105,6 +132,170 @@ class ApiService {
       );
 
   static void validateConfiguration() => ApiService().baseUrl;
+
+  @override
+  Future<List<QCMaterialFamily>> fetchMaterialFamilies({
+    String query = '',
+  }) async {
+    final body = await _getMasterData('/master-data/material-families', {
+      'q': query,
+      'category': 'CABLE',
+    });
+    return _parseMasterData(() => _parseList(body, QCMaterialFamily.fromJson));
+  }
+
+  @override
+  Future<List<QCMaterialVendor>> fetchMaterialVendors({
+    String query = '',
+    String? materialId,
+  }) async {
+    final body = await _getMasterData('/master-data/vendors', {
+      'q': query,
+      'material_id': materialId,
+    });
+    return _parseMasterData(() => _parseList(body, QCMaterialVendor.fromJson));
+  }
+
+  @override
+  Future<List<QCMaterialOption>> fetchMaterialOptions({
+    String query = '',
+    String? vendor,
+    String? familyId,
+  }) async {
+    final body = await _getMasterData('/master-data/materials', {
+      'q': query,
+      'vendor': vendor,
+      'family_id': familyId,
+    });
+    return _parseMasterData(() => _parseList(body, QCMaterialOption.fromJson));
+  }
+
+  @override
+  Future<QCMaterialOption> fetchMaterialDetail(String materialId) async {
+    final body = await _getMasterData(
+      '/master-data/materials/${Uri.encodeComponent(materialId)}',
+    );
+    return _parseMasterData(
+      () => QCMaterialOption.fromJson(_asMap(body)),
+    );
+  }
+
+  @override
+  Future<QCMaterialBrandResolution> fetchMaterialBrands({
+    required String vendor,
+    required String materialId,
+  }) async {
+    final body = await _getMasterData('/master-data/brands', {
+      'vendor': vendor,
+      'material_id': materialId,
+    });
+    return _parseMasterData(
+      () => QCMaterialBrandResolution.fromJson(_asMap(body)),
+    );
+  }
+
+  @override
+  Future<List<QCWarehousePlant>> fetchWarehousePlants({
+    String query = '',
+  }) async {
+    final body = await _getMasterData('/master-data/warehouses', {'q': query});
+    return _parseMasterData(
+      () => _parseList(body, QCWarehousePlant.fromJson),
+    );
+  }
+
+  @override
+  Future<QCWarehousePlant> fetchWarehousePlant(String plant) async {
+    final body = await _getMasterData(
+      '/master-data/warehouses/${Uri.encodeComponent(plant)}',
+    );
+    return _parseMasterData(
+      () => QCWarehousePlant.fromJson(_asMap(body)),
+    );
+  }
+
+  Future<dynamic> _getMasterData(
+    String path, [
+    Map<String, String?> queryParameters = const {},
+  ]) async {
+    final query = {
+      for (final entry in queryParameters.entries)
+        if (entry.value?.trim().isNotEmpty == true)
+          entry.key: entry.value!.trim(),
+    };
+    final uri = Uri.parse('$baseUrl$path').replace(
+      queryParameters: query.isEmpty ? null : query,
+    );
+
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        final response = await (_client?.get(uri) ?? http.get(uri)).timeout(
+          const Duration(seconds: 4),
+        );
+        if (response.statusCode == 200) return jsonDecode(response.body);
+        if (attempt == 0 &&
+            const {502, 503, 504}.contains(response.statusCode)) {
+          await Future<void>.delayed(const Duration(milliseconds: 750));
+          continue;
+        }
+        throw _handleApiError(response, 'Master data gagal dimuat');
+      } on ApiRequestException {
+        rethrow;
+      } on TimeoutException catch (error) {
+        if (attempt == 0) {
+          await Future<void>.delayed(const Duration(milliseconds: 750));
+          continue;
+        }
+        throw ApiRequestException(
+          'Master data tidak dapat dimuat. Periksa koneksi lalu coba lagi: $error',
+          code: 'NETWORK_ERROR',
+        );
+      } on http.ClientException catch (error) {
+        if (attempt == 0) {
+          await Future<void>.delayed(const Duration(milliseconds: 750));
+          continue;
+        }
+        throw ApiRequestException(
+          'Master data tidak dapat dimuat. Periksa koneksi lalu coba lagi: $error',
+          code: 'NETWORK_ERROR',
+        );
+      } catch (error) {
+        throw ApiRequestException(
+          'Respons master data tidak valid: $error',
+          code: 'INVALID_RESPONSE',
+        );
+      }
+    }
+    throw const ApiRequestException('Master data tidak dapat dimuat.');
+  }
+
+  List<T> _parseList<T>(
+    dynamic body,
+    T Function(Map<String, dynamic>) parser,
+  ) {
+    if (body is! List) throw const FormatException('response must be a list');
+    return body.map((item) => parser(_asMap(item))).toList(growable: false);
+  }
+
+  Map<String, dynamic> _asMap(dynamic value) {
+    if (value is! Map) {
+      throw const FormatException('response must be an object');
+    }
+    return Map<String, dynamic>.from(value);
+  }
+
+  T _parseMasterData<T>(T Function() parse) {
+    try {
+      return parse();
+    } on ApiRequestException {
+      rethrow;
+    } catch (error) {
+      throw ApiRequestException(
+        'Respons master data tidak valid: $error',
+        code: 'INVALID_RESPONSE',
+      );
+    }
+  }
 
   /// Fetch all reports from the mock API backend.
   Future<List<QCReportModel>> fetchReports() async {
@@ -168,7 +359,8 @@ class ApiService {
         );
       }
       if (response.statusCode == 404) {
-        throw ApiRequestException('Laporan $reportId tidak ditemukan.', code: 'NOT_FOUND', statusCode: 404);
+        throw ApiRequestException('Laporan $reportId tidak ditemukan.',
+            code: 'NOT_FOUND', statusCode: 404);
       }
       throw _handleApiError(response, 'Detail laporan gagal dimuat');
     } on ApiRequestException catch (error) {
@@ -302,7 +494,6 @@ class ApiService {
     }
   }
 
-
   /// Sync/patch a report to the mock API backend.
   Future<bool> patchReport(
     QCReportModel report, {
@@ -402,12 +593,13 @@ class ApiService {
             const Duration(seconds: 15),
           );
       final response = await http.Response.fromStream(streamedResponse);
-      debugPrint('[QCPhotoProfile] E. HTTP upload: ${stopwatch.elapsedMilliseconds} ms');
-      
+      debugPrint(
+          '[QCPhotoProfile] E. HTTP upload: ${stopwatch.elapsedMilliseconds} ms');
+
       final body = _decodeObject(response.body);
       if (response.statusCode != 201) {
-        throw _handleApiError(
-            response, 'Foto gagal diunggah.', decodedBody: body);
+        throw _handleApiError(response, 'Foto gagal diunggah.',
+            decodedBody: body);
       }
 
       final objectPath = body?['object_path'];
@@ -452,8 +644,8 @@ class ApiService {
           .timeout(const Duration(seconds: 10));
       final body = _decodeObject(response.body);
       if (response.statusCode != 200) {
-        throw _handleApiError(
-            response, 'URL foto tidak dapat dimuat.', decodedBody: body);
+        throw _handleApiError(response, 'URL foto tidak dapat dimuat.',
+            decodedBody: body);
       }
 
       final entries = body?['signed_urls'];
@@ -511,11 +703,13 @@ class ApiService {
     if (apiErr != null) {
       return apiErr;
     }
-    
+
     // Fallback for legacy { error: "string" }
     final body = decodedBody ?? _decodeObject(response.body);
     final fallbackMsg = body?['error']?.toString();
-    if (fallbackMsg != null && fallbackMsg.isNotEmpty && fallbackMsg.toLowerCase() != 'null') {
+    if (fallbackMsg != null &&
+        fallbackMsg.isNotEmpty &&
+        fallbackMsg.toLowerCase() != 'null') {
       return ApiRequestException(fallbackMsg, statusCode: response.statusCode);
     }
 

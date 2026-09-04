@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/models/qc_material_evaluation_model.dart';
+import '../../../shared/models/qc_material_master_data.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_input.dart';
@@ -19,6 +20,7 @@ import '../../../shared/providers/qc_material_form_provider.dart';
 import '../../../shared/utils/qc_photo_validation.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/qc_draft_protection.dart';
+import '../../../shared/widgets/master_data_search_field.dart';
 import '../../../shared/services/qc_local_draft_store.dart';
 
 import '../../../shared/models/qc_material_template_model.dart';
@@ -358,6 +360,31 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
     QCMaterialFormProvider p,
     Map<QCMaterialGeneralField, BuildContext> fieldContexts,
   ) {
+    Widget vendorField() => _buildMasterDataField<QCMaterialVendor>(
+          field: QCMaterialGeneralField.vendorName,
+          provider: p,
+          fieldContexts: fieldContexts,
+          label: 'Nama Mitra Pabrikasi / Vendor',
+          hintText: p.usesCableMasterData && p.selectedMaterial == null
+              ? 'Pilih ID material terlebih dahulu'
+              : 'Cari dan pilih vendor',
+          value: p.selectedVendor?.vendor ?? p.vendorNameController.text,
+          helperText: p.vendorNeedsReselection
+              ? 'Data lama: pilih ulang vendor dari master data.'
+              : p.vendorResolutionMessage,
+          prefixIcon: Icons.business_center_outlined,
+          enabled: !p.usesCableMasterData ||
+              (p.selectedMaterial != null &&
+                  !p.isResolvingVendors &&
+                  p.vendorChoices.length > 1),
+          loading: p.isResolvingVendors,
+          clearable: !p.usesCableMasterData || p.vendorChoices.length > 1,
+          search: p.searchVendors,
+          optionTitle: (option) => option.vendor,
+          onSelected: p.selectVendor,
+          onClear: () => p.selectVendor(null),
+        );
+
     return AppCard(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -402,26 +429,56 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
             prefixIcon: Icons.local_shipping_outlined,
           ),
           const SizedBox(height: 12),
-          _buildGeneralInput(
-            field: QCMaterialGeneralField.vendorName,
-            provider: p,
-            fieldContexts: fieldContexts,
-            label: 'Nama Mitra Pabrikasi / Vendor',
-            hintText: 'Masukkan nama vendor logam/tiang',
-            controller: p.vendorNameController,
-            prefixIcon: Icons.business_center_outlined,
-          ),
-          const SizedBox(height: 12),
-          _buildGeneralInput(
+          if (!p.usesCableMasterData) ...[
+            vendorField(),
+            const SizedBox(height: 12),
+          ],
+          if (p.usesCableMasterData) ...[
+            _buildMasterDataField<QCMaterialFamily>(
+              field: QCMaterialGeneralField.materialFamily,
+              provider: p,
+              fieldContexts: fieldContexts,
+              label: 'QC Material',
+              hintText: 'Cari dan pilih QC Material',
+              value: p.selectedFamily?.name ?? '',
+              helperText: p.familyNeedsReselection
+                  ? 'Data lama: pilih ulang QC Material dari master data.'
+                  : null,
+              prefixIcon: Icons.category_outlined,
+              search: p.searchMaterialFamilies,
+              optionTitle: (option) => option.name,
+              onSelected: p.selectMaterialFamily,
+              onClear: () => p.selectMaterialFamily(null),
+            ),
+            const SizedBox(height: 12),
+          ],
+          _buildMasterDataField<QCMaterialOption>(
             field: QCMaterialGeneralField.materialId,
             provider: p,
             fieldContexts: fieldContexts,
             label: 'ID Material',
-            hintText: 'Masukkan kode ID material',
-            controller: p.materialIdController,
+            hintText: p.usesCableMasterData && p.selectedFamily == null
+                ? 'Pilih QC Material terlebih dahulu'
+                : 'Cari dan pilih ID material',
+            value:
+                p.selectedMaterial?.materialId ?? p.materialIdController.text,
+            valueSubtitle: p.selectedMaterial?.description,
+            helperText: p.materialNeedsReselection
+                ? 'Data lama: pilih ulang material dari master data.'
+                : null,
             prefixIcon: Icons.qr_code_scanner_outlined,
+            enabled: !p.usesCableMasterData || p.selectedFamily != null,
+            search: p.searchMaterials,
+            optionTitle: (option) => option.materialId,
+            optionSubtitle: (option) => option.description,
+            onSelected: p.selectMaterial,
+            onClear: () => p.selectMaterial(null),
           ),
           const SizedBox(height: 12),
+          if (p.usesCableMasterData) ...[
+            vendorField(),
+            const SizedBox(height: 12),
+          ],
           Row(
             children: [
               Expanded(
@@ -463,24 +520,65 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
             prefixIcon: Icons.format_list_numbered,
           ),
           const SizedBox(height: 12),
-          _buildGeneralInput(
+          _buildMasterDataField<QCMaterialBrand>(
             field: QCMaterialGeneralField.brandName,
             provider: p,
             fieldContexts: fieldContexts,
             label: 'Merk Material',
-            hintText: 'Masukkan nama merk tiang',
-            controller: p.brandNameController,
+            hintText: p.selectedVendor == null || p.selectedMaterial == null
+                ? 'Pilih vendor dan material terlebih dahulu'
+                : 'Pilih merk material',
+            value: p.selectedBrand?.brand ?? p.brandNameController.text,
+            valueSubtitle: p.selectedBrand?.manufacturer,
+            helperText: p.brandNeedsReselection
+                ? 'Data lama: pilih ulang merk dari master data.'
+                : p.brandResolutionMessage,
             prefixIcon: Icons.copyright_outlined,
+            enabled: p.selectedVendor != null &&
+                p.selectedMaterial != null &&
+                p.brandChoices.length > 1,
+            loading: p.isResolvingBrand,
+            clearable: p.brandChoices.length > 1,
+            search: (query) async {
+              final normalized = query.trim().toLowerCase();
+              return p.brandChoices
+                  .where(
+                    (option) => option.brand.toLowerCase().contains(normalized),
+                  )
+                  .toList(growable: false);
+            },
+            optionTitle: (option) => option.brand,
+            optionSubtitle: (option) => option.manufacturer,
+            onSelected: (option) => p.selectBrand(option),
+            onClear: () => p.selectBrand(null),
           ),
           const SizedBox(height: 12),
-          _buildGeneralInput(
+          _buildMasterDataField<QCWarehousePlant>(
             field: QCMaterialGeneralField.warehouseLocation,
             provider: p,
             fieldContexts: fieldContexts,
             label: 'Lokasi Warehouse Penerima',
-            hintText: 'Contoh: Gudang Cikarang A',
-            controller: p.warehouseLocationController,
+            hintText: 'Cari plant, nama, branch, atau region',
+            value: p.selectedWarehouse == null
+                ? p.warehouseLocationController.text
+                : '${p.selectedWarehouse!.plant} — ${p.selectedWarehouse!.name}',
+            valueSubtitle: p.selectedWarehouse == null
+                ? null
+                : [
+                    p.selectedWarehouse!.branch,
+                    p.selectedWarehouse!.region,
+                  ].where((value) => value.isNotEmpty).join(' • '),
+            helperText: p.warehouseNeedsReselection
+                ? 'Data lama: pilih ulang warehouse dari master data.'
+                : p.warehouseSelectionMessage,
             prefixIcon: Icons.store_outlined,
+            search: p.searchWarehouses,
+            optionTitle: (option) => '${option.plant} — ${option.name}',
+            optionSubtitle: (option) => [option.branch, option.region]
+                .where((value) => value.isNotEmpty)
+                .join(' • '),
+            onSelected: p.selectWarehouse,
+            onClear: () => p.selectWarehouse(null),
           ),
           const SizedBox(height: 12),
           _buildGeneralInput(
@@ -569,6 +667,49 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
           prefixIcon: prefixIcon,
           errorText: provider.generalFieldError(field),
           onChanged: (_) => provider.clearGeneralFieldError(field),
+        );
+      },
+    );
+  }
+
+  Widget _buildMasterDataField<T>({
+    required QCMaterialGeneralField field,
+    required QCMaterialFormProvider provider,
+    required Map<QCMaterialGeneralField, BuildContext> fieldContexts,
+    required String label,
+    required String hintText,
+    required String value,
+    String? valueSubtitle,
+    String? helperText,
+    required IconData prefixIcon,
+    bool enabled = true,
+    bool loading = false,
+    bool clearable = true,
+    required Future<List<T>> Function(String query) search,
+    required String Function(T option) optionTitle,
+    String? Function(T option)? optionSubtitle,
+    required FutureOr<void> Function(T option) onSelected,
+    required VoidCallback onClear,
+  }) {
+    return Builder(
+      builder: (context) {
+        fieldContexts[field] = context;
+        return MasterDataSearchField<T>(
+          label: label,
+          hintText: hintText,
+          value: value,
+          valueSubtitle: valueSubtitle,
+          helperText: helperText,
+          errorText: provider.generalFieldError(field),
+          prefixIcon: prefixIcon,
+          enabled: enabled,
+          loading: loading,
+          clearable: clearable,
+          search: search,
+          optionTitle: optionTitle,
+          optionSubtitle: optionSubtitle,
+          onSelected: onSelected,
+          onClear: onClear,
         );
       },
     );
