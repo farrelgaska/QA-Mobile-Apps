@@ -103,7 +103,7 @@ void main() {
           return http.Response('[{"vendor":"Vendor A","active":true}]', 200);
         }
         return http.Response(
-          '[{"material_id":"MAT-1","material_description":null,"material_name":"Mapped material","family_id":"cable-family-a","active":true}]',
+          '[{"material_id":"MAT-1","material_description":null,"material_name":"Mapped material","family_id":"cable-family-a","core_count":24,"active":true}]',
           200,
         );
       }));
@@ -123,6 +123,7 @@ void main() {
       expect(materials.single.materialDescription, isNull);
       expect(materials.single.description, 'Mapped material');
       expect(materials.single.familyId, 'cable-family-a');
+      expect(materials.single.coreCount, 24);
       expect(requests[0].url.queryParameters, {
         'q': 'cable',
         'category': 'CABLE',
@@ -147,7 +148,7 @@ void main() {
           );
         }
         return http.Response(
-          '{"material_id":"MAT-1","material_description":"Description","material_name":"Material","family_id":"cable-family-a","active":true}',
+          '{"material_id":"MAT-1","material_description":"Description","material_name":"Material","family_id":"cable-family-a","core_count":24,"active":true}',
           200,
         );
       }));
@@ -160,6 +161,7 @@ void main() {
 
       expect(material.materialDescription, 'Description');
       expect(material.familyId, 'cable-family-a');
+      expect(material.coreCount, 24);
       expect(brands.resolved?.brand, 'Brand A');
       expect(brands.choices.single.manufacturer, 'Factory');
     });

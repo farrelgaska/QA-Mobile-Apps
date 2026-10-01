@@ -30,6 +30,7 @@ class QCMaterialFormScreen extends StatefulWidget {
   final String? editReportId;
   final bool isRevision;
   final QCMaterialTemplate template;
+  final QCMaterialFamily? initialFamily;
   final QCLocalDraftStore draftStore;
 
   const QCMaterialFormScreen({
@@ -38,6 +39,7 @@ class QCMaterialFormScreen extends StatefulWidget {
     this.editReportId,
     this.isRevision = false,
     required this.template,
+    this.initialFamily,
     this.draftStore = const QCLocalDraftStore(),
   });
 
@@ -70,6 +72,7 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
           editReportId: widget.editReportId,
           isRevision: widget.isRevision,
           template: widget.template,
+          initialFamily: widget.initialFamily,
         ),
       child: Consumer<QCMaterialFormProvider>(
         builder: (context, provider, _) {
@@ -451,14 +454,36 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
               onClear: () => p.selectMaterialFamily(null),
             ),
             const SizedBox(height: 12),
+            _buildMasterDataField<int>(
+              field: QCMaterialGeneralField.cableCapacity,
+              provider: p,
+              fieldContexts: fieldContexts,
+              label: 'Kapasitas Kabel',
+              hintText: p.selectedFamily == null
+                  ? 'Pilih QC Material terlebih dahulu'
+                  : 'Cari dan pilih jumlah core kabel',
+              value:
+                  p.selectedCoreCount == null ? '' : '${p.selectedCoreCount}D',
+              helperText: p.capacityNeedsReselection
+                  ? 'Data lama: pilih ulang kapasitas dari master data.'
+                  : null,
+              prefixIcon: Icons.format_list_numbered,
+              enabled: p.selectedFamily != null,
+              search: p.searchCableCapacities,
+              optionTitle: (option) => '${option}D',
+              optionSubtitle: (option) => '$option core',
+              onSelected: p.selectCableCapacity,
+              onClear: () => p.selectCableCapacity(null),
+            ),
+            const SizedBox(height: 12),
           ],
           _buildMasterDataField<QCMaterialOption>(
             field: QCMaterialGeneralField.materialId,
             provider: p,
             fieldContexts: fieldContexts,
             label: 'ID Material',
-            hintText: p.usesCableMasterData && p.selectedFamily == null
-                ? 'Pilih QC Material terlebih dahulu'
+            hintText: p.usesCableMasterData && p.selectedCoreCount == null
+                ? 'Pilih kapasitas kabel terlebih dahulu'
                 : 'Cari dan pilih ID material',
             value:
                 p.selectedMaterial?.materialId ?? p.materialIdController.text,
@@ -467,10 +492,12 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
                 ? 'Data lama: pilih ulang material dari master data.'
                 : null,
             prefixIcon: Icons.qr_code_scanner_outlined,
-            enabled: !p.usesCableMasterData || p.selectedFamily != null,
+            enabled: !p.usesCableMasterData || p.selectedCoreCount != null,
             search: p.searchMaterials,
             optionTitle: (option) => option.materialId,
-            optionSubtitle: (option) => option.description,
+            optionSubtitle: (option) => option.coreCount == null
+                ? option.description
+                : '${option.coreCount} core • ${option.description ?? ''}',
             onSelected: p.selectMaterial,
             onClear: () => p.selectMaterial(null),
           ),
@@ -516,7 +543,9 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
             hintText: 'Contoh: 5',
             controller: p.sampleCountController,
             keyboardType: TextInputType.number,
-            helperText: 'Menentukan jumlah langkah pemeriksaan sampel.',
+            helperText: p.usesCableMasterData
+                ? 'Jumlah core sampel yang diperiksa, bukan kapasitas kabel.'
+                : 'Menentukan jumlah langkah pemeriksaan sampel.',
             prefixIcon: Icons.format_list_numbered,
           ),
           const SizedBox(height: 12),
@@ -823,6 +852,7 @@ class _QCMaterialFormScreenState extends State<QCMaterialFormScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ChecklistItemCard(
+                isIdentity: item.category == 'Identitas Sampel',
                 itemNumber: index + 1,
                 title: item.label,
                 standardText: item.standardText,

@@ -2,12 +2,14 @@ class QCMaterialFamily {
   final String familyId;
   final String name;
   final String category;
+  final String? templateId;
   final bool active;
 
   const QCMaterialFamily({
     required this.familyId,
     required this.name,
     required this.category,
+    this.templateId,
     required this.active,
   });
 
@@ -16,6 +18,7 @@ class QCMaterialFamily {
         familyId: _requiredString(json, 'family_id'),
         name: _requiredString(json, 'name'),
         category: _requiredString(json, 'category'),
+        templateId: _optionalString(json['template_id']),
         active: json['active'] == true,
       );
 
@@ -23,6 +26,7 @@ class QCMaterialFamily {
         'family_id': familyId,
         'name': name,
         'category': category,
+        if (templateId != null) 'template_id': templateId,
         'active': active,
       };
 }
@@ -47,6 +51,7 @@ class QCMaterialOption {
   final String? materialDescription;
   final String? materialName;
   final String? familyId;
+  final int? coreCount;
   final bool active;
 
   const QCMaterialOption({
@@ -54,6 +59,7 @@ class QCMaterialOption {
     this.materialDescription,
     this.materialName,
     this.familyId,
+    this.coreCount,
     required this.active,
   });
 
@@ -65,6 +71,7 @@ class QCMaterialOption {
         materialDescription: _optionalString(json['material_description']),
         materialName: _optionalString(json['material_name']),
         familyId: _optionalString(json['family_id']),
+        coreCount: _optionalPositiveInt(json['core_count']),
         active: json['active'] == true,
       );
 
@@ -73,6 +80,7 @@ class QCMaterialOption {
         'material_description': materialDescription,
         'material_name': materialName,
         'family_id': familyId,
+        'core_count': coreCount,
         'active': active,
       };
 }
@@ -203,4 +211,13 @@ String? _optionalString(dynamic value) {
   if (value is! String) throw const FormatException('value must be a string');
   final normalized = value.trim();
   return normalized.isEmpty ? null : normalized;
+}
+
+int? _optionalPositiveInt(dynamic value) {
+  if (value == null) return null;
+  final parsed = value is int ? value : int.tryParse(value.toString());
+  if (parsed == null || parsed <= 0) {
+    throw const FormatException('core_count must be a positive integer');
+  }
+  return parsed;
 }

@@ -15,6 +15,8 @@ import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../shared/models/qc_report_model.dart';
 import '../../shared/models/qc_material_master_data.dart';
+import '../../shared/models/qc_material_template_model.dart';
+import '../../shared/models/qc_template_contract.dart';
 
 abstract class QCMaterialMasterDataApi {
   Future<List<QCMaterialFamily>> fetchMaterialFamilies({String query = ''});
@@ -40,6 +42,8 @@ abstract class QCMaterialMasterDataApi {
   Future<List<QCWarehousePlant>> fetchWarehousePlants({String query = ''});
 
   Future<QCWarehousePlant> fetchWarehousePlant(String plant);
+
+  Future<QCMaterialSelection> fetchMaterialTemplateResolution(String materialId);
 }
 
 class QCEvidenceUploadResult {
@@ -178,6 +182,22 @@ class ApiService implements QCMaterialMasterDataApi {
     return _parseMasterData(
       () => QCMaterialOption.fromJson(_asMap(body)),
     );
+  }
+
+  @override
+  Future<QCMaterialSelection> fetchMaterialTemplateResolution(String materialId) async {
+    final body = await _getMasterData(
+      '/master-data/materials/${Uri.encodeComponent(materialId)}/template',
+    );
+    return _parseMasterData(() {
+      final map = _asMap(body);
+      final templateMap = map['template'] as Map<String, dynamic>;
+      final familyMap = map['family'] as Map<String, dynamic>;
+      return (
+        template: QCTemplateContract.material(templateMap),
+        family: QCMaterialFamily.fromJson(familyMap),
+      );
+    });
   }
 
   @override

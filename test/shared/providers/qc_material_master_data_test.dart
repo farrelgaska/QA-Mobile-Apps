@@ -1,23 +1,30 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mobile/core/services/api_service.dart';
+import 'package:mobile/core/dummy/dummy_state.dart';
 import 'package:mobile/features/qc_material/screens/qc_material_form_screen.dart';
+import 'package:mobile/shared/models/enums.dart';
 import 'package:mobile/shared/models/qc_material_master_data.dart';
 import 'package:mobile/shared/models/qc_material_template_model.dart';
+import 'package:mobile/shared/models/qc_report_model.dart';
 import 'package:mobile/shared/providers/qc_material_form_provider.dart';
 
 const familyA = QCMaterialFamily(
   familyId: 'cable-family-a',
   name: 'KU FO ADSS G652D Marking Myrep',
   category: 'CABLE',
+  templateId: 'template-1',
   active: true,
 );
 const familyB = QCMaterialFamily(
   familyId: 'cable-family-b',
   name: 'KD FO Single Mode G 652D',
   category: 'CABLE',
+  templateId: 'template-1',
   active: true,
 );
 const vendorA = QCMaterialVendor(vendor: 'Vendor A', active: true);
@@ -26,18 +33,21 @@ const materialA = QCMaterialOption(
   materialId: 'AC-ADSS-24D-MREP',
   materialName: 'KU FO ADSS 24 C G652D Marking Myrep',
   familyId: 'cable-family-a',
+  coreCount: 24,
   active: true,
 );
 const materialA2 = QCMaterialOption(
   materialId: 'AC-ADSS-48D-MREP',
   materialName: 'KU FO ADSS 48 C G652D Marking Myrep',
   familyId: 'cable-family-a',
+  coreCount: 48,
   active: true,
 );
 const materialB = QCMaterialOption(
   materialId: 'DC-SM-12D-G652D',
   materialName: 'KD FO Single Mode 12 core G 652D',
   familyId: 'cable-family-b',
+  coreCount: 12,
   active: true,
 );
 const brandA = QCMaterialBrand(
@@ -62,7 +72,38 @@ const warehouse = QCWarehousePlant(
 typedef VendorLoader = Future<List<QCMaterialVendor>> Function(
     String materialId);
 
+class FakePersistenceApi implements QCMaterialPersistenceApi {
+  QCReportModel? postedReport;
+
+  @override
+  Future<QCEvidenceUploadResult> uploadQCEvidence({
+    required XFile file,
+    required String reportId,
+    required String itemId,
+    Uint8List? bytes,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<bool> postReport(
+    QCReportModel report, {
+    bool throwOnError = false,
+    String? idempotencyKey,
+  }) async {
+    postedReport = QCReportModel.fromJson(report.toJson());
+    return true;
+  }
+
+  @override
+  Future<bool> patchReport(
+    QCReportModel report, {
+    bool throwOnError = false,
+  }) async =>
+      true;
+}
+
 class FakeMasterDataApi implements QCMaterialMasterDataApi {
+  final List<QCMaterialFamily> families = [familyA, familyB];
   final Map<String, List<QCMaterialOption>> materialsByFamily = {
     familyA.familyId: [materialA, materialA2],
     familyB.familyId: [materialB],
@@ -82,9 +123,21 @@ class FakeMasterDataApi implements QCMaterialMasterDataApi {
       {String query = ''}) async {
     calls++;
     final normalized = query.toLowerCase();
-    return [familyA, familyB]
+    return families
         .where((family) => family.name.toLowerCase().contains(normalized))
         .toList();
+  }
+
+  @override
+  Future<QCMaterialSelection> fetchMaterialTemplateResolution(
+      String materialId) async {
+    calls++;
+    final material = materialsByFamily.values
+        .expand((items) => items)
+        .firstWhere((item) => item.materialId == materialId);
+    final family =
+        families.firstWhere((item) => item.familyId == material.familyId);
+    return (template: template(id: family.templateId!), family: family);
   }
 
   @override
@@ -162,8 +215,10 @@ class FakeMasterDataApi implements QCMaterialMasterDataApi {
   }
 }
 
-QCMaterialTemplate template({String category = 'CABLE'}) => QCMaterialTemplate(
-      id: 'template-1',
+QCMaterialTemplate template(
+        {String category = 'CABLE', String id = 'template-1'}) =>
+    QCMaterialTemplate(
+      id: id,
       name: 'Cable inspection',
       code: 'QC-CABLE',
       category: category,
@@ -174,9 +229,11 @@ QCMaterialTemplate template({String category = 'CABLE'}) => QCMaterialTemplate(
 QCMaterialFormProvider providerFor(
   FakeMasterDataApi api, {
   String category = 'CABLE',
+  String templateId = 'template-1',
 }) {
   final provider = QCMaterialFormProvider(masterDataApi: api);
-  provider.init('template-1', template: template(category: category));
+  provider.init(templateId,
+      template: template(category: category, id: templateId));
   return provider;
 }
 
@@ -192,7 +249,8 @@ QCMaterialBrandResolution resolution(
     );
 
 void main() {
-  testWidgets('cable form orders family, material, vendor, then warehouse',
+  testWidgets(
+      'cable form orders family, capacity, material, vendor, then warehouse',
       (tester) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1;
@@ -210,15 +268,19 @@ void main() {
     await tester.pumpAndSettle();
 
     final family = find.text('QC Material');
+    final capacity = find.text('Kapasitas Kabel');
     final material = find.text('ID Material');
     final vendor = find.text('Nama Mitra Pabrikasi / Vendor');
     final warehouseField = find.text('Lokasi Warehouse Penerima');
     expect(family, findsOneWidget);
+    expect(capacity, findsOneWidget);
     expect(material, findsOneWidget);
     expect(vendor, findsOneWidget);
     expect(warehouseField, findsOneWidget);
     expect(
-        tester.getTopLeft(family).dy, lessThan(tester.getTopLeft(material).dy));
+        tester.getTopLeft(family).dy, lessThan(tester.getTopLeft(capacity).dy));
+    expect(tester.getTopLeft(capacity).dy,
+        lessThan(tester.getTopLeft(material).dy));
     expect(
         tester.getTopLeft(material).dy, lessThan(tester.getTopLeft(vendor).dy));
     expect(
@@ -246,7 +308,18 @@ void main() {
       ),
     );
     expect(provider.selectedFamily, isNull);
+    provider.selectMaterialFamily(const QCMaterialFamily(
+      familyId: 'cable-other',
+      name: 'Other cable',
+      category: 'CABLE',
+      templateId: 'CABLE_DUCT',
+      active: true,
+    ));
+    expect(provider.selectedFamily, isNull);
     provider.selectMaterialFamily(familyA);
+    expect(await provider.searchCableCapacities(''), [24, 48]);
+    expect(await provider.searchCableCapacities('24D'), [24]);
+    provider.selectCableCapacity(48);
     expect(await provider.searchMaterials('48D'), [materialA2]);
     expect(api.lastFamilyId, familyA.familyId);
     expect(api.lastVendor, isNull);
@@ -264,6 +337,8 @@ void main() {
     addTearDown(provider.dispose);
 
     provider.selectMaterialFamily(familyA);
+    await provider.searchCableCapacities('');
+    provider.selectCableCapacity(24);
     await provider.selectMaterial(materialA);
 
     expect(api.lastMaterialVendorFilter, materialA.materialId);
@@ -281,6 +356,8 @@ void main() {
     addTearDown(provider.dispose);
 
     provider.selectMaterialFamily(familyA);
+    await provider.searchCableCapacities('');
+    provider.selectCableCapacity(24);
     await provider.selectMaterial(materialA);
     expect(provider.selectedVendor, isNull);
     expect(provider.vendorChoices, const [vendorA, vendorB]);
@@ -289,6 +366,12 @@ void main() {
     await provider.selectVendor(vendorB);
     expect(provider.selectedBrand, isNull);
     expect(provider.brandChoices, const [brandA, brandB]);
+    provider.selectBrand(const QCMaterialBrand(
+      brand: 'Brand A',
+      manufacturer: 'Wrong Factory',
+      active: true,
+    ));
+    expect(provider.selectedBrand, isNull);
     provider.selectBrand(brandB);
     expect(provider.selectedBrand?.manufacturer, 'Factory B');
   });
@@ -303,6 +386,8 @@ void main() {
 
     await provider.selectWarehouse(warehouse);
     provider.selectMaterialFamily(familyA);
+    await provider.searchCableCapacities('');
+    provider.selectCableCapacity(24);
     await provider.selectMaterial(materialA);
     provider.selectMaterialFamily(familyB);
 
@@ -321,8 +406,11 @@ void main() {
     final provider = providerFor(api);
     addTearDown(provider.dispose);
     provider.selectMaterialFamily(familyA);
+    await provider.searchCableCapacities('');
+    provider.selectCableCapacity(24);
 
     final firstSelection = provider.selectMaterial(materialA);
+    provider.selectCableCapacity(48);
     final secondSelection = provider.selectMaterial(materialA2);
     second.complete(const [vendorB]);
     await secondSelection;
@@ -341,6 +429,8 @@ void main() {
     addTearDown(provider.dispose);
     await provider.selectWarehouse(warehouse);
     provider.selectMaterialFamily(familyA);
+    await provider.searchCableCapacities('');
+    provider.selectCableCapacity(24);
 
     await provider.selectMaterial(materialA);
 
@@ -359,6 +449,8 @@ void main() {
     final original = providerFor(api);
     addTearDown(original.dispose);
     original.selectMaterialFamily(familyA);
+    await original.searchCableCapacities('');
+    original.selectCableCapacity(24);
     await original.selectMaterial(materialA);
     await original.selectWarehouse(warehouse);
     final draft = original.createLocalDraftSnapshot();
@@ -371,6 +463,8 @@ void main() {
     expect(api.calls, callsBeforeRestore);
     expect(restored.selectedFamily?.familyId, familyA.familyId);
     expect(restored.selectedMaterial?.materialId, materialA.materialId);
+    expect(restored.selectedMaterial?.coreCount, 24);
+    expect(restored.selectedCoreCount, 24);
     expect(restored.selectedVendor?.vendor, vendorA.vendor);
     expect(restored.selectedBrand?.manufacturer, brandA.manufacturer);
     expect(restored.selectedWarehouse?.plant, warehouse.plant);
@@ -395,6 +489,7 @@ void main() {
 
     expect(restored.materialIdController.text, materialA.materialId);
     expect(restored.familyNeedsReselection, isTrue);
+    expect(restored.capacityNeedsReselection, isTrue);
     expect(restored.materialNeedsReselection, isTrue);
     restored.validateGeneralInformation();
     expect(
@@ -418,6 +513,183 @@ void main() {
     await provider.selectMaterial(materialA);
 
     expect(provider.selectedFamily, isNull);
+    expect(provider.selectedVendor, vendorA);
     expect(provider.selectedBrand, brandA);
+  });
+
+  test('Aerial, Duct, and ADSS materials load their backend templates',
+      () async {
+    final cases = [
+      (
+        family: const QCMaterialFamily(
+          familyId: 'aerial',
+          name: 'Aerial',
+          category: 'CABLE',
+          templateId: 'QC_CABLE_AERIAL',
+          active: true,
+        ),
+        material: const QCMaterialOption(
+          materialId: 'AC-OF-SM-12D',
+          familyId: 'aerial',
+          coreCount: 12,
+          active: true,
+        ),
+      ),
+      (
+        family: const QCMaterialFamily(
+          familyId: 'duct',
+          name: 'Duct',
+          category: 'CABLE',
+          templateId: 'QC_CABLE_DUCT',
+          active: true,
+        ),
+        material: const QCMaterialOption(
+          materialId: 'DC-OF-SM-24D',
+          familyId: 'duct',
+          coreCount: 24,
+          active: true,
+        ),
+      ),
+      (
+        family: const QCMaterialFamily(
+          familyId: 'adss',
+          name: 'ADSS',
+          category: 'CABLE',
+          templateId: 'QC_CABLE_ADSS',
+          active: true,
+        ),
+        material: const QCMaterialOption(
+          materialId: 'AC-ADSS-48D-MREP',
+          familyId: 'adss',
+          coreCount: 48,
+          active: true,
+        ),
+      ),
+    ];
+    for (final item in cases) {
+      final api = FakeMasterDataApi()
+        ..families.add(item.family)
+        ..materialsByFamily[item.family.familyId] = [item.material];
+      final provider = providerFor(api, templateId: item.family.templateId!);
+      addTearDown(provider.dispose);
+      provider.selectMaterialFamily(item.family);
+      expect(
+          await provider.searchCableCapacities(''), [item.material.coreCount]);
+      provider.selectCableCapacity(item.material.coreCount);
+      expect(await provider.searchMaterials(''), [item.material]);
+      await provider.selectMaterial(item.material);
+      expect(provider.template.id, item.family.templateId);
+      expect(provider.selectedFamily?.familyId, item.family.familyId);
+      expect(provider.selectedMaterial?.coreCount, item.material.coreCount);
+    }
+  });
+
+  test('capacity and family changes clear dependent cable selections',
+      () async {
+    final api = FakeMasterDataApi()
+      ..vendorsByMaterial[materialA.materialId] = const [vendorA]
+      ..resolutions['${vendorA.vendor}|${materialA.materialId}'] =
+          resolution(vendorA, materialA, const [brandA]);
+    final provider = providerFor(api);
+    addTearDown(provider.dispose);
+    await provider.selectWarehouse(warehouse);
+    provider.selectMaterialFamily(familyA);
+    await provider.searchCableCapacities('');
+    provider.selectCableCapacity(24);
+    await provider.selectMaterial(materialA);
+    provider.sampleCountController.text = '2';
+    expect(provider.selectedBrand, brandA);
+    expect(provider.createLocalDraftSnapshot()['general']['sampleCount'], '2');
+    expect(provider.selectedMaterial?.coreCount, 24);
+
+    provider.selectCableCapacity(48);
+    expect(provider.selectedMaterial, isNull);
+    expect(provider.selectedVendor, isNull);
+    expect(provider.selectedBrand, isNull);
+    expect(provider.selectedWarehouse?.plant, warehouse.plant);
+    expect(provider.sampleCountController.text, '2');
+    provider.selectMaterialFamily(familyB);
+    expect(provider.selectedCoreCount, isNull);
+  });
+
+  test('reselecting the same cable material preserves sampled inspection',
+      () async {
+    final api = FakeMasterDataApi()
+      ..vendorsByMaterial[materialA.materialId] = const [vendorA]
+      ..resolutions['${vendorA.vendor}|${materialA.materialId}'] =
+          resolution(vendorA, materialA, const [brandA]);
+    final provider = providerFor(api);
+    addTearDown(provider.dispose);
+    provider.selectMaterialFamily(familyA);
+    await provider.searchCableCapacities('');
+    provider.selectCableCapacity(24);
+    await provider.selectMaterial(materialA);
+    provider.samples.first.notesController.text = 'Inspected core 1';
+
+    provider.selectMaterialFamily(familyA);
+    final callsBeforeReselection = api.calls;
+    await provider.selectMaterial(materialA);
+
+    expect(api.calls, greaterThan(callsBeforeReselection));
+    expect(provider.samples.first.notesController.text, 'Inspected core 1');
+    expect(provider.selectedVendor, vendorA);
+    expect(provider.selectedBrand, brandA);
+
+    api.vendorsByMaterial[materialA.materialId] = const [vendorB];
+    await provider.selectMaterial(materialA);
+    expect(provider.selectedVendor, vendorB);
+    expect(provider.selectedBrand, isNull);
+    expect(provider.samples.first.notesController.text, 'Inspected core 1');
+
+    await provider.selectMaterial(null);
+    expect(provider.selectedMaterial, isNull);
+    expect(provider.selectedVendor, isNull);
+    expect(provider.samples.first.notesController.text, isEmpty);
+  });
+
+  test('API draft and revision restore structured cable metadata', () async {
+    final api = FakeMasterDataApi()
+      ..vendorsByMaterial[materialA.materialId] = const [vendorA]
+      ..resolutions['${vendorA.vendor}|${materialA.materialId}'] =
+          resolution(vendorA, materialA, const [brandA]);
+    final persistence = FakePersistenceApi();
+    final state = DummyState();
+    final previousReports = List<QCReportModel>.from(state.reports);
+    addTearDown(() {
+      state.reports
+        ..clear()
+        ..addAll(previousReports);
+    });
+    final original = QCMaterialFormProvider(
+      masterDataApi: api,
+      api: persistence,
+    )..init('template-1', template: template());
+    addTearDown(original.dispose);
+    original.selectMaterialFamily(familyA);
+    await original.searchCableCapacities('');
+    original.selectCableCapacity(24);
+    await original.selectMaterial(materialA);
+    await original.selectWarehouse(warehouse);
+    original.sampleCountController.text = '2';
+    await original.persistReport(QCReportStatus.DRAFT);
+    final report = persistence.postedReport!;
+    final selection = report.generalInfo['qcMaterialMasterData'] as Map;
+    expect(report.status, QCReportStatus.DRAFT);
+    expect(report.sampleCount, 2);
+    expect(selection['core_count'], 24);
+    expect((selection['material'] as Map)['material_id'], materialA.materialId);
+    expect(state.reports.any((item) => item.id == report.id), isTrue);
+
+    final restored = QCMaterialFormProvider(masterDataApi: api)
+      ..init('template-1',
+          editReportId: report.id, isRevision: true, template: template());
+    addTearDown(restored.dispose);
+    expect(restored.selectedFamily?.familyId, familyA.familyId);
+    expect(restored.selectedCoreCount, 24);
+    expect(restored.selectedMaterial?.coreCount, 24);
+    expect(restored.selectedVendor?.vendor, vendorA.vendor);
+    expect(restored.selectedBrand?.brand, brandA.brand);
+    expect(restored.selectedWarehouse?.plant, warehouse.plant);
+    expect(restored.sampleCount, 2);
   });
 }
