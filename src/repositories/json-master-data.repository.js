@@ -25,6 +25,7 @@ class MasterDataRepository {
     return {
       material_id: master?.material_id ?? related[0].material_id,
       material_description: master?.material_description ?? null,
+      core_count: master?.core_count ?? null,
       material_name: names.size === 1 ? names.values().next().value : null,
       family_id: master?.family_id ?? null,
       active: true

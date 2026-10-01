@@ -11,6 +11,10 @@ const familyMigration = fs.readFileSync(path.join(
   __dirname,
   '../../supabase/migrations/20260904000100_add_qc_material_families.sql'
 ), 'utf8');
+const cableMigration = fs.readFileSync(path.join(
+  __dirname,
+  '../../supabase/migrations/20261001000100_normalize_cable_qc_templates.sql'
+), 'utf8');
 
 test('master-data migration creates constrained persistent entities and no warehouse relation', () => {
   for (const table of ['qc_materials', 'qc_vendor_materials', 'qc_warehouse_plants']) {
@@ -43,4 +47,17 @@ test('material-family migration adds a stable cable family relation', () => {
   assert.match(familyMigration,
     /foreign key \(family_id\)[\s\S]*references public\.qc_material_families \(family_id\)/);
   assert.match(familyMigration, /qc_materials_family_active_idx/);
+});
+
+test('cable migration versions only cable templates and preserves reports', () => {
+  assert.match(cableMigration, /add column core_count integer/);
+  assert.match(cableMigration, /qc_materials_core_count_positive/);
+  for (const id of ['QC_CABLE_AERIAL', 'QC_CABLE_DUCT', 'QC_CABLE_ADSS']) {
+    assert.match(cableMigration, new RegExp(id));
+  }
+  assert.match(cableMigration, /G\.625D/);
+  assert.match(cableMigration, /update public\.qc_material_families/);
+  assert.match(cableMigration, /where id in \('CABLE_AERIAL', 'CABLE_DUCT', 'CABLE_ADSS'\)/);
+  assert.doesNotMatch(cableMigration, /delete from public\.qc_reports|update public\.qc_reports/i);
+  assert.doesNotMatch(cableMigration, /delete from public\.qc_vendor_materials/i);
 });

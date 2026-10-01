@@ -121,6 +121,7 @@ test('material description and independent warehouse metadata are available', ()
   assert.deepEqual(masterDataRepository.findMaterialById('dc-of-sm-12d'), {
     material_id: 'DC-OF-SM-12D',
     material_description: 'KD FO Single Mode 12 core G 652D',
+    core_count: 12,
     material_name: 'KD FO Single Mode 12 core G 652D',
     family_id: 'cable-kd-fo-single-mode-g652d',
     active: true
@@ -166,6 +167,16 @@ test('master-data HTTP endpoints preserve error, CORS, and request-id contracts'
 
     const material = await fetch(`${baseUrl}/master-data/materials/DC-OF-SM-12D`);
     assert.equal((await material.json()).material_description, 'KD FO Single Mode 12 core G 652D');
+
+    for (const [materialId, templateId] of [
+      ['AC-OF-SM-24D', 'QC_CABLE_AERIAL'],
+      ['DC-OF-SM-24D', 'QC_CABLE_DUCT'],
+      ['AC-OF-SM-ADSS-24D', 'QC_CABLE_ADSS']
+    ]) {
+      const resolved = await fetch(`${baseUrl}/master-data/materials/${materialId}/template`);
+      assert.equal(resolved.status, 200);
+      assert.equal((await resolved.json()).template.id, templateId);
+    }
 
     const response = await fetch(
       `${baseUrl}/master-data/brands?vendor=ADHISAKTI%20SOLUSI%20KOMPUTINDO&material_id=DC-OF-SM-12D`,

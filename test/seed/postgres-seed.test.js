@@ -97,6 +97,8 @@ describe('Canonical Tooling - Postgres Provider', () => {
     const deletes = executedQueries.filter(q => q.includes('DELETE'));
     assert.ok(!deletes.some(q => q.includes('DELETE FROM public.api_idempotency_keys')), 'idempotency keys must NOT be deleted during seed');
     assert.ok(!deletes.some(q => q.includes('DELETE FROM public.qc_reports')), 'qc_reports must NOT be deleted during seed');
+    assert.ok(executedQueries.some(q =>
+      q.includes("is_active = false where id in ('CABLE_AERIAL', 'CABLE_DUCT', 'CABLE_ADSS')")));
 
     for (const table of [
       'qc_material_families', 'qc_materials', 'qc_vendor_materials', 'qc_warehouse_plants'

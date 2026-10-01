@@ -274,12 +274,14 @@ test('JSON item PATCH merges fields, keeps IDs immutable, and clears fields on t
   );
 });
 
-test('all 13 canonical choice items have valid choices and the 4 fallback items expose Sesuai/Tidak Sesuai', () => {
+test('all 16 active choice items have valid choices and the 4 fallback items expose Sesuai/Tidak Sesuai', () => {
   const templatesPath = path.join(__dirname, '../../data/templates.json');
   const templates = JSON.parse(fs.readFileSync(templatesPath, 'utf8'));
-  const choiceItems = templates.flatMap(t => t.checklist_items || t.checklistItems).filter(i => (i.input_type || i.inputType) === 'choice');
+  const choiceItems = templates.filter(t => t.is_active !== false)
+    .flatMap(t => t.checklist_items || t.checklistItems)
+    .filter(i => (i.input_type || i.inputType) === 'choice');
   
-  assert.equal(choiceItems.length, 13);
+  assert.equal(choiceItems.length, 16);
   for (const item of choiceItems) {
     const opts = item.choice_options || item.choiceOptions;
     assert.equal(Array.isArray(opts), true);

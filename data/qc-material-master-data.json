@@ -4,84 +4,98 @@
       "family_id": "cable-kd-fo-single-mode-g652d",
       "name": "KD FO Single Mode G 652D",
       "category": "CABLE",
+      "template_id": "QC_CABLE_DUCT",
       "active": true
     },
     {
       "family_id": "cable-kd-fo-single-mode-g655c",
       "name": "KD FO Single Mode G 655C",
       "category": "CABLE",
+      "template_id": "QC_CABLE_DUCT",
       "active": true
     },
     {
       "family_id": "cable-kd-fo-single-mode-g652d-scpt",
       "name": "KD FO Single Mode G652D SCPT",
       "category": "CABLE",
+      "template_id": "QC_CABLE_DUCT",
       "active": true
     },
     {
       "family_id": "cable-kd-fo-sm-g652d-marking-mitratel",
       "name": "KD FO SM G652D Marking Mitratel",
       "category": "CABLE",
+      "template_id": "QC_CABLE_DUCT",
       "active": true
     },
     {
       "family_id": "cable-kd-fo-sm-g652d-marking-telin",
       "name": "KD FO SM G652D Marking Telin",
       "category": "CABLE",
+      "template_id": "QC_CABLE_DUCT",
       "active": true
     },
     {
       "family_id": "cable-ku-fiber-optik-adss-span-100",
       "name": "KU Fiber Optik ADSS Span 100",
       "category": "CABLE",
+      "template_id": "QC_CABLE_ADSS",
       "active": true
     },
     {
       "family_id": "cable-ku-fo-adss-g652d-marking-jlm",
       "name": "KU FO ADSS G652D Marking JLM",
       "category": "CABLE",
+      "template_id": "QC_CABLE_ADSS",
       "active": true
     },
     {
       "family_id": "cable-ku-fo-adss-g652d-marking-myrep",
       "name": "KU FO ADSS G652D Marking Myrep",
       "category": "CABLE",
+      "template_id": "QC_CABLE_ADSS",
       "active": true
     },
     {
       "family_id": "cable-ku-fo-adss-span-100-mitratel",
       "name": "KU FO ADSS Span 100 Mitratel",
       "category": "CABLE",
+      "template_id": "QC_CABLE_ADSS",
       "active": true
     },
     {
       "family_id": "cable-ku-fo-single-mode-g652d",
       "name": "KU FO Single Mode G652D",
       "category": "CABLE",
+      "template_id": "QC_CABLE_AERIAL",
       "active": true
     },
     {
       "family_id": "cable-ku-fo-single-mode-g652d-scpt",
       "name": "KU FO Single Mode G652D SCPT",
       "category": "CABLE",
+      "template_id": "QC_CABLE_AERIAL",
       "active": true
     },
     {
       "family_id": "cable-ku-fo-single-mode-g655c",
       "name": "KU FO Single Mode G655C",
       "category": "CABLE",
+      "template_id": "QC_CABLE_AERIAL",
       "active": true
     },
     {
       "family_id": "cable-ku-fo-sm-adss-g652d-marking-telkom",
       "name": "KU FO SM ADSS G652D Marking Telkom",
       "category": "CABLE",
+      "template_id": "QC_CABLE_ADSS",
       "active": true
     },
     {
       "family_id": "cable-ku-fo-sm-g652d-marking-mitratel",
       "name": "KU FO SM G652D Marking Mitratel",
       "category": "CABLE",
+      "template_id": "QC_CABLE_AERIAL",
       "active": true
     }
   ],
@@ -90,91 +104,106 @@
       "material_id": "AC-ADSS-144D-MREP",
       "material_description": "KU FO ADSS 144 C G652D Marking Myrep",
       "active": true,
-      "family_id": "cable-ku-fo-adss-g652d-marking-myrep"
+      "family_id": "cable-ku-fo-adss-g652d-marking-myrep",
+      "core_count": 144
     },
     {
       "material_id": "AC-ADSS-24D-MREP",
       "material_description": "KU FO ADSS 24 C G652D Marking Myrep",
       "active": true,
-      "family_id": "cable-ku-fo-adss-g652d-marking-myrep"
+      "family_id": "cable-ku-fo-adss-g652d-marking-myrep",
+      "core_count": 24
     },
     {
       "material_id": "AC-ADSS-288D-MREP",
       "material_description": "KU FO ADSS 288 C G652D Marking Myrep",
       "active": true,
-      "family_id": "cable-ku-fo-adss-g652d-marking-myrep"
+      "family_id": "cable-ku-fo-adss-g652d-marking-myrep",
+      "core_count": 288
     },
     {
       "material_id": "AC-ADSS-36D-MREP",
       "material_description": "KU FO ADSS 36 C G652D Marking Myrep",
       "active": true,
-      "family_id": "cable-ku-fo-adss-g652d-marking-myrep"
+      "family_id": "cable-ku-fo-adss-g652d-marking-myrep",
+      "core_count": 36
     },
     {
       "material_id": "AC-ADSS-48D-MREP",
       "material_description": "KU FO ADSS 48 C G652D Marking Myrep",
       "active": true,
-      "family_id": "cable-ku-fo-adss-g652d-marking-myrep"
+      "family_id": "cable-ku-fo-adss-g652d-marking-myrep",
+      "core_count": 48
     },
     {
       "material_id": "AC-ADSS-96D-MREP",
       "material_description": "KU FO ADSS 96 C G652D Marking Myrep",
       "active": true,
-      "family_id": "cable-ku-fo-adss-g652d-marking-myrep"
+      "family_id": "cable-ku-fo-adss-g652d-marking-myrep",
+      "core_count": 96
     },
     {
       "material_id": "AC-OF-ADSS-100-12C",
       "material_description": "KU Fiber Optik ADSS Span 100 12 core",
       "active": true,
-      "family_id": "cable-ku-fiber-optik-adss-span-100"
+      "family_id": "cable-ku-fiber-optik-adss-span-100",
+      "core_count": 12
     },
     {
       "material_id": "AC-OF-ADSS-100-24C",
       "material_description": "KU Fiber Optik ADSS Span 100 24 core",
       "active": true,
-      "family_id": "cable-ku-fiber-optik-adss-span-100"
+      "family_id": "cable-ku-fiber-optik-adss-span-100",
+      "core_count": 24
     },
     {
       "material_id": "AC-OF-ADSS-100-48C",
       "material_description": "KU Fiber Optik ADSS Span 100 48 core",
       "active": true,
-      "family_id": "cable-ku-fiber-optik-adss-span-100"
+      "family_id": "cable-ku-fiber-optik-adss-span-100",
+      "core_count": 48
     },
     {
       "material_id": "AC-OF-ADSS-100-96C",
       "material_description": "KU Fiber Optik ADSS Span 100 96 core",
       "active": true,
-      "family_id": "cable-ku-fiber-optik-adss-span-100"
+      "family_id": "cable-ku-fiber-optik-adss-span-100",
+      "core_count": 96
     },
     {
       "material_id": "AC-OF-ADSS-12D-JLM",
       "material_description": "KU FO ADSS 12 C G652D Marking JLM",
       "active": true,
-      "family_id": "cable-ku-fo-adss-g652d-marking-jlm"
+      "family_id": "cable-ku-fo-adss-g652d-marking-jlm",
+      "core_count": 12
     },
     {
       "material_id": "AC-OF-ADSS-24D-JLM",
       "material_description": "KU FO ADSS 24 C G652D Marking JLM",
       "active": true,
-      "family_id": "cable-ku-fo-adss-g652d-marking-jlm"
+      "family_id": "cable-ku-fo-adss-g652d-marking-jlm",
+      "core_count": 24
     },
     {
       "material_id": "AC-OF-ADSS-48D-JLM",
       "material_description": "KU FO ADSS 48 C G652D Marking JLM",
       "active": true,
-      "family_id": "cable-ku-fo-adss-g652d-marking-jlm"
+      "family_id": "cable-ku-fo-adss-g652d-marking-jlm",
+      "core_count": 48
     },
     {
       "material_id": "AC-OF-ADSS-6C-MTEL",
       "material_description": "KU FO ADSS Span 100 6 core Mitratel",
       "active": true,
-      "family_id": "cable-ku-fo-adss-span-100-mitratel"
+      "family_id": "cable-ku-fo-adss-span-100-mitratel",
+      "core_count": 6
     },
     {
       "material_id": "AC-OF-ADSS-96D-JLM",
       "material_description": "KU FO ADSS 96 C G652D Marking JLM",
       "active": true,
-      "family_id": "cable-ku-fo-adss-g652d-marking-jlm"
+      "family_id": "cable-ku-fo-adss-g652d-marking-jlm",
+      "core_count": 96
     },
     {
       "material_id": "AC-OF-SM-1-3SL",
@@ -186,25 +215,29 @@
       "material_id": "AC-OF-SM-12-SC",
       "material_description": "KU FO Single Mode 12 core G652D SCPT",
       "active": true,
-      "family_id": "cable-ku-fo-single-mode-g652d-scpt"
+      "family_id": "cable-ku-fo-single-mode-g652d-scpt",
+      "core_count": 12
     },
     {
       "material_id": "AC-OF-SM-12C",
       "material_description": "KU FO Single Mode 12 core G655C",
       "active": true,
-      "family_id": "cable-ku-fo-single-mode-g655c"
+      "family_id": "cable-ku-fo-single-mode-g655c",
+      "core_count": 12
     },
     {
       "material_id": "AC-OF-SM-12D",
       "material_description": "KU FO Single Mode 12 core G652D",
       "active": true,
-      "family_id": "cable-ku-fo-single-mode-g652d"
+      "family_id": "cable-ku-fo-single-mode-g652d",
+      "core_count": 12
     },
     {
       "material_id": "AC-OF-SM-12D-MTEL",
       "material_description": "KU FO SM 12 core G652D Marking Mitratel",
       "active": true,
-      "family_id": "cable-ku-fo-sm-g652d-marking-mitratel"
+      "family_id": "cable-ku-fo-sm-g652d-marking-mitratel",
+      "core_count": 12
     },
     {
       "material_id": "AC-OF-SM-1B",
@@ -216,25 +249,29 @@
       "material_id": "AC-OF-SM-24-SC",
       "material_description": "KU FO Single Mode 24 core G652D SCPT",
       "active": true,
-      "family_id": "cable-ku-fo-single-mode-g652d-scpt"
+      "family_id": "cable-ku-fo-single-mode-g652d-scpt",
+      "core_count": 24
     },
     {
       "material_id": "AC-OF-SM-24C",
       "material_description": "KU FO Single Mode 24 core G655C",
       "active": true,
-      "family_id": "cable-ku-fo-single-mode-g655c"
+      "family_id": "cable-ku-fo-single-mode-g655c",
+      "core_count": 24
     },
     {
       "material_id": "AC-OF-SM-24D",
       "material_description": "KU FO Single Mode 24 core G652D",
       "active": true,
-      "family_id": "cable-ku-fo-single-mode-g652d"
+      "family_id": "cable-ku-fo-single-mode-g652d",
+      "core_count": 24
     },
     {
       "material_id": "AC-OF-SM-24D-MTEL",
       "material_description": "KU FO SM 24 core G652D Marking Mitratel",
       "active": true,
-      "family_id": "cable-ku-fo-sm-g652d-marking-mitratel"
+      "family_id": "cable-ku-fo-sm-g652d-marking-mitratel",
+      "core_count": 24
     },
     {
       "material_id": "AC-OF-SM-2B",
@@ -246,61 +283,71 @@
       "material_id": "AC-OF-SM-48C",
       "material_description": "KU FO Single Mode 48 core G655C",
       "active": true,
-      "family_id": "cable-ku-fo-single-mode-g655c"
+      "family_id": "cable-ku-fo-single-mode-g655c",
+      "core_count": 48
     },
     {
       "material_id": "AC-OF-SM-48D",
       "material_description": "KU FO Single Mode 48 core G652D",
       "active": true,
-      "family_id": "cable-ku-fo-single-mode-g652d"
+      "family_id": "cable-ku-fo-single-mode-g652d",
+      "core_count": 48
     },
     {
       "material_id": "AC-OF-SM-48D-MTEL",
       "material_description": "KU FO SM 48 core G652D Marking Mitratel",
       "active": true,
-      "family_id": "cable-ku-fo-sm-g652d-marking-mitratel"
+      "family_id": "cable-ku-fo-sm-g652d-marking-mitratel",
+      "core_count": 48
     },
     {
       "material_id": "AC-OF-SM-96C",
       "material_description": "KU FO Single Mode 96 core G655C",
       "active": true,
-      "family_id": "cable-ku-fo-single-mode-g655c"
+      "family_id": "cable-ku-fo-single-mode-g655c",
+      "core_count": 96
     },
     {
       "material_id": "AC-OF-SM-96D",
       "material_description": "KU FO Single Mode 96 core G652D",
       "active": true,
-      "family_id": "cable-ku-fo-single-mode-g652d"
+      "family_id": "cable-ku-fo-single-mode-g652d",
+      "core_count": 96
     },
     {
       "material_id": "AC-OF-SM-96D-MTEL",
       "material_description": "KU FO SM 96 core G652D Marking Mitratel",
       "active": true,
-      "family_id": "cable-ku-fo-sm-g652d-marking-mitratel"
+      "family_id": "cable-ku-fo-sm-g652d-marking-mitratel",
+      "core_count": 96
     },
     {
       "material_id": "AC-OF-SM-ADSS-12D",
       "material_description": "KU FO SM ADSS 12 C G652D Marking Telkom",
       "active": true,
-      "family_id": "cable-ku-fo-sm-adss-g652d-marking-telkom"
+      "family_id": "cable-ku-fo-sm-adss-g652d-marking-telkom",
+      "core_count": 12
     },
     {
       "material_id": "AC-OF-SM-ADSS-24D",
       "material_description": "KU FO SM ADSS 24 C G652D Marking Telkom",
       "active": true,
-      "family_id": "cable-ku-fo-sm-adss-g652d-marking-telkom"
+      "family_id": "cable-ku-fo-sm-adss-g652d-marking-telkom",
+      "core_count": 24
     },
     {
       "material_id": "AC-OF-SM-ADSS-48D",
       "material_description": "KU FO SM ADSS 48 C G652D Marking Telkom",
       "active": true,
-      "family_id": "cable-ku-fo-sm-adss-g652d-marking-telkom"
+      "family_id": "cable-ku-fo-sm-adss-g652d-marking-telkom",
+      "core_count": 48
     },
     {
       "material_id": "AC-OF-SM-ADSS-96D",
       "material_description": "KU FO SM ADSS 96 C G652D Marking Telkom",
       "active": true,
-      "family_id": "cable-ku-fo-sm-adss-g652d-marking-telkom"
+      "family_id": "cable-ku-fo-sm-adss-g652d-marking-telkom",
+      "core_count": 96
     },
     {
       "material_id": "AD-FC",
@@ -636,67 +683,78 @@
       "material_id": "DC-OF-SM-12-SC",
       "material_description": "KD FO Single Mode 12 core G 652D SCPT",
       "active": true,
-      "family_id": "cable-kd-fo-single-mode-g652d-scpt"
+      "family_id": "cable-kd-fo-single-mode-g652d-scpt",
+      "core_count": 12
     },
     {
       "material_id": "DC-OF-SM-12C",
       "material_description": "KD FO Single Mode 12 core G 655C",
       "active": true,
-      "family_id": "cable-kd-fo-single-mode-g655c"
+      "family_id": "cable-kd-fo-single-mode-g655c",
+      "core_count": 12
     },
     {
       "material_id": "DC-OF-SM-12D",
       "material_description": "KD FO Single Mode 12 core G 652D",
       "active": true,
-      "family_id": "cable-kd-fo-single-mode-g652d"
+      "family_id": "cable-kd-fo-single-mode-g652d",
+      "core_count": 12
     },
     {
       "material_id": "DC-OF-SM-12D-MTEL",
-      "material_description": null,
+      "material_description": "KD FO SM 12 core G652D Marking Mitratel",
       "active": true,
-      "family_id": "cable-kd-fo-sm-g652d-marking-mitratel"
+      "family_id": "cable-kd-fo-sm-g652d-marking-mitratel",
+      "core_count": 12
     },
     {
       "material_id": "DC-OF-SM-144D",
       "material_description": "KD FO Single Mode 144 core G652D",
       "active": true,
-      "family_id": "cable-kd-fo-single-mode-g652d"
+      "family_id": "cable-kd-fo-single-mode-g652d",
+      "core_count": 144
     },
     {
       "material_id": "DC-OF-SM-144D-MTEL",
       "material_description": "KD FO SM 144 core G652D Marking Mitratel",
       "active": true,
-      "family_id": "cable-kd-fo-sm-g652d-marking-mitratel"
+      "family_id": "cable-kd-fo-sm-g652d-marking-mitratel",
+      "core_count": 144
     },
     {
       "material_id": "DC-OF-SM-144D-TLIN",
       "material_description": "KD FO SM 144 core G652D Marking Telin",
       "active": true,
-      "family_id": "cable-kd-fo-sm-g652d-marking-telin"
+      "family_id": "cable-kd-fo-sm-g652d-marking-telin",
+      "core_count": 144
     },
     {
       "material_id": "DC-OF-SM-24-SC",
       "material_description": "KD FO Single Mode 24 core G652D SCPT",
       "active": true,
-      "family_id": "cable-kd-fo-single-mode-g652d-scpt"
+      "family_id": "cable-kd-fo-single-mode-g652d-scpt",
+      "core_count": 24
     },
     {
       "material_id": "DC-OF-SM-24C",
       "material_description": "KD FO Single Mode 24 core G655C",
       "active": true,
-      "family_id": "cable-kd-fo-single-mode-g655c"
+      "family_id": "cable-kd-fo-single-mode-g655c",
+      "core_count": 24
     },
     {
       "material_id": "DC-OF-SM-24D",
       "material_description": "KD FO Single Mode 24 core G652D",
       "active": true,
-      "family_id": "cable-kd-fo-single-mode-g652d"
+      "family_id": "cable-kd-fo-single-mode-g652d",
+      "core_count": 24
     },
     {
       "material_id": "DC-OF-SM-24D-MTEL",
       "material_description": "KD FO SM 24 core G652D Marking Mitratel",
       "active": true,
-      "family_id": "cable-kd-fo-sm-g652d-marking-mitratel"
+      "family_id": "cable-kd-fo-sm-g652d-marking-mitratel",
+      "core_count": 24
     },
     {
       "material_id": "DC-OF-SM-264D",
@@ -708,55 +766,64 @@
       "material_id": "DC-OF-SM-288D",
       "material_description": "KD FO Single Mode 288 core G652D",
       "active": true,
-      "family_id": "cable-kd-fo-single-mode-g652d"
+      "family_id": "cable-kd-fo-single-mode-g652d",
+      "core_count": 288
     },
     {
       "material_id": "DC-OF-SM-288D-MTEL",
-      "material_description": null,
+      "material_description": "KD FO SM 288 core G652D Marking Mitratel",
       "active": true,
-      "family_id": "cable-kd-fo-sm-g652d-marking-mitratel"
+      "family_id": "cable-kd-fo-sm-g652d-marking-mitratel",
+      "core_count": 288
     },
     {
       "material_id": "DC-OF-SM-48C",
       "material_description": "KD FO Single Mode 48 core G655C",
       "active": true,
-      "family_id": "cable-kd-fo-single-mode-g655c"
+      "family_id": "cable-kd-fo-single-mode-g655c",
+      "core_count": 48
     },
     {
       "material_id": "DC-OF-SM-48D",
       "material_description": "KD FO Single Mode 48 core G652D",
       "active": true,
-      "family_id": "cable-kd-fo-single-mode-g652d"
+      "family_id": "cable-kd-fo-single-mode-g652d",
+      "core_count": 48
     },
     {
       "material_id": "DC-OF-SM-48D-MTEL",
       "material_description": "KD FO SM 48 core G652D Marking Mitratel",
       "active": true,
-      "family_id": "cable-kd-fo-sm-g652d-marking-mitratel"
+      "family_id": "cable-kd-fo-sm-g652d-marking-mitratel",
+      "core_count": 48
     },
     {
       "material_id": "DC-OF-SM-96C",
       "material_description": "KD FO Single Mode 96 core G655C",
       "active": true,
-      "family_id": "cable-kd-fo-single-mode-g655c"
+      "family_id": "cable-kd-fo-single-mode-g655c",
+      "core_count": 96
     },
     {
       "material_id": "DC-OF-SM-96D",
       "material_description": "KD FO Single Mode 96 core G652D",
       "active": true,
-      "family_id": "cable-kd-fo-single-mode-g652d"
+      "family_id": "cable-kd-fo-single-mode-g652d",
+      "core_count": 96
     },
     {
       "material_id": "DC-OF-SM-96D-MTEL",
       "material_description": "KD FO SM 96 core G652D Marking Mitratel",
       "active": true,
-      "family_id": "cable-kd-fo-sm-g652d-marking-mitratel"
+      "family_id": "cable-kd-fo-sm-g652d-marking-mitratel",
+      "core_count": 96
     },
     {
       "material_id": "DC-OF-SM-96D-TLIN",
-      "material_description": null,
+      "material_description": "KD FO SM 96 core G652D Marking Telin",
       "active": true,
-      "family_id": "cable-kd-fo-sm-g652d-marking-telin"
+      "family_id": "cable-kd-fo-sm-g652d-marking-telin",
+      "core_count": 96
     },
     {
       "material_id": "DC-SD-3",

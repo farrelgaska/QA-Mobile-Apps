@@ -12,7 +12,7 @@ class PostgresMasterDataRepository {
   findMaterialFamilies({ q = '', category = '' } = {}) {
     return this._read(async client => {
       const result = await client.query(
-        `select family_id, name, category, true as active
+        `select family_id, name, category, template_id, true as active
          from public.qc_material_families
          where is_active
            and ($1 = '' or lower(category) = $1)
@@ -69,7 +69,7 @@ class PostgresMasterDataRepository {
            where vm.is_active and ($1 = '' or lower(vm.vendor) = $1)
            group by vm.material_id
          )
-         select material.material_id, material.material_description, material.family_id,
+         select material.material_id, material.material_description, material.core_count, material.family_id,
            names.material_name, true as active
          from public.qc_materials as material
          left join material_names as names on names.material_id = material.material_id
@@ -98,7 +98,7 @@ class PostgresMasterDataRepository {
            where vm.is_active
            group by vm.material_id
          )
-         select material.material_id, material.material_description, material.family_id,
+         select material.material_id, material.material_description, material.core_count, material.family_id,
            names.material_name, true as active
          from public.qc_materials as material
          left join material_names as names on names.material_id = material.material_id
@@ -190,25 +190,27 @@ class PostgresMasterDataRepository {
     }));
 
     await executor.query(
-      `insert into public.qc_material_families (family_id, name, category, is_active)
-       select family_id, name, category, active
+      `insert into public.qc_material_families (family_id, name, category, template_id, is_active)
+       select family_id, name, category, template_id, active
        from jsonb_to_recordset($1::jsonb)
-         as seed(family_id text, name text, category text, active boolean)
+         as seed(family_id text, name text, category text, template_id text, active boolean)
        on conflict (lower(family_id)) do update set
          family_id = excluded.family_id,
          name = excluded.name,
          category = excluded.category,
+         template_id = excluded.template_id,
          is_active = excluded.is_active`,
       [JSON.stringify(masterData.material_families)]
     );
     await executor.query(
-      `insert into public.qc_materials (material_id, material_description, family_id, is_active)
-       select material_id, material_description, family_id, active
+      `insert into public.qc_materials (material_id, material_description, core_count, family_id, is_active)
+       select material_id, material_description, core_count, family_id, active
        from jsonb_to_recordset($1::jsonb)
-         as seed(material_id text, material_description text, family_id text, active boolean)
+         as seed(material_id text, material_description text, core_count integer, family_id text, active boolean)
        on conflict (lower(material_id)) do update set
          material_id = excluded.material_id,
          material_description = excluded.material_description,
+         core_count = excluded.core_count,
          family_id = excluded.family_id,
          is_active = excluded.is_active`,
       [JSON.stringify([...materials.values()])]

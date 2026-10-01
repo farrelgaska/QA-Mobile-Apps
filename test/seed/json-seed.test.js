@@ -3,7 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const { describe, it, beforeEach, after } = require('node:test');
 const { handleJsonProvider } = require('../../scripts/seed/cli');
-const baselineTemplates = require('../../scripts/seed/baseline.json');
+const baselineTemplates = [...require('../../scripts/seed/baseline.json'),
+  ...require('../../scripts/seed/cable-checklists').cableChecklists];
 
 describe('Canonical Tooling - JSON Provider', () => {
   const tempDir = path.join(__dirname, 'temp-json-data');
@@ -52,7 +53,11 @@ describe('Canonical Tooling - JSON Provider', () => {
     const idempotency = { 'create_report::key': { resource_id: 'r1' } };
     fs.writeFileSync(tempIdempotency, JSON.stringify(idempotency));
     const userTemplate = { id: 'user-1', name: 'User Template' };
-    fs.writeFileSync(tempTemplates, JSON.stringify([userTemplate]));
+    const legacyCable = {
+      id: 'CABLE_DUCT', type: 'MATERIAL', category: 'CABLE', is_active: true,
+      checklist_items: [{ id: 'kesimpulan', parameter_name: 'Diterima / Ditolak' }]
+    };
+    fs.writeFileSync(tempTemplates, JSON.stringify([userTemplate, legacyCable]));
 
     await handleJsonProvider('seed', tempReports, tempTemplates);
 
@@ -61,8 +66,10 @@ describe('Canonical Tooling - JSON Provider', () => {
     assert.deepStrictEqual(JSON.parse(fs.readFileSync(tempIdempotency, 'utf8')), idempotency);
 
     const templates = JSON.parse(fs.readFileSync(tempTemplates, 'utf8'));
-    assert.strictEqual(templates.length, baselineTemplates.length + 1);
+    assert.strictEqual(templates.length, baselineTemplates.length + 2);
     assert.ok(templates.find(t => t.id === 'user-1'), 'Custom template is preserved on seed');
+    assert.strictEqual(templates.find(t => t.id === 'CABLE_DUCT').is_active, false);
+    assert.ok(templates.find(t => t.id === 'QC_CABLE_DUCT').is_active);
   });
 
   it('reseed => results in 0 reports and exactly canonical templates', async () => {

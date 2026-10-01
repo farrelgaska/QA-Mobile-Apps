@@ -52,11 +52,15 @@ test('PostgreSQL master seed batches idempotent upserts with expected unique rec
       materials.find(item => item.material_id === materialId),
       {
         material_id: materialId,
-        material_description: null,
+        material_description: masterData.vendor_materials.find(
+          mapping => mapping.material_id === materialId
+        ).material_name,
         family_id: materialId === 'DC-OF-SM-96D-TLIN'
           ? 'cable-kd-fo-sm-g652d-marking-telin'
           : 'cable-kd-fo-sm-g652d-marking-mitratel',
-        active: true
+        active: true,
+        core_count: materialId === 'DC-OF-SM-288D-MTEL' ? 288
+          : materialId === 'DC-OF-SM-96D-TLIN' ? 96 : 12
       }
     );
   }

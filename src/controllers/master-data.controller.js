@@ -1,4 +1,4 @@
-const { masterDataRepository } = require('../repositories');
+const { masterDataRepository, templateRepository } = require('../repositories');
 const AppError = require('../utils/AppError');
 
 const queryString = (req, name, { required = false } = {}) => {
@@ -99,6 +99,55 @@ const getWarehouseByPlant = async (req, res, next) => {
   }
 };
 
+const getMaterialTemplate = async (req, res, next) => {
+  try {
+    const material = await masterDataRepository.findMaterialById(req.params.materialId);
+    if (!material) {
+      return next(new AppError({
+        status: 404,
+        code: 'NOT_FOUND',
+        message: `Material dengan ID ${req.params.materialId} tidak ditemukan.`
+      }));
+    }
+
+    if (!material.family_id) {
+      return next(new AppError({
+        status: 404,
+        code: 'NOT_FOUND',
+        message: `Material ${req.params.materialId} tidak memiliki family.`
+      }));
+    }
+
+    const families = await masterDataRepository.findMaterialFamilies({});
+    const family = families.find(f => f.family_id.toLowerCase() === material.family_id.toLowerCase());
+    
+    if (!family || !family.template_id) {
+      return next(new AppError({
+        status: 404,
+        code: 'NOT_FOUND',
+        message: `Template untuk family ${material.family_id} tidak ditemukan.`
+      }));
+    }
+
+    const template = await templateRepository.findById(family.template_id);
+    if (!template) {
+      return next(new AppError({
+        status: 404,
+        code: 'NOT_FOUND',
+        message: `Template dengan ID ${family.template_id} tidak ditemukan.`
+      }));
+    }
+
+    res.json({
+      materialId: material.material_id,
+      family: family,
+      template: template
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getMaterialFamilies,
   getVendors,
@@ -106,5 +155,6 @@ module.exports = {
   getMaterialById,
   getBrands,
   getWarehouses,
-  getWarehouseByPlant
+  getWarehouseByPlant,
+  getMaterialTemplate
 };

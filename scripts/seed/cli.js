@@ -4,10 +4,13 @@ const { assertSafeToMutate } = require('./guard');
 const { DATA_PROVIDER: dataProvider, REPORTS_FILE, TEMPLATES_FILE } = require('../../src/config/env');
 const { getPool } = require('../../src/database/postgres');
 const { PostgresTemplateRepository } = require('../../src/repositories/postgres-template.repository');
+const { PostgresMasterDataRepository } = require('../../src/repositories/postgres-master-data.repository');
 const { canonicalTemplateInput } = require('../../src/repositories/postgres/mappers');
 
 // Load canonical baseline
-const baselineTemplates = require('./baseline.json');
+const baselineTemplates = [...require('./baseline.json'), ...require('./cable-checklists').cableChecklists];
+const legacyCableIds = new Set(['CABLE_AERIAL', 'CABLE_DUCT', 'CABLE_ADSS']);
+const masterData = require('../../data/qc-material-master-data.json');
 
 function writeJsonSafely(filePath, data) {
   const tempPath = `${filePath}.${Date.now()}.tmp`;
@@ -40,7 +43,9 @@ async function handleJsonProvider(command, reportsPath, templatesPath) {
     }
 
     const baselineMap = new Map(baselineTemplates.map(t => [t.id, t]));
-    const newTemplates = currentTemplates.map(t => baselineMap.has(t.id) ? baselineMap.get(t.id) : t);
+    const newTemplates = currentTemplates.map(t => baselineMap.has(t.id)
+      ? baselineMap.get(t.id)
+      : legacyCableIds.has(t.id) ? { ...t, is_active: false } : t);
 
     // Add missing canonical templates
     const existingIds = new Set(newTemplates.map(t => t.id));
@@ -61,6 +66,7 @@ async function handlePostgresProvider(command) {
   try {
     client = await pool.connect();
     const templateRepo = new PostgresTemplateRepository(pool);
+    const masterDataRepo = new PostgresMasterDataRepository(pool);
 
     await client.query('BEGIN');
 
@@ -68,7 +74,11 @@ async function handlePostgresProvider(command) {
       console.log('[Postgres] Resetting environment to clean baseline...');
       await client.query("DELETE FROM public.api_idempotency_keys WHERE scope = 'create_report'");
       await client.query('DELETE FROM public.qc_reports');
+      await client.query('DELETE FROM public.qc_vendor_materials');
+      await client.query('DELETE FROM public.qc_materials');
+      await client.query('DELETE FROM public.qc_material_families');
       await client.query('DELETE FROM public.qc_templates');
+      await client.query('DELETE FROM public.qc_warehouse_plants');
 
       for (const tpl of baselineTemplates) {
         const canonical = canonicalTemplateInput(tpl);
@@ -85,8 +95,14 @@ async function handlePostgresProvider(command) {
         const existing = await templateRepo._findById(client, tpl.id, true);
         const canonical = canonicalTemplateInput(tpl);
         if (existing) {
-          await client.query('DELETE FROM public.qc_templates WHERE id = $1', [tpl.id]);
-          await templateRepo._insertRoot(client, canonical);
+          await client.query(
+            `update public.qc_templates set name=$2, description=$3, form_code=$4,
+               category=$5, is_active=$6, version=$7, updated_at=$8 where id=$1`,
+            [canonical.id, canonical.name, canonical.description,
+              canonical.form_code, canonical.category, canonical.is_active,
+              canonical.version, canonical.updated_at]
+          );
+          await client.query('DELETE FROM public.qc_template_items WHERE template_id = $1', [tpl.id]);
           await templateRepo._insertItems(client, canonical.id, canonical.checklist_items);
           updated++;
         } else {
@@ -95,8 +111,18 @@ async function handlePostgresProvider(command) {
           created++;
         }
       }
+      await client.query(
+        "update public.qc_templates set is_active = false where id in ('CABLE_AERIAL', 'CABLE_DUCT', 'CABLE_ADSS')"
+      );
       console.log(`[Postgres] Seeded ${created} new templates, restored ${updated} existing templates to canonical baseline.`);
     }
+
+    const masterCounts = await masterDataRepo.seed(masterData, client);
+    console.log(
+      `[Postgres] Seeded QC Material master data: ${masterCounts.material_families} families, ` +
+      `${masterCounts.materials} materials, ` +
+      `${masterCounts.vendor_materials} vendor mappings, ${masterCounts.warehouses} warehouses.`
+    );
 
     await client.query('COMMIT');
   } catch (err) {

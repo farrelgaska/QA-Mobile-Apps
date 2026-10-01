@@ -23,6 +23,15 @@ const cableFamilyId = materialName => `cable-${cableFamilyKey(materialName)
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-|-$/g, '')}`;
 
+// Provisional business mapping from the source material classification.
+const cableChecklistId = materialName => {
+  const name = display(materialName);
+  if (/^KD FO\b/i.test(name)) return 'QC_CABLE_DUCT';
+  if (/^KU (?:FO|Fiber Optik)\b/i.test(name) && /\bADSS\b/i.test(name)) return 'QC_CABLE_ADSS';
+  if (/^KU FO\b/i.test(name)) return 'QC_CABLE_AERIAL';
+  throw new Error(`Cable checklist classification needs confirmation: ${name}`);
+};
+
 const addCableFamilies = masterData => {
   const familiesByKey = new Map();
   const familyByMaterialId = new Map();
@@ -33,8 +42,12 @@ const addCableFamilies = masterData => {
       family_id: cableFamilyId(mapping.material_name),
       name: cableFamilyName(mapping.material_name),
       category: 'CABLE',
+      template_id: cableChecklistId(mapping.material_name),
       active: false
     };
+    if (family.template_id !== cableChecklistId(mapping.material_name)) {
+      throw new Error(`Cable family has conflicting checklist types: ${family.name}`);
+    }
     family.active ||= mapping.active;
     familiesByKey.set(key, family);
 
@@ -80,4 +93,4 @@ if (require.main === module) {
   );
 }
 
-module.exports = { addCableFamilies, cableFamilyId, cableFamilyKey, cableFamilyName };
+module.exports = { addCableFamilies, cableFamilyId, cableFamilyKey, cableFamilyName, cableChecklistId };
