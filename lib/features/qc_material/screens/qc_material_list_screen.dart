@@ -3,13 +3,20 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/api_service.dart';
 import '../../../shared/models/qc_material_template_model.dart';
+import '../../../shared/models/qc_material_master_data.dart';
 import '../../../shared/models/qc_template_contract.dart';
 import '../../../shared/widgets/screen_header.dart';
 import '../../../shared/widgets/search_bar_field.dart';
 import '../../../shared/widgets/status_badge.dart';
 
+bool _isCableTemplate(QCMaterialTemplate template) =>
+    template.category.trim().toUpperCase() == 'CABLE' ||
+    template.id.startsWith('QC_CABLE_');
+
 class QCMaterialListScreen extends StatefulWidget {
-  const QCMaterialListScreen({super.key});
+  final ApiService? apiService;
+
+  const QCMaterialListScreen({super.key, this.apiService});
 
   @override
   State<QCMaterialListScreen> createState() => _QCMaterialListScreenState();
@@ -18,6 +25,7 @@ class QCMaterialListScreen extends StatefulWidget {
 class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
   String _searchQuery = '';
   List<QCMaterialTemplate> _templates = [];
+  List<QCMaterialFamily> _families = [];
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -35,7 +43,8 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
     });
 
     try {
-      final rawTemplates = await ApiService().fetchTemplates('MATERIAL');
+      final api = widget.apiService ?? ApiService();
+      final rawTemplates = await api.fetchTemplates('MATERIAL');
 
       final materialTemplates = rawTemplates
           .where(
@@ -45,10 +54,33 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
           )
           .map(QCTemplateContract.material)
           .toList();
+      final templatesById = {
+        for (final template in materialTemplates) template.id: template,
+      };
+      var families = <QCMaterialFamily>[];
+      String? cableError;
+      try {
+        families = (await api.fetchMaterialFamilies())
+            .where((family) =>
+                family.active &&
+                family.category.trim().toUpperCase() == 'CABLE')
+            .toList();
+        if ((families.isEmpty && materialTemplates.any(_isCableTemplate)) ||
+            families.any(
+                (family) => !templatesById.containsKey(family.templateId))) {
+          throw const FormatException(
+              'Cable family has no executable checklist');
+        }
+      } catch (_) {
+        families = [];
+        cableError = 'QC kabel belum tersedia. Ketuk Coba lagi.';
+      }
 
       if (mounted) {
         setState(() {
           _templates = materialTemplates;
+          _families = families;
+          _errorMessage = cableError;
           _isLoading = false;
         });
       }
@@ -67,10 +99,24 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredTemplates = _templates.where((m) {
-      final matchesSearch =
-          m.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              m.code.toLowerCase().contains(_searchQuery.toLowerCase());
+    final familyTemplateIds =
+        _families.map((family) => family.templateId).toSet();
+    final entries = [
+      for (final template in _templates.where(
+          (t) => !_isCableTemplate(t) && !familyTemplateIds.contains(t.id)))
+        (template: template, family: null as QCMaterialFamily?),
+      for (final family in _families)
+        (
+          template: _templates.firstWhere((t) => t.id == family.templateId),
+          family: family
+        ),
+    ];
+    final filteredTemplates = entries.where((entry) {
+      final m = entry.template;
+      final matchesSearch = (entry.family?.name ?? m.name)
+              .toLowerCase()
+              .contains(_searchQuery.toLowerCase()) ||
+          m.code.toLowerCase().contains(_searchQuery.toLowerCase());
       return matchesSearch;
     }).toList();
 
@@ -177,10 +223,13 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
                             itemCount: filteredTemplates.length,
                             physics: const BouncingScrollPhysics(),
                             itemBuilder: (context, index) {
-                              final template = filteredTemplates[index];
+                              final entry = filteredTemplates[index];
+                              final template = entry.template;
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 16.0),
                                 child: Container(
+                                  key: ValueKey(
+                                      entry.family?.familyId ?? template.id),
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
@@ -208,7 +257,8 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
                                                   CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  template.name,
+                                                  entry.family?.name ??
+                                                      template.name,
                                                   maxLines: 2,
                                                   overflow:
                                                       TextOverflow.ellipsis,
@@ -220,7 +270,8 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
                                                 ),
                                                 const SizedBox(height: 6),
                                                 Text(
-                                                  template.category,
+                                                  entry.family?.category ??
+                                                      template.category,
                                                   maxLines: 1,
                                                   overflow:
                                                       TextOverflow.ellipsis,
@@ -289,7 +340,13 @@ class _QCMaterialListScreenState extends State<QCMaterialListScreen> {
                                                 onPressed: () async {
                                                   await context.push(
                                                     '/qc-material/form/${template.id}',
-                                                    extra: template,
+                                                    extra: entry.family == null
+                                                        ? template
+                                                        : (
+                                                            template: template,
+                                                            family:
+                                                                entry.family!
+                                                          ),
                                                   );
                                                   if (mounted) {
                                                     await _loadTemplates();

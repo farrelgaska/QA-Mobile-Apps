@@ -43,7 +43,8 @@ abstract class QCMaterialMasterDataApi {
 
   Future<QCWarehousePlant> fetchWarehousePlant(String plant);
 
-  Future<QCMaterialSelection> fetchMaterialTemplateResolution(String materialId);
+  Future<QCMaterialSelection> fetchMaterialTemplateResolution(
+      String materialId);
 }
 
 class QCEvidenceUploadResult {
@@ -185,7 +186,8 @@ class ApiService implements QCMaterialMasterDataApi {
   }
 
   @override
-  Future<QCMaterialSelection> fetchMaterialTemplateResolution(String materialId) async {
+  Future<QCMaterialSelection> fetchMaterialTemplateResolution(
+      String materialId) async {
     final body = await _getMasterData(
       '/master-data/materials/${Uri.encodeComponent(materialId)}/template',
     );
@@ -409,7 +411,8 @@ class ApiService implements QCMaterialMasterDataApi {
       final url =
           type != null ? '$baseUrl/templates?type=$type' : '$baseUrl/templates';
       var response =
-          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 4));
+          await (_client?.get(Uri.parse(url)) ?? http.get(Uri.parse(url)))
+              .timeout(const Duration(seconds: 4));
       if (response.statusCode == 304) {
         final retryUri = Uri.parse(url).replace(
           queryParameters: {
@@ -417,7 +420,8 @@ class ApiService implements QCMaterialMasterDataApi {
             '_cache_bust': DateTime.now().millisecondsSinceEpoch.toString(),
           },
         );
-        response = await http.get(retryUri).timeout(const Duration(seconds: 4));
+        response = await (_client?.get(retryUri) ?? http.get(retryUri))
+            .timeout(const Duration(seconds: 4));
       }
       if (response.statusCode == 200) {
         final List<dynamic> list = jsonDecode(response.body);
