@@ -1,5 +1,8 @@
 import 'enums.dart';
 import 'template_choice_option.dart';
+import 'qc_material_master_data.dart';
+
+typedef QCMaterialSelection = ({QCMaterialTemplate template, QCMaterialFamily family});
 
 class QCMaterialTemplate {
   final String id;

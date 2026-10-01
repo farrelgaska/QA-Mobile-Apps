@@ -32,6 +32,7 @@ class ChecklistItemCard extends StatefulWidget {
   final Map<String, Uint8List> uploadedPhotoPreviewBytes;
   final String? warningMessage;
   final bool isLocked; // locked if auto-validation fails/succeeds on numerics
+  final bool isIdentity;
 
   final Function(QCResultStatus) onStatusChanged;
   final ValueChanged<String> onResultValueChanged;
@@ -60,6 +61,7 @@ class ChecklistItemCard extends StatefulWidget {
     this.uploadedPhotoPreviewBytes = const {},
     this.warningMessage,
     required this.isLocked,
+    this.isIdentity = false,
     required this.onStatusChanged,
     required this.onResultValueChanged,
     required this.onIssueDescriptionChanged,
@@ -103,8 +105,8 @@ class _ChecklistItemCardState extends State<ChecklistItemCard> {
   @override
   Widget build(BuildContext context) {
     final showIssueField = widget.currentStatus == QCResultStatus.fail;
-    final requiresManualStatus = widget.inputType == QCInputType.text ||
-        widget.inputType == QCInputType.photo;
+    final requiresManualStatus = !widget.isIdentity && (widget.inputType == QCInputType.text ||
+        widget.inputType == QCInputType.photo);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
