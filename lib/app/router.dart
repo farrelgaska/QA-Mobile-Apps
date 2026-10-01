@@ -121,9 +121,12 @@ final GoRouter appRouter = GoRouter(
         final id = state.pathParameters['id'] ?? '';
         final editReportId = state.uri.queryParameters['editReportId'];
         final isRevision = state.uri.queryParameters['isRevision'] == 'true';
-        final template = state.extra is QCMaterialTemplate
-            ? state.extra as QCMaterialTemplate
+        final selection = state.extra is QCMaterialSelection
+            ? state.extra as QCMaterialSelection
             : null;
+        final template = selection?.template ?? (state.extra is QCMaterialTemplate
+            ? state.extra as QCMaterialTemplate
+            : null);
         if (template == null || template.id != id) {
           return _buildPageWithTransition(
             context: context,
@@ -141,6 +144,7 @@ final GoRouter appRouter = GoRouter(
             editReportId: editReportId,
             isRevision: isRevision,
             template: template,
+            initialFamily: selection?.family,
           ),
         );
       },
