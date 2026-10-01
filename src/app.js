@@ -12,6 +12,7 @@ const { CORS_ORIGINS, CORS_ALLOW_LOCALHOST, APP_ENV } = require('./config/env');
 const healthRoutes = require('./routes/health.routes');
 const reportRoutes = require('./routes/report.routes');
 const templateRoutes = require('./routes/template.routes');
+const masterDataRoutes = require('./routes/master-data.routes');
 const uploadRoutes = require('./routes/upload.routes');
 const observabilityMiddleware = require('./middleware/observability');
 const notFoundMiddleware = require('./middleware/not-found');
@@ -68,6 +69,7 @@ app.get('/', (req, res) => {
 app.use('/health', healthRoutes);
 app.use('/reports', demoAuthMiddleware, reportRoutes);
 app.use('/templates', demoAuthMiddleware, templateRoutes);
+app.use('/master-data', demoAuthMiddleware, masterDataRoutes);
 app.use('/uploads', demoAuthMiddleware, uploadRoutes);
 if (APP_ENV !== 'production') {
   app.use('/mock-storage', express.static(LOCAL_QC_EVIDENCE_ROOT));
